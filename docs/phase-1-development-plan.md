@@ -1,10 +1,12 @@
-﻿﻿﻿﻿# 项目迭代规划与巡查记录
+﻿﻿﻿﻿﻿﻿﻿﻿# StarNav 第一阶段开发规划与巡查记录
 
-> 用途：记录当前项目后续可迭代方向，后续按优先级逐项实现。
+> 用途：记录第一阶段核心功能开发、巡查、修正与收尾情况。
 >
 > 项目：星漫旅站 / Cloudflare Workers 书签导航
 >
-> 当前阶段建议：优先围绕「搜索更准、AI 更懂本站、后台更省心、数据更安全」推进。
+> 阶段定位：第一阶段以「搜索更准、AI 更懂本站、后台更省心、数据更安全、生态可扩展」为主线，当前已基本收尾。
+>
+> 后续规划：第二阶段已迁移到同目录下的 [`phase-2-development-plan.md`](./phase-2-development-plan.md)。
 
 ---
 
@@ -971,7 +973,7 @@
   - 解决类似“‘星空图床’这个书签位于哪个分类下”无法提取核心书签名的问题。
   - 已推送到远程 `master` 分支。
 
-- 后续每完成一个功能，建议在本文件中勾选对应任务，或者迁移到正式 `PROJECT_PLAN.md`。
+- 后续每完成一个功能，建议在本文件中勾选对应任务；第二阶段新增规划统一记录到同目录下的 `phase-2-development-plan.md`。
 - 后续更新 `README.md` 时需要补充说明：
   - 定时健康巡检代码已内置 `scheduled` 入口，但当前仓库未默认启用 `wrangler.toml` 的 `[triggers]`，避免 Cloudflare Cron Trigger 数量超限导致部署失败。
   - 新账号或未超限账号可在 `wrangler.toml` 添加 `[triggers] crons = ["0 3 * * *"]`，或在 Cloudflare 后台手动配置 Cron Trigger。
@@ -981,7 +983,7 @@
 
 ## 二十、第二阶段规划入口
 
-第一阶段 `PROJECT_PLAN.md` 中的大部分核心功能已经基本收尾，项目已具备前台导航、后台管理、AI 助理、备份恢复、API 开放、WebHook、浏览器插件和工程质量基线。
+第一阶段 `phase-1-development-plan.md` 中的大部分核心功能已经基本收尾，项目已具备前台导航、后台管理、AI 助理、备份恢复、API 开放、WebHook、浏览器插件和工程质量基线。
 
 第二阶段不再以继续堆叠单点功能为主，而是转向：
 
@@ -996,7 +998,7 @@
 
 第二阶段详细规划已整理为独立文档：
 
-- [docs/phase-2-development-plan.md](docs/phase-2-development-plan.md)
+- [phase-2-development-plan.md](./phase-2-development-plan.md)
 
 当前最推荐的第二阶段启动任务：
 
