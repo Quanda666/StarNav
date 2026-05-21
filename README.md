@@ -152,6 +152,7 @@
 │   ├── backup-restore-guide.md          # 备份、恢复与导入导出指南
 │   ├── browser-extension-guide.md       # 浏览器插件使用指南
 │   ├── deployment-checklist.md          # 部署检查清单
+│   ├── phase-2-development-plan.md      # 第二阶段开发规划
 │   ├── web-deployment-guide.md          # Cloudflare 网页版全流程部署教程
 │   └── webhook-guide.md                 # WebHook 使用指南
 ├── PROJECT_PLAN.md                      # 项目迭代规划与巡查记录
@@ -204,6 +205,7 @@ npx wrangler d1 execute book --file=schema.sql
 - [docs/browser-extension-guide.md](docs/browser-extension-guide.md)：浏览器插件使用指南。
 - [docs/webhook-guide.md](docs/webhook-guide.md)：WebHook 使用指南。
 - [docs/backup-restore-guide.md](docs/backup-restore-guide.md)：备份、恢复与导入导出指南。
+- [docs/phase-2-development-plan.md](docs/phase-2-development-plan.md)：第二阶段开发规划，面向第一阶段收尾后的优化、增加、改进和拓展。
 - [PROJECT_PLAN.md](PROJECT_PLAN.md)：项目迭代规划与巡查记录，原 `tem.md` 已重命名为该文件。
 
 ## 🚀 快速部署

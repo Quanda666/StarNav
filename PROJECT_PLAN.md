@@ -1,4 +1,4 @@
-﻿﻿# 项目迭代规划与巡查记录
+﻿﻿﻿﻿# 项目迭代规划与巡查记录
 
 > 用途：记录当前项目后续可迭代方向，后续按优先级逐项实现。
 >
@@ -976,3 +976,35 @@
   - 定时健康巡检代码已内置 `scheduled` 入口，但当前仓库未默认启用 `wrangler.toml` 的 `[triggers]`，避免 Cloudflare Cron Trigger 数量超限导致部署失败。
   - 新账号或未超限账号可在 `wrangler.toml` 添加 `[triggers] crons = ["0 3 * * *"]`，或在 Cloudflare 后台手动配置 Cron Trigger。
   - `HEALTH_CHECK_CRON_LIMIT` 用于控制每次定时巡检最多检测多少个书签，默认 30，可按书签数量调整。
+
+---
+
+## 二十、第二阶段规划入口
+
+第一阶段 `PROJECT_PLAN.md` 中的大部分核心功能已经基本收尾，项目已具备前台导航、后台管理、AI 助理、备份恢复、API 开放、WebHook、浏览器插件和工程质量基线。
+
+第二阶段不再以继续堆叠单点功能为主，而是转向：
+
+- 稳定性
+- 可维护性
+- 可观测性
+- 性能优化
+- 大数据量后台维护体验
+- AI 管理助手
+- API / 插件生态增强
+- 部署、升级和排错体验优化
+
+第二阶段详细规划已整理为独立文档：
+
+- [docs/phase-2-development-plan.md](docs/phase-2-development-plan.md)
+
+当前最推荐的第二阶段启动任务：
+
+> 新增“系统健康中心”。
+
+最小范围包括：
+
+- `GET /api/system/health`
+- 后台“系统健康”页签
+- D1 / KV / 关键表 / 管理员账号 / 备份 / WebHook / AI 配置检查
+- 对健康接口补充测试
