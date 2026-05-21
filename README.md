@@ -152,7 +152,7 @@
 │   ├── backup-restore-guide.md          # 备份、恢复与导入导出指南
 │   ├── browser-extension-guide.md       # 浏览器插件使用指南
 │   ├── deployment-checklist.md          # 部署检查清单
-│   ├── web-deployment-guide.md          # Cloudflare 网页版手把手部署教程
+│   ├── web-deployment-guide.md          # Cloudflare 网页版全流程部署教程
 │   └── webhook-guide.md                 # WebHook 使用指南
 ├── PROJECT_PLAN.md                      # 项目迭代规划与巡查记录
 ├── schema.sql                           # D1 数据库建表 SQL
@@ -198,7 +198,7 @@ npx wrangler d1 execute book --file=schema.sql
 项目已将单独功能说明和使用教程拆分到 `docs/` 目录：
 
 - [docs/README.md](docs/README.md)：文档总索引。
-- [docs/web-deployment-guide.md](docs/web-deployment-guide.md)：Cloudflare 网页版手把手部署教程，适合不熟悉 Wrangler 的用户；推荐最终仍使用 Wrangler 部署。
+- [docs/web-deployment-guide.md](docs/web-deployment-guide.md)：Cloudflare 网页版全流程部署教程，适合不熟悉命令行和 Wrangler 的用户。
 - [docs/deployment-checklist.md](docs/deployment-checklist.md)：部署检查清单。
 - [docs/api-guide.md](docs/api-guide.md)：API 开放与第三方接入指南。
 - [docs/browser-extension-guide.md](docs/browser-extension-guide.md)：浏览器插件使用指南。
@@ -208,8 +208,10 @@ npx wrangler d1 execute book --file=schema.sql
 
 ## 🚀 快速部署
 
-推荐使用 Wrangler 部署，便于后续升级、排查和自动化。
-如果你不熟悉 Wrangler，可先参考 [Cloudflare 网页版手把手部署教程](docs/web-deployment-guide.md)，按网页控制台完成 D1、KV、域名等准备工作，再使用 Wrangler 完成最终部署。
+你可以选择两种部署路径：
+
+- **网页版全流程部署**：适合不熟悉命令行和 Wrangler 的用户，见 [Cloudflare 网页版全流程部署教程](docs/web-deployment-guide.md)。
+- **Wrangler 部署**：适合开发者和需要本地调试、自动化发布的场景，按下方步骤执行。
 
 ### 1. 安装依赖
 

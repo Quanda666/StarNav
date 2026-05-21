@@ -4,10 +4,10 @@
 
 ## 部署与升级
 
-- [Cloudflare 网页版手把手部署教程](./web-deployment-guide.md)
-  - 面向不熟悉 Wrangler 的用户。
-  - 使用 Cloudflare 控制台完成 D1、KV、域名等准备工作。
-  - 最终仍推荐使用 Wrangler 部署，便于后续升级和排查。
+- [Cloudflare 网页版全流程部署教程](./web-deployment-guide.md)
+  - 面向不熟悉命令行和 Wrangler 的用户。
+  - 使用 Cloudflare Dashboard + GitHub 仓库连接完成 Worker 部署。
+  - 使用 Cloudflare 控制台完成 D1、KV、域名、Cron Trigger 和后续重新部署。
 - [部署检查清单](./deployment-checklist.md)
   - 部署前后逐项检查 D1、KV、管理员、AI、API Token、WebHook、Cron、备份和回滚。
 
