@@ -194,10 +194,12 @@
     <h2>Token 获取方式</h2>
     <div class="help">
       <ol>
-        <li>先登录 StarNav 后台。</li>
-        <li>在后台页面打开浏览器控制台，调用 <code>POST /api/tokens</code> 创建一个包含 <code>write</code> scope 的 Token。</li>
-        <li>把生成的 <code>nav_xxx</code> 粘贴到本页 Bearer Token 输入框。</li>
+        <li>先登录 StarNav 后台，进入「Token 管理」页签。</li>
+        <li>点击「一键生成浏览器插件 Token」，或手动创建一个包含 <code>write</code> scope 的 Token。</li>
+        <li>复制创建后显示的 <code>nav_xxx</code>。Token 明文只会显示一次，请及时保存。</li>
+        <li>回到本页，把 <code>nav_xxx</code> 粘贴到 Bearer Token 输入框并保存设置。</li>
       </ol>
+      <p class="small">开发者也可以在已登录后台的浏览器控制台中调用 <code>POST /api/tokens</code> 创建 Token；普通用户建议优先使用后台 Token 管理界面。</p>
       <p class="small">生产建议：为浏览器插件单独创建 Token；如果设备丢失，可在后台撤销该 Token。</p>
     </div>
 
