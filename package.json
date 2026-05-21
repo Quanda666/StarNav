@@ -1,0 +1,27 @@
+{
+  "name": "nav",
+  "version": "1.0.0",
+  "private": true,
+  "description": "星漫旅站 - Cloudflare Workers 书签导航",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "check": "node scripts/check-syntax.js",
+    "test": "node --test",
+    "quality": "npm run check && npm test",
+    "db:init": "wrangler d1 execute NAV_DB --file=./schema.sql",
+    "db:backup": "wrangler d1 export NAV_DB --output=backup.sql"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "bookmark",
+    "navigation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^4.93.0"
+  }
+}

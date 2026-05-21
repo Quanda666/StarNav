@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "StarNav 一键收藏",
+  "description": "将当前网页一键收藏到 StarNav 导航站。",
+  "version": "1.0.0",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "icons": {
+    "16": "icons/starnav.ico",
+    "32": "icons/starnav.ico",
+    "48": "icons/starnav.ico",
+    "128": "icons/starnav.ico"
+  },
+  "action": {
+    "default_title": "收藏到 StarNav",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/starnav.ico",
+      "32": "icons/starnav.ico",
+      "48": "icons/starnav.ico",
+      "128": "icons/starnav.ico"
+    }
+  },
+  "options_page": "options.html"
+}

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>收藏到 StarNav</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #020617;
+        --card: #0f172a;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --border: #1e293b;
+        --primary: #60a5fa;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 420px;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    main {
+      padding: 16px;
+    }
+
+    header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    #optionsBtn {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 36px;
+      height: 36px;
+      padding: 7px;
+      background: transparent;
+      border: 0;
+      border-radius: 50%;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+
+    #optionsBtn:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    #optionsBtn svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      background: var(--card);
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 62px;
+      resize: vertical;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    button {
+      padding: 9px 10px;
+      border: 0;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--primary);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--border);
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    button:disabled {
+      opacity: .65;
+      cursor: not-allowed;
+    }
+
+    #status,
+    #duplicateBox {
+      min-height: 22px;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    #duplicateBox {
+      display: none;
+      padding: 10px;
+      border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--border));
+      border-radius: 12px;
+      color: var(--warning);
+      background: color-mix(in srgb, var(--warning) 10%, transparent);
+    }
+
+    .input-action {
+      position: relative;
+      display: block;
+    }
+
+    .input-action input {
+      padding-right: 46px;
+    }
+
+    .input-action button {
+      position: absolute;
+      right: 5px;
+      top: 50%;
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      padding: 0;
+      transform: translateY(-50%);
+      border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border));
+      border-radius: 11px;
+      color: var(--primary);
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      line-height: 1;
+      box-shadow: none;
+    }
+
+    .input-action button:hover {
+      background: color-mix(in srgb, var(--primary) 18%, transparent);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .tiny {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>收藏到 StarNav</h1>
+      <button id="optionsBtn" title="设置">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
+        </svg>
+      </button>
+    </header>
+
+    <label for="name">名称</label>
+    <input id="name">
+
+    <label for="url">URL</label>
+    <input id="url">
+
+    <label for="desc">描述</label>
+    <textarea id="desc" placeholder="可选，自动抓取后会填充"></textarea>
+
+    <div class="row">
+      <div>
+        <label for="catelog">分类</label>
+        <input id="catelog" placeholder="未分类" list="categoryList">
+      </div>
+      <div>
+        <label for="tags">标签</label>
+        <input id="tags" placeholder="逗号分隔" list="tagList">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="visibility">可见性</label>
+        <select id="visibility">
+          <option value="public">公开</option>
+          <option value="private">私密</option>
+          <option value="unlisted">不列出</option>
+          <option value="admin_only">仅管理员</option>
+        </select>
+      </div>
+      <div>
+        <label for="logo">Logo URL</label>
+        <div class="input-action">
+          <input id="logo" placeholder="自动抓取">
+          <button id="fetchFaviconBtn" type="button" title="自动获取图标" aria-label="自动获取图标">✨</button>
+        </div>
+      </div>
+    </div>
+
+    <datalist id="categoryList"></datalist>
+    <datalist id="tagList"></datalist>
+
+    <div id="duplicateBox"></div>
+
+    <div class="actions">
+      <button id="saveBtn" class="full">保存书签</button>
+      <button id="fetchBtn" class="secondary">自动抓取</button>
+      <button id="checkDuplicateBtn" class="secondary">检测重复</button>
+      <button id="suggestCategoryBtn" class="secondary">推荐分类</button>
+      <button id="suggestTagsBtn" class="secondary">推荐标签</button>
+      <button id="forceSaveBtn" class="danger full" style="display:none;">仍然强制保存</button>
+    </div>
+
+    <div id="status"></div>
+    <div class="tiny">生产版支持 Bearer Token、自动抓取、AI 推荐、重复检测、分类/标签候选和强制保存。</div>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
