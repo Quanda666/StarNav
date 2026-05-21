@@ -94,11 +94,154 @@ database_id = "这里填写你的 D1 database_id"
 仍然在 Cloudflare Dashboard 操作：
 
 1. 进入刚创建的 D1 数据库。
-2. 打开 **Console** 或 SQL 执行页面。
+2. 打开 **Console** 或 **Query** / SQL 执行页面。
 3. 回到 GitHub 仓库，打开项目根目录的 `schema.sql`。
-4. 复制 `schema.sql` 的全部内容。
-5. 粘贴到 D1 Console。
+4. 复制 SQL 内容。
+5. 粘贴到 D1 Console 的 SQL 编辑框。
 6. 点击执行。
+
+> 如果点击执行后提示 `The request is malformed: Requests without any query are not supported.`，通常表示 D1 Console 没有收到任何 SQL 查询。
+> 这一般不是 `schema.sql` 语法错误，而是网页控制台没有把内容提交进去。请确认 SQL 已经粘贴到真正的 SQL 编辑框中，而不是搜索框、表格页、空白面板或 Console 外部区域。
+
+### 推荐：分段执行 schema.sql
+
+Cloudflare D1 网页 Console 有时对一次性粘贴多条 SQL 不够稳定。推荐按下面几段分别复制执行。
+
+#### 第一段：书签、待审核、分类表
+
+```sql
+-- 网站配置表
+CREATE TABLE IF NOT EXISTS sites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  logo TEXT,
+  desc TEXT,
+  catelog TEXT NOT NULL,
+  category_id INTEGER,
+  visibility TEXT NOT NULL DEFAULT 'public',
+  sort_order INTEGER NOT NULL DEFAULT 9999,
+  hits INTEGER DEFAULT 0,
+  last_visit_time TIMESTAMP,
+  last_checked_at TIMESTAMP,
+  last_status_code INTEGER,
+  last_error TEXT,
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 待审核网站表
+CREATE TABLE IF NOT EXISTS pending_sites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  logo TEXT,
+  desc TEXT,
+  catelog TEXT NOT NULL,
+  tags TEXT,
+  reason TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  reject_reason TEXT,
+  reviewed_at TIMESTAMP,
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 分类排序表
+CREATE TABLE IF NOT EXISTS category_orders (
+  catelog TEXT PRIMARY KEY,
+  sort_order INTEGER NOT NULL DEFAULT 9999
+);
+
+-- 分类表
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  parent_id INTEGER,
+  sort_order INTEGER NOT NULL DEFAULT 9999,
+  icon TEXT,
+  color TEXT,
+  description TEXT,
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(parent_id) REFERENCES categories(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
+CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order, name);
+CREATE INDEX IF NOT EXISTS idx_sites_catelog ON sites(catelog);
+CREATE INDEX IF NOT EXISTS idx_sites_sort ON sites(catelog, sort_order, create_time);
+```
+
+#### 第二段：标签、分类元数据和设置表
+
+```sql
+-- 标签表
+CREATE TABLE IF NOT EXISTS tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS site_tags (
+  site_id INTEGER NOT NULL,
+  tag_id INTEGER NOT NULL,
+  PRIMARY KEY(site_id, tag_id),
+  FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE,
+  FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
+CREATE INDEX IF NOT EXISTS idx_site_tags_tag ON site_tags(tag_id, site_id);
+
+-- 分类元数据表
+CREATE TABLE IF NOT EXISTS category_metadata (
+  catelog TEXT PRIMARY KEY,
+  icon TEXT,
+  description TEXT
+);
+
+-- 设置表
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### 第三段：搜索统计和操作日志表
+
+```sql
+-- 搜索关键词聚合统计表
+CREATE TABLE IF NOT EXISTS search_terms (
+  keyword TEXT PRIMARY KEY,
+  total_searches INTEGER NOT NULL DEFAULT 0,
+  total_results INTEGER NOT NULL DEFAULT 0,
+  last_result_count INTEGER NOT NULL DEFAULT 0,
+  zero_result_count INTEGER NOT NULL DEFAULT 0,
+  first_searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_terms_total ON search_terms(total_searches DESC, last_searched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_search_terms_zero ON search_terms(zero_result_count DESC, last_searched_at DESC);
+
+-- 操作日志表
+CREATE TABLE IF NOT EXISTS operation_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  action TEXT NOT NULL,
+  target TEXT,
+  target_id TEXT,
+  summary TEXT,
+  detail TEXT,
+  ip TEXT,
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_operation_logs_create_time ON operation_logs(create_time DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_operation_logs_action ON operation_logs(action, create_time DESC);
+```
+
+每执行一段后，如果页面提示成功，再继续执行下一段。
 
 执行成功后，D1 中会创建项目所需的数据表和索引。
 
