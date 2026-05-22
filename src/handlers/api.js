@@ -1,5 +1,5 @@
-import { conflict, errorResponse, forbidden, isSubmissionEnabled, jsonResponse, unauthorized } from '../lib/utils.js';
-import { createApiToken, hasBearerToken, isAdminAuthenticated, listApiTokens, revokeApiToken, validateApiToken } from '../lib/auth.js';
+import { errorResponse, isSubmissionEnabled, jsonResponse } from '../lib/utils.js';
+import { createApiToken, isAdminAuthenticated, listApiTokens, revokeApiToken, validateApiToken } from '../lib/auth.js';
 import { getFavicon } from '../lib/favicon.js';
 import {
   approvePendingSite,
@@ -37,7 +37,7 @@ import {
   updateCategory,
 } from '../services/categoryService.js';
 import { applySiteTagSuggestions, listSitesNeedingTags, listTags, mergeTags } from '../services/tagService.js';
-import { chatWithAiAssistant, getAiSettings, listAiModels, suggestCategoryForSite, suggestTagMerges, suggestTagsForSite, suggestTagsForSites, testAiSettings, updateAiSettings } from '../services/aiService.js';
+import { analyzeNoTagSites, analyzeDuplicateSites, analyzeSearchGaps, analyzeCategoryErrors, chatWithAiAssistant, getAiSettings, listAiModels, suggestCategoryForSite, suggestTagMerges, suggestTagsForSite, suggestTagsForSites, testAiSettings, updateAiSettings } from '../services/aiService.js';
 import { getSystemSettings, updateSystemSettings } from '../services/systemSettingsService.js';
 import {
   getPrivateBookmarkPassword,
@@ -48,332 +48,16 @@ import {
 import { OPERATION_LOG_ACTIONS, listOperationLogs, logOperation } from '../services/operationLogService.js';
 import { createBackup, deleteBackup, getBackupPayload, getWebDavBackupSettings, listBackups, restoreBackup, testWebDavBackupSettings, updateWebDavBackupSettings } from '../services/backupService.js';
 import { createWebhook, deleteWebhook, listWebhooks, testWebhook, updateWebhook } from '../services/webhookService.js';
+import { getSystemHealth } from '../services/systemHealthService.js';
+import { getPublicApiDiscovery, getPublicOpenApiDocument } from './api/discovery.js';
+import { handleApiError, requireAdmin } from './api/errors.js';
+import { getSiteRouteFlags, sitesToBookmarkHtml, sitesToCsv } from './api/sites.js';
+import { handleSpacesApiRequest } from './api/spaces.js';
 
 function safeLog(ctx, promise) {
   if (ctx?.waitUntil && promise && typeof promise.then === 'function') {
     ctx.waitUntil(promise.catch(() => {}));
   }
-}
-
-async function requireAdmin(request, env, options = {}) {
-  const { allowApiToken = false, scope = 'write' } = options;
-
-  if (allowApiToken && hasBearerToken(request)) {
-    const tokenAuth = await validateApiToken(request, env, scope);
-    if (tokenAuth.authenticated) return null;
-    if (tokenAuth.forbidden) {
-      return forbidden('API token scope is insufficient', {
-        requiredScope: scope,
-        tokenScopes: tokenAuth.token?.scopes || [],
-      });
-    }
-  }
-
-  if (await isAdminAuthenticated(request, env)) {
-    return null;
-  }
-
-  if (allowApiToken && !hasBearerToken(request)) {
-    const tokenAuth = await validateApiToken(request, env, scope);
-    if (tokenAuth.authenticated) return null;
-    if (tokenAuth.forbidden) {
-      return forbidden('API token scope is insufficient', {
-        requiredScope: scope,
-        tokenScopes: tokenAuth.token?.scopes || [],
-      });
-    }
-  }
-
-  return unauthorized(allowApiToken ? 'Admin cookie or Bearer token is required' : 'Admin authentication is required', {
-    allowApiToken,
-    requiredScope: allowApiToken ? scope : undefined,
-  });
-}
-
-function csvCell(value) {
-  const text = Array.isArray(value) ? value.join(' ') : String(value ?? '');
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
-function sitesToCsv(sites = []) {
-  const columns = [
-    ['id', 'ID'],
-    ['name', '名称'],
-    ['url', '网址'],
-    ['logo', 'Logo'],
-    ['desc', '描述'],
-    ['catelog', '分类'],
-    ['tags', '标签'],
-    ['visibility', '可见性'],
-    ['sort_order', '排序'],
-    ['hits', '访问次数'],
-    ['last_visit_time', '最近访问时间'],
-    ['last_checked_at', '最近检测时间'],
-    ['last_status_code', '最近检测状态码'],
-    ['last_error', '最近检测错误'],
-    ['create_time', '创建时间'],
-    ['update_time', '更新时间'],
-  ];
-  const rows = [
-    columns.map(([, label]) => csvCell(label)).join(','),
-    ...sites.map((site) => columns.map(([key]) => csvCell(site?.[key])).join(',')),
-  ];
-  return `\uFEFF${rows.join('\r\n')}\r\n`;
-}
-
-function bookmarkHtmlEscape(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function toBookmarkTimestamp(value) {
-  const time = Date.parse(value || '');
-  return Number.isFinite(time) ? Math.floor(time / 1000) : Math.floor(Date.now() / 1000);
-}
-
-function sitesToBookmarkHtml(sites = []) {
-  const groups = new Map();
-  for (const site of sites) {
-    const category = String(site?.catelog || '未分类').trim() || '未分类';
-    if (!groups.has(category)) groups.set(category, []);
-    groups.get(category).push(site);
-  }
-
-  const lines = [
-    '<!DOCTYPE NETSCAPE-Bookmark-file-1>',
-    '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
-    '<TITLE>Bookmarks</TITLE>',
-    '<H1>Bookmarks</H1>',
-    '<DL><p>',
-  ];
-
-  for (const [category, items] of groups.entries()) {
-    lines.push(`  <DT><H3 ADD_DATE="${Math.floor(Date.now() / 1000)}">${bookmarkHtmlEscape(category)}</H3>`);
-    lines.push('  <DL><p>');
-    for (const site of items) {
-      const attrs = [
-        `HREF="${bookmarkHtmlEscape(site?.url)}"`,
-        `ADD_DATE="${toBookmarkTimestamp(site?.create_time)}"`,
-        `LAST_MODIFIED="${toBookmarkTimestamp(site?.update_time)}"`,
-      ];
-      if (site?.logo) attrs.push(`ICON="${bookmarkHtmlEscape(site.logo)}"`);
-      if (Array.isArray(site?.tags) && site.tags.length) attrs.push(`TAGS="${bookmarkHtmlEscape(site.tags.join(','))}"`);
-      lines.push(`    <DT><A ${attrs.join(' ')}>${bookmarkHtmlEscape(site?.name || site?.url || '未命名书签')}</A>`);
-      if (site?.desc) lines.push(`    <DD>${bookmarkHtmlEscape(site.desc)}`);
-    }
-    lines.push('  </DL><p>');
-  }
-
-  lines.push('</DL><p>');
-  return lines.join('\n');
-}
-
-function getPublicApiDiscovery(origin = '') {
-  const baseUrl = origin || '';
-  const endpoints = [
-    {
-      method: 'GET',
-      path: '/api/sites',
-      summary: '公开书签列表',
-      auth: 'none',
-      permission: '按当前 cookie 权限过滤 private/admin_only/unlisted；未解锁访客只返回公开可列出书签',
-      query: {
-        page: '页码，默认 1',
-        pageSize: '每页数量，默认 10',
-        catalog: '分类名称',
-        tag: '标签名称',
-        keyword: '普通关键词',
-        sort: '排序模式，例如 hot/recent',
-        health: '健康筛选：bad/ok/unknown',
-      },
-    },
-    {
-      method: 'POST',
-      path: '/api/sites',
-      summary: '第三方创建书签',
-      auth: 'bearer',
-      permission: '需要后台 cookie 或 Bearer Token write/admin scope；适合浏览器插件和脚本写入',
-      body: {
-        name: '书签名称，必填',
-        url: '书签 URL，必填',
-        desc: '描述，可选',
-        catelog: '分类，可选',
-        tags: '标签，可选，逗号或空格分隔',
-        visibility: '可见性，可选：public/private/unlisted/admin_only',
-      },
-    },
-    {
-      method: 'GET',
-      path: '/api/categories',
-      summary: '平铺分类列表',
-      auth: 'none',
-      permission: '公开可读',
-    },
-    {
-      method: 'GET',
-      path: '/api/categories/tree',
-      summary: '树形分类列表',
-      auth: 'none',
-      permission: '公开可读',
-    },
-    {
-      method: 'GET',
-      path: '/api/tags',
-      summary: '标签列表及使用次数',
-      auth: 'none',
-      permission: '公开可读',
-    },
-    {
-      method: 'GET',
-      path: '/api/search',
-      summary: '全站公开搜索',
-      auth: 'none',
-      permission: '按当前 cookie 权限过滤 private/admin_only/unlisted；未解锁访客只搜索公开可列出书签',
-      query: {
-        q: '搜索词，支持 tag: / cat: / category: / url: / is: 语法',
-        keyword: 'q 的兼容别名',
-        limit: '返回数量，默认 50',
-      },
-    },
-    {
-      method: 'GET',
-      path: '/api/settings/public',
-      summary: '站点公开设置',
-      auth: 'none',
-      permission: '公开可读',
-    },
-    {
-      method: 'POST',
-      path: '/api/ai/chat',
-      summary: 'AI 书签助理',
-      auth: 'none',
-      permission: '按当前 cookie 权限过滤 private/admin_only/unlisted；未解锁访客只检索公开可列出书签',
-      body: {
-        message: '用户问题，必填',
-        previousSites: '上一轮命中书签 ID 数组，可选；后端会重新读取并校验权限',
-      },
-    },
-    {
-      method: 'GET',
-      path: '/api/favicon',
-      summary: '获取指定 URL 的 favicon',
-      auth: 'none',
-      permission: '公开可读',
-      query: {
-        url: '目标网站 URL，必填',
-      },
-    },
-    {
-      method: 'GET',
-      path: '/api/site/preview',
-      summary: '抓取网站标题、描述、favicon，并检测重复',
-      auth: 'conditional',
-      permission: '管理员可用；未登录访客仅在开启公开提交时可用',
-      query: {
-        url: '目标网站 URL，必填',
-      },
-    },
-    {
-      method: 'POST',
-      path: '/api/config/submit',
-      aliases: ['/api/submissions'],
-      summary: '访客提交新书签',
-      auth: 'none',
-      permission: '仅在开启公开提交时可用',
-    },
-    {
-      method: 'POST',
-      path: '/api/submit/suggest-category',
-      summary: '为访客提交推荐分类',
-      auth: 'conditional',
-      permission: '管理员可用；未登录访客仅在开启公开提交时可用',
-    },
-    {
-      method: 'POST',
-      path: '/api/submit/suggest-tags',
-      summary: '为访客提交推荐标签',
-      auth: 'conditional',
-      permission: '管理员可用；未登录访客仅在开启公开提交时可用',
-    },
-  ];
-
-  return {
-    code: 200,
-    name: 'StarNav Public API',
-    version: '1.0.0',
-    baseUrl,
-    description: '公开 API 默认无需 Token；第三方写入可使用 Bearer Token；敏感管理操作仍使用后台 cookie 鉴权。',
-    endpoints,
-    openapi: `${baseUrl}/api/openapi.json`,
-  };
-}
-
-function getPublicOpenApiDocument(origin = '') {
-  const discovery = getPublicApiDiscovery(origin);
-  const paths = {};
-  for (const endpoint of discovery.endpoints) {
-    const pathItem = paths[endpoint.path] || {};
-    pathItem[endpoint.method.toLowerCase()] = {
-      summary: endpoint.summary,
-      description: endpoint.permission,
-      security: endpoint.auth === 'none' ? [] : endpoint.auth === 'bearer' ? [{ bearerAuth: [] }] : [{ cookieAuth: [] }],
-      parameters: Object.entries(endpoint.query || {}).map(([name, description]) => ({
-        name,
-        in: 'query',
-        required: /必填/.test(description),
-        schema: { type: 'string' },
-        description,
-      })),
-      requestBody: endpoint.body ? {
-        required: true,
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              properties: Object.fromEntries(Object.entries(endpoint.body).map(([name, description]) => [name, { type: 'string', description }])),
-            },
-          },
-        },
-      } : undefined,
-      responses: {
-        200: { description: 'OK' },
-        400: { description: 'Bad Request' },
-        401: { description: 'Unauthorized' },
-        403: { description: 'Forbidden' },
-      },
-    };
-    paths[endpoint.path] = pathItem;
-  }
-
-  return {
-    openapi: '3.0.3',
-    info: {
-      title: discovery.name,
-      version: discovery.version,
-      description: discovery.description,
-    },
-    servers: [{ url: origin || '/' }],
-    components: {
-      securitySchemes: {
-        cookieAuth: {
-          type: 'apiKey',
-          in: 'cookie',
-          name: 'admin_session',
-          description: '后台管理操作使用现有 cookie 鉴权；公开 API 不需要鉴权。',
-        },
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'StarNav API Token',
-          description: '第三方写入接口可使用 Authorization: Bearer <token>。',
-        },
-      },
-    },
-    paths,
-  };
 }
 
 export async function handleApiRequest(request, env, ctx) {
@@ -383,17 +67,19 @@ export async function handleApiRequest(request, env, ctx) {
   const segments = path.split('/').filter(Boolean);
   const id = segments.at(-1);
 
-  const isSitesCollectionPath = path === '/config' || path === '/sites';
-  const isSiteSubmitPath = path === '/config/submit' || path === '/submissions';
-  const isSiteReorderPath = path === '/config/reorder' || path === '/sites/reorder';
-  const isSiteImportPath = path === '/config/import' || path === '/sites/import';
-  const isSiteImportPreviewPath = path === '/config/import/preview' || path === '/sites/import/preview';
-  const isSiteBulkPath = path === '/config/bulk' || path === '/sites/bulk';
-  const isSiteExportPath = path === '/config/export' || path === '/sites/export';
-  const isSiteCheckPath = /^\/(?:config|sites)\/\d+\/check$/.test(path);
-  const isSiteItemPath = /^\/(?:config|sites)\/\d+$/.test(path);
-  const isSubmissionsCollectionPath = path === '/pending' || path === '/submissions';
-  const isSubmissionItemPath = /^\/(?:pending|submissions)\/\d+$/.test(path);
+  const {
+    isSitesCollectionPath,
+    isSiteSubmitPath,
+    isSiteReorderPath,
+    isSiteImportPath,
+    isSiteImportPreviewPath,
+    isSiteBulkPath,
+    isSiteExportPath,
+    isSiteCheckPath,
+    isSiteItemPath,
+    isSubmissionsCollectionPath,
+    isSubmissionItemPath,
+  } = getSiteRouteFlags(path);
 
   try {
     if ((path === '/' || path === '/discovery') && method === 'GET') {
@@ -413,6 +99,17 @@ export async function handleApiRequest(request, env, ctx) {
 
     if (path === '/settings/public' && method === 'GET') {
       return jsonResponse({ code: 200, data: await getSystemSettings(env) });
+    }
+
+    if (path === '/spaces' || path.startsWith('/spaces/')) {
+      const response = await handleSpacesApiRequest(request, env, ctx, path, method, id);
+      if (response) return response;
+    }
+
+    if (path === '/system/health' && method === 'GET') {
+      const unauthorized = await requireAdmin(request, env, { allowApiToken: false });
+      if (unauthorized) return unauthorized;
+      return jsonResponse({ code: 200, data: await getSystemHealth(env) });
     }
 
     if (path === '/tokens' && method === 'GET') {
@@ -498,6 +195,23 @@ export async function handleApiRequest(request, env, ctx) {
       return jsonResponse(result);
     }
 
+    if (path === '/ai/admin/analyze' && method === 'POST') {
+      const unauthorized = await requireAdmin(request, env, { allowApiToken: false });
+      if (unauthorized) return unauthorized;
+      const body = await request.json().catch(() => ({}));
+      const type = body?.type || '';
+      const limit = body?.limit || 20;
+      let data;
+      switch (type) {
+        case 'no-tags': data = await analyzeNoTagSites(env, { limit }); break;
+        case 'duplicates': data = await analyzeDuplicateSites(env, { limit }); break;
+        case 'search-gaps': data = await analyzeSearchGaps(env, { limit }); break;
+        case 'category-errors': data = await analyzeCategoryErrors(env, { limit }); break;
+        default: return errorResponse('Invalid analysis type. Use: no-tags, duplicates, search-gaps, category-errors', 400);
+      }
+      return jsonResponse({ code: 200, data });
+    }
+
     if (isSitesCollectionPath && method === 'GET') {
       const page = url.searchParams.get('page') || 1;
       const pageSize = url.searchParams.get('pageSize') || 10;
@@ -513,7 +227,8 @@ export async function handleApiRequest(request, env, ctx) {
         return errorResponse('Private bookmarks require access password', 401);
       }
 
-      const result = await getSites(env, { page, pageSize, catalog, keyword, tag, sort, health, includePrivate: privateAccess, adminAuthed, privateUnlocked: privateAccess });
+      const space = url.searchParams.get('space') || '';
+      const result = await getSites(env, { page, pageSize, catalog, keyword, tag, sort, health, space, includePrivate: privateAccess, adminAuthed, privateUnlocked: privateAccess });
       return jsonResponse({ code: 200, ...result });
     }
     if (isSitesCollectionPath && method === 'POST') {
@@ -537,7 +252,8 @@ export async function handleApiRequest(request, env, ctx) {
     }
 
     if (isSiteSubmitPath && method === 'POST') {
-      if (!isSubmissionEnabled(env)) return errorResponse('Public submission disabled', 403);
+      const settings = await getSystemSettings(env);
+      if (!isSubmissionEnabled(env, settings)) return errorResponse('Public submission disabled', 403);
       const insert = await submitSite(env, await request.json());
       return jsonResponse({ code: 201, message: 'Config submitted successfully, waiting for admin approve', insert }, 201);
     }
@@ -545,7 +261,10 @@ export async function handleApiRequest(request, env, ctx) {
     if (path === '/site/preview' && method === 'GET') {
       const adminAuthed = await isAdminAuthenticated(request, env);
       const tokenAuth = adminAuthed ? { authenticated: true } : await validateApiToken(request, env, 'write');
-      if (!adminAuthed && !tokenAuth.authenticated && !isSubmissionEnabled(env)) return errorResponse('Public submission disabled', 403);
+      if (!adminAuthed && !tokenAuth.authenticated) {
+        const settings = await getSystemSettings(env);
+        if (!isSubmissionEnabled(env, settings)) return errorResponse('Public submission disabled', 403);
+      }
       if (tokenAuth.forbidden) return errorResponse('API token scope is insufficient', 403);
       const target = url.searchParams.get('url') || '';
       if (!target) return errorResponse('url parameter is required', 400);
@@ -561,7 +280,10 @@ export async function handleApiRequest(request, env, ctx) {
     if (path === '/submit/suggest-category' && method === 'POST') {
       const adminAuthed = await isAdminAuthenticated(request, env);
       const tokenAuth = adminAuthed ? { authenticated: true } : await validateApiToken(request, env, 'write');
-      if (!adminAuthed && !tokenAuth.authenticated && !isSubmissionEnabled(env)) return errorResponse('Public submission disabled', 403);
+      if (!adminAuthed && !tokenAuth.authenticated) {
+        const settings = await getSystemSettings(env);
+        if (!isSubmissionEnabled(env, settings)) return errorResponse('Public submission disabled', 403);
+      }
       if (tokenAuth.forbidden) return errorResponse('API token scope is insufficient', 403);
       const body = await request.json();
       const data = await suggestCategoryForSite(env, body);
@@ -571,7 +293,10 @@ export async function handleApiRequest(request, env, ctx) {
     if (path === '/submit/suggest-tags' && method === 'POST') {
       const adminAuthed = await isAdminAuthenticated(request, env);
       const tokenAuth = adminAuthed ? { authenticated: true } : await validateApiToken(request, env, 'write');
-      if (!adminAuthed && !tokenAuth.authenticated && !isSubmissionEnabled(env)) return errorResponse('Public submission disabled', 403);
+      if (!adminAuthed && !tokenAuth.authenticated) {
+        const settings = await getSystemSettings(env);
+        if (!isSubmissionEnabled(env, settings)) return errorResponse('Public submission disabled', 403);
+      }
       if (tokenAuth.forbidden) return errorResponse('API token scope is insufficient', 403);
       const body = await request.json();
       const data = await suggestTagsForSite(env, {
@@ -1030,17 +755,6 @@ export async function handleApiRequest(request, env, ctx) {
 
     return errorResponse('Not Found', 404);
   } catch (error) {
-    if (error?.code === 'DUPLICATE_URL') {
-      const details = {
-        duplicate: error.duplicate || null,
-        scope: error.scope || 'site',
-      };
-      const response = conflict(error.message, details);
-      const payload = await response.json();
-      return jsonResponse({ ...payload, ...details }, 409);
-    }
-    const message = error?.message || 'Internal Server Error';
-    const status = /required|invalid|not found|children|sites|parent|must be|valid https url/i.test(message) ? 400 : 500;
-    return errorResponse(status === 500 ? `Internal Server Error: ${message}` : message, status);
+    return handleApiError(error);
   }
 }

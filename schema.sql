@@ -1,3 +1,17 @@
+-- 空间表（支持多空间/多导航页）
+CREATE TABLE IF NOT EXISTS spaces (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL UNIQUE,
+  icon TEXT,
+  color TEXT,
+  description TEXT,
+  visibility TEXT NOT NULL DEFAULT 'public',
+  sort_order INTEGER NOT NULL DEFAULT 9999,
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 网站配置表
 CREATE TABLE IF NOT EXISTS sites (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -7,6 +21,7 @@ CREATE TABLE IF NOT EXISTS sites (
   desc TEXT,
   catelog TEXT NOT NULL,
   category_id INTEGER,
+  space_id INTEGER,
   visibility TEXT NOT NULL DEFAULT 'public',
   sort_order INTEGER NOT NULL DEFAULT 9999,
   hits INTEGER DEFAULT 0,
@@ -15,7 +30,9 @@ CREATE TABLE IF NOT EXISTS sites (
   last_status_code INTEGER,
   last_error TEXT,
   create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE SET NULL,
+  FOREIGN KEY(space_id) REFERENCES spaces(id) ON DELETE CASCADE
 );
 
 -- 待审核网站表（审核中心：支持 pending/approved/rejected 状态）
@@ -45,18 +62,22 @@ CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
   parent_id INTEGER,
+  space_id INTEGER,
   sort_order INTEGER NOT NULL DEFAULT 9999,
   icon TEXT,
   color TEXT,
   description TEXT,
   create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(parent_id) REFERENCES categories(id) ON DELETE SET NULL
+  FOREIGN KEY(parent_id) REFERENCES categories(id) ON DELETE SET NULL,
+  FOREIGN KEY(space_id) REFERENCES spaces(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
+CREATE INDEX IF NOT EXISTS idx_categories_space ON categories(space_id);
 CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order, name);
 CREATE INDEX IF NOT EXISTS idx_sites_catelog ON sites(catelog);
+CREATE INDEX IF NOT EXISTS idx_sites_space ON sites(space_id);
 CREATE INDEX IF NOT EXISTS idx_sites_sort ON sites(catelog, sort_order, create_time);
 
 -- 标签表

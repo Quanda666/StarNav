@@ -11,10 +11,10 @@ import { errorResponse } from './lib/utils.js';
 export default {
   async fetch(request, env, ctx) {
     try {
-      const pwaResponse = handlePwaRequest(request);
-      if (pwaResponse) return pwaResponse;
-
       await ensureSchema(env);
+
+      const pwaResponse = await handlePwaRequest(request, env);
+      if (pwaResponse) return pwaResponse;
 
       const url = new URL(request.url);
 

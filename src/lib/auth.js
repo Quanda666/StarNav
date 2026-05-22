@@ -185,6 +185,10 @@ function sanitizeApiTokenRecord(record = {}) {
     scopes: normalizeTokenScopes(record.scopes),
     createdAt: record.createdAt || null,
     lastUsedAt: record.lastUsedAt || null,
+    lastUsedIp: record.lastUsedIp || null,
+    useCount: record.useCount || 0,
+    expiresAt: record.expiresAt || null,
+    note: record.note || null,
     revokedAt: record.revokedAt || null,
   };
 }
@@ -198,6 +202,8 @@ function sanitizeApiTokenRecord(record = {}) {
  * @param {object} [input] Token 创建参数。
  * @param {string} [input.name] Token 名称。
  * @param {ApiTokenScope[]|string} [input.scopes] 授权范围，默认包含 `read` 和 `write`。
+ * @param {string|null} [input.expiresAt] 过期时间。
+ * @param {string} [input.note] 备注。
  * @returns {Promise<{token: string, data: ApiTokenPublicRecord}>}
  */
 export async function createApiToken(env, input = {}) {
@@ -213,6 +219,10 @@ export async function createApiToken(env, input = {}) {
     tokenHash,
     createdAt: now,
     lastUsedAt: null,
+    lastUsedIp: null,
+    useCount: 0,
+    expiresAt: input?.expiresAt || null,
+    note: String(input?.note || '').trim().slice(0, 200) || null,
     revokedAt: null,
   };
   await env.NAV_AUTH.put(`${API_TOKEN_PREFIX}${id}`, JSON.stringify(record));
@@ -293,15 +303,39 @@ export async function validateApiToken(request, env, requiredScope = 'write') {
     if (record?.revokedAt || !record?.tokenHash) continue;
     if (!(await constantTimeCompare(tokenHash, record.tokenHash))) continue;
 
+    // 检查是否过期
+    if (record.expiresAt && new Date(record.expiresAt) < new Date()) {
+      continue;
+    }
+
     const scopes = normalizeTokenScopes(record.scopes);
-    if (requiredScope && !scopes.includes(requiredScope) && !scopes.includes('admin')) {
+    let hasPermission = scopes.includes('admin') || (requiredScope && scopes.includes(requiredScope));
+    if (!hasPermission && requiredScope) {
+      if (requiredScope === 'write' && (scopes.includes('write:sites') || scopes.includes('write'))) {
+        hasPermission = true;
+      } else if (requiredScope === 'read' && (scopes.includes('read:sites') || scopes.includes('read'))) {
+        hasPermission = true;
+      } else if (requiredScope.startsWith('write:') && scopes.includes('write')) {
+        hasPermission = true;
+      } else if (requiredScope.startsWith('read:') && scopes.includes('read')) {
+        hasPermission = true;
+      }
+    }
+
+    if (requiredScope && !hasPermission) {
       return { authenticated: false, forbidden: true, token: sanitizeApiTokenRecord(record) };
     }
 
-    // Token 鉴权成功后可靠写入最近使用时间。
+    // Token 鉴权成功后可靠写入最近使用时间、IP 和使用次数。
     // 这里不能使用未托管的后台 Promise，否则在 Cloudflare Workers 请求结束时可能被中止，
     // 导致管理页一直显示“从未使用”。
-    const updatePayload = { ...record, lastUsedAt: new Date().toISOString() };
+    const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Real-IP') || null;
+    const updatePayload = {
+      ...record,
+      lastUsedAt: new Date().toISOString(),
+      lastUsedIp: ip,
+      useCount: (record.useCount || 0) + 1
+    };
     await env.NAV_AUTH.put(key.name, JSON.stringify(updatePayload));
 
     return { authenticated: true, token: sanitizeApiTokenRecord(updatePayload) };

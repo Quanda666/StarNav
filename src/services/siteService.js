@@ -2,6 +2,7 @@ import { getFavicon } from '../lib/favicon.js';
 import { cleanText, normalizeSortOrder, nullableText } from '../lib/utils.js';
 import { upsertCategoryByName } from './categoryService.js';
 import { PRIVATE_BOOKMARK_CATEGORY } from './privateBookmarkService.js';
+import { resolveSpaceId } from './spaceService.js';
 import { attachTagsToSites, getSiteIdsByTag, normalizeTags, setSiteTags } from './tagService.js';
 
 /**
@@ -361,6 +362,7 @@ const SITE_SELECT_COLUMNS = `
   s.desc,
   COALESCE(c.name, s.catelog) AS catelog,
   s.category_id,
+  s.space_id,
   s.visibility,
   s.sort_order,
   s.hits,
@@ -372,7 +374,15 @@ const SITE_SELECT_COLUMNS = `
   s.update_time
 `;
 
-async function getPrependSortOrder(env) {
+async function getPrependSortOrder(env, spaceId = null) {
+  const normalizedSpaceId = Number(spaceId);
+  if (Number.isFinite(normalizedSpaceId) && normalizedSpaceId > 0) {
+    const row = await env.NAV_DB.prepare('SELECT MIN(sort_order) AS min_sort_order FROM sites WHERE space_id = ?').bind(normalizedSpaceId).first();
+    const minSortOrder = Number(row?.min_sort_order);
+    if (!Number.isFinite(minSortOrder)) return 9999;
+    return Math.max(-2147483648, Math.round(minSortOrder) - 10);
+  }
+
   const row = await env.NAV_DB.prepare('SELECT MIN(sort_order) AS min_sort_order FROM sites').first();
   const minSortOrder = Number(row?.min_sort_order);
   if (!Number.isFinite(minSortOrder)) return 9999;
@@ -392,12 +402,16 @@ function normalizeSitePayload(config) {
   const sort_order = normalizeSortOrder(config?.sort_order);
   const visibility = normalizeVisibility(config?.visibility, catelog);
   const tags = normalizeTags(config?.tags || config?.tag_names);
+  const space = cleanText(config?.space || config?.space_slug);
+  const space_id = config?.space_id === undefined || config?.space_id === null || config?.space_id === ''
+    ? null
+    : Number(config.space_id);
 
   if (!name || !url || !catelog) {
     throw new Error('Name, URL and Catelog are required');
   }
 
-  return { name, url, logo, desc, catelog, visibility, sort_order, tags };
+  return { name, url, logo, desc, catelog, visibility, sort_order, tags, space, space_id: Number.isFinite(space_id) && space_id > 0 ? space_id : null };
 }
 
 /**
@@ -419,16 +433,27 @@ function normalizeSitePayload(config) {
  * @param {boolean} [options.privateUnlocked=options.includePrivate] 是否已解锁私密书签。
  * @returns {Promise<{data: SiteRecord[], total: number, page: number, pageSize: number}>}
  */
-export async function getSites(env, { page = 1, pageSize = 10, catalog = '', keyword = '', tag = '', sort = '', health = '', includePrivate = true, adminAuthed = false, privateUnlocked = includePrivate } = {}) {
+export async function getSites(env, { page = 1, pageSize = 10, catalog = '', keyword = '', tag = '', sort = '', health = '', space = '', space_id = null, includePrivate = true, adminAuthed = false, privateUnlocked = includePrivate } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.max(1, Math.min(100, Number(pageSize) || 10));
   const offset = (safePage - 1) * safePageSize;
+  const hasSpaceFilter = Boolean(space_id || cleanText(space));
+  const resolvedSpaceId = hasSpaceFilter ? (space_id ? Number(space_id) : await resolveSpaceId(env, space)) : null;
   const orderSql = sort === 'manual'
     ? 'ORDER BY s.sort_order ASC, datetime(s.create_time) DESC, s.id DESC'
     : 'ORDER BY datetime(s.create_time) DESC, s.id DESC';
 
   const where = [];
   const binds = [];
+
+  if (Number.isFinite(resolvedSpaceId) && resolvedSpaceId > 0) {
+    if (cleanText(space) === 'default') {
+      where.push('(s.space_id = ? OR s.space_id IS NULL)');
+    } else {
+      where.push('s.space_id = ?');
+    }
+    binds.push(resolvedSpaceId);
+  }
 
   if (tag) {
     const taggedSiteIds = await getSiteIdsByTag(env, tag);
@@ -499,13 +524,29 @@ export async function getSites(env, { page = 1, pageSize = 10, catalog = '', key
  * @param {object} env Cloudflare Workers 环境绑定，需包含 `NAV_DB`。
  * @returns {Promise<SiteRecord[]>}
  */
-export async function getAllSites(env) {
+export async function getAllSites(env, { space = '', space_id = null } = {}) {
+  const hasSpaceFilter = Boolean(space_id || cleanText(space));
+  const resolvedSpaceId = hasSpaceFilter ? (space_id ? Number(space_id) : await resolveSpaceId(env, space)) : null;
+  const where = [];
+  const binds = [];
+
+  if (Number.isFinite(resolvedSpaceId) && resolvedSpaceId > 0) {
+    if (cleanText(space) === 'default') {
+      where.push('(s.space_id = ? OR s.space_id IS NULL)');
+    } else {
+      where.push('s.space_id = ?');
+    }
+    binds.push(resolvedSpaceId);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const { results } = await env.NAV_DB.prepare(`
     SELECT ${SITE_SELECT_COLUMNS}
     FROM sites s
     LEFT JOIN categories c ON c.id = s.category_id
+    ${whereSql}
     ORDER BY s.sort_order ASC, datetime(s.create_time) DESC, s.id DESC
-  `).all();
+  `).bind(...binds).all();
   return attachTagsToSites(env, results || []);
 }
 
@@ -1001,19 +1042,20 @@ function buildDuplicateError(duplicate, scope = 'site') {
  */
 export async function createSite(env, config, { force = false } = {}) {
   const site = normalizeSitePayload(config);
+  const spaceId = site.space_id || await resolveSpaceId(env, site.space);
   if (!force) {
     const duplicate = await findDuplicateSite(env, site.url);
     if (duplicate) throw buildDuplicateError(duplicate, 'create');
   }
   if (!hasExplicitSortOrder(config)) {
-    site.sort_order = await getPrependSortOrder(env);
+    site.sort_order = await getPrependSortOrder(env, spaceId);
   }
   const category = await upsertCategoryByName(env, site.catelog, site.sort_order);
 
   const result = await env.NAV_DB.prepare(`
-    INSERT INTO sites (name, url, logo, desc, catelog, category_id, visibility, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, site.visibility, site.sort_order).run();
+    INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, spaceId, site.visibility, site.sort_order).run();
 
   const siteId = result?.meta?.last_row_id;
   if (siteId) await setSiteTags(env, siteId, site.tags);
@@ -1046,13 +1088,14 @@ export async function updateSite(env, id, config, { force = false } = {}) {
     const duplicate = await findDuplicateSite(env, site.url, { excludeId: id });
     if (duplicate) throw buildDuplicateError(duplicate, 'update');
   }
-  const category = await upsertCategoryByName(env, site.catelog, site.sort_order);
+  const spaceId = site.space_id || existing.space_id || await resolveSpaceId(env, site.space);
+  const category = await upsertCategoryByName(env, site.catelog, site.sort_order, spaceId);
 
   const result = await env.NAV_DB.prepare(`
     UPDATE sites
-    SET name = ?, url = ?, logo = ?, desc = ?, catelog = ?, category_id = ?, visibility = ?, sort_order = ?, update_time = CURRENT_TIMESTAMP
+    SET name = ?, url = ?, logo = ?, desc = ?, catelog = ?, category_id = ?, space_id = ?, visibility = ?, sort_order = ?, update_time = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, site.visibility, site.sort_order, id).run();
+  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, spaceId, site.visibility, site.sort_order, id).run();
 
   await setSiteTags(env, id, site.tags);
 
@@ -1415,14 +1458,15 @@ export async function approvePendingSite(env, id, { force = false } = {}) {
     if (duplicate) throw buildDuplicateError(duplicate, 'approve');
   }
 
-  const sortOrder = await getPrependSortOrder(env);
-  const category = await upsertCategoryByName(env, config.catelog, sortOrder);
+  const spaceId = await resolveSpaceId(env, null); // 批准后默认进入默认空间
+  const sortOrder = await getPrependSortOrder(env, spaceId);
+  const category = await upsertCategoryByName(env, config.catelog, sortOrder, spaceId);
 
   const visibility = normalizeVisibility(config.visibility, config.catelog);
   const result = await env.NAV_DB.prepare(`
-    INSERT INTO sites (name, url, logo, desc, catelog, category_id, visibility, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(config.name, config.url, config.logo, config.desc, config.catelog, category?.id || null, visibility, sortOrder).run();
+    INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(config.name, config.url, config.logo, config.desc, config.catelog, category?.id || null, spaceId, visibility, sortOrder).run();
 
   const siteId = result?.meta?.last_row_id;
   if (siteId) await setSiteTags(env, siteId, parseStoredTags(config.tags));
@@ -1634,11 +1678,12 @@ export async function importSites(env, jsonData, { mode = 'merge' } = {}) {
         continue;
       }
       seenKeys.add(key);
-      const category = await upsertCategoryByName(env, site.catelog, site.sort_order);
+      const spaceId = await resolveSpaceId(env, site.space);
+      const category = await upsertCategoryByName(env, site.catelog, site.sort_order, spaceId);
       const result = await env.NAV_DB.prepare(`
-        INSERT INTO sites (name, url, logo, desc, catelog, category_id, visibility, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, site.visibility, site.sort_order).run();
+        INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, spaceId, site.visibility, site.sort_order).run();
       const siteId = result?.meta?.last_row_id;
       if (siteId) await setSiteTags(env, siteId, site.tags);
       importedSites += 1;

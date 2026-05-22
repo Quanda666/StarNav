@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿# StarNav 第一阶段开发规划与巡查记录
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿# StarNav 第一阶段开发规划与巡查记录
 
 > 用途：记录第一阶段核心功能开发、巡查、修正与收尾情况。
 >
@@ -719,6 +719,8 @@
   - 默认布局。（本轮完成：后台系统设置新增“默认首页布局”，支持卡片、列表、分组、瀑布、概览；访客本地已选择布局时优先使用本地偏好）
   - 默认主题色。（本轮完成：后台系统设置新增“默认主题色”，支持星空蓝、森林绿、暮光紫、蔷薇红、琥珀金；访客本地已选择主题色时优先使用本地偏好）
   - 首页顶部横幅。（本轮完成：后台系统设置新增“显示首页顶部横幅”开关，可控制首页 hero 区域是否渲染）
+  - 前台公开提交入口。（本轮完成：后台系统设置新增“显示前台公开提交入口”开关；关闭后前台不再渲染提交弹窗，访客提交、抓取预览、提交分类/标签推荐接口均返回 403，管理员和 Bearer Token 写入能力不受影响）
+  - 前台私人书签入口。（本轮完成：后台系统设置新增“显示前台私人书签入口”开关；关闭后未解锁访客侧栏不展示“私人书签”分类入口，已解锁访客和管理员仍可看到并访问）
 
 - [x] 节日主题
   - 特定日期展示轻量节日效果。
@@ -755,8 +757,8 @@
   - `/api/settings/public` GET — 已公开，返回站点名称、副标题、图标等公开设置。
   - `/api/ai/chat` POST — 已公开，AI 书签助理聊天接口。
   - `/api/favicon` GET — 已公开，获取指定 URL 的 favicon。
-  - `/api/site/preview` GET — 支持后台 cookie、Bearer Token 或公开提交开启时使用，抓取标题、描述、favicon 并查重。
-  - `/api/submit/suggest-category` POST / `/api/submit/suggest-tags` POST — 支持后台 cookie、Bearer Token 或公开提交开启时使用，供插件推荐分类和标签。
+  - `/api/site/preview` GET — 支持后台 cookie、Bearer Token 或公开提交开启时使用，抓取标题、描述、favicon 并查重；公开提交关闭时未登录访客返回 403。
+  - `/api/submit/suggest-category` POST / `/api/submit/suggest-tags` POST — 支持后台 cookie、Bearer Token 或公开提交开启时使用，供插件推荐分类和标签；公开提交关闭时未登录访客返回 403。
   - `/api/sites/check-duplicate` GET — 支持后台 cookie 或 Bearer Token 查重。
   - `/api` GET / `/api/discovery` GET — API 发现端点，返回公开 / 条件公开端点清单、鉴权状态、权限说明、参数说明。
   - `/api/openapi.json` GET — OpenAPI 3.0.3 描述，便于第三方工具导入或生成客户端。

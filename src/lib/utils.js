@@ -133,7 +133,12 @@ export function nullableText(value) {
   return cleaned || null;
 }
 
-export function isSubmissionEnabled(env) {
+export function isSubmissionEnabled(env, settings = null) {
+  const settingFlag = settings?.publicSubmissionEnabled;
+  if (settingFlag !== undefined && settingFlag !== null && settingFlag !== '') {
+    return String(settingFlag).trim().toLowerCase() === 'true';
+  }
+
   const flag = env.ENABLE_PUBLIC_SUBMISSION;
   if (flag === undefined || flag === null) return true;
   return String(flag).trim().toLowerCase() === 'true';

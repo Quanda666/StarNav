@@ -5,7 +5,9 @@
   "version": "1.0.0",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "contextMenus",
+    "notifications"
   ],
   "host_permissions": [
     "http://*/*",
@@ -17,6 +19,9 @@
     "48": "icons/starnav.ico",
     "128": "icons/starnav.ico"
   },
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_title": "收藏到 StarNav",
     "default_popup": "popup.html",
@@ -25,6 +30,15 @@
       "32": "icons/starnav.ico",
       "48": "icons/starnav.ico",
       "128": "icons/starnav.ico"
+    }
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F",
+        "mac": "MacCtrl+Shift+F"
+      },
+      "description": "打开 StarNav 收藏弹窗"
     }
   },
   "options_page": "options.html"

@@ -15,13 +15,12 @@ import {
   verifyPrivateBookmarkPassword,
 } from '../services/privateBookmarkService.js';
 
-function flattenCategories(nodes, level = 0, output = []) {
-  nodes.forEach((node) => {
-    output.push({ ...node, level });
-    flattenCategories(node.children || [], level + 1, output);
-  });
-  return output;
-}
+import { renderPrivateBookmarkUnlockBox, renderPrivateBookmarkPasswordPage } from './home/privateAccess.js';
+import { flattenCategories, getAncestorNames, renderCategoryLinks } from './home/categories.js';
+import { renderSiteCard, renderGroupedSites, renderDashboardSites, sortSitesForView, renderSortLinks } from './home/siteCard.js';
+import { renderAnnouncementModal } from './home/announcement.js';
+import { renderFrontAdminModal, renderSubmitModal } from './home/modals.js';
+import { frontAdminScript, dragScript, myUsageScript } from './home/scripts.js';
 
 export async function renderHomePage(request, env, ctx) {
   const i18n = resolveI18n(request);
@@ -32,12 +31,15 @@ export async function renderHomePage(request, env, ctx) {
   const sortMode = ['hot', 'recent'].includes(requestedSort) ? requestedSort : '';
   const tagFilter = (url.searchParams.get('tag') || '').trim();
   const isPrivateCatalog = isPrivateBookmarkCategory(catalog);
-  const [sites, categoryTree, adminAuthed, visitorPrivateAccess, systemSettings] = await Promise.all([
-    getAllSites(env),
-    getCategoryTree(env),
+  const [adminAuthed, visitorPrivateAccess, systemSettings] = await Promise.all([
     isAdminAuthenticated(request, env),
     hasPrivateBookmarkAccess(request, env),
     getSystemSettings(env),
+  ]);
+  const currentSpaceSlug = '';
+  const [sites, categoryTree] = await Promise.all([
+    getAllSites(env),
+    getCategoryTree(env),
   ]);
 
   if (request.method === 'POST') {
@@ -73,10 +75,6 @@ export async function renderHomePage(request, env, ctx) {
     return renderPrivateBookmarkPasswordPage({ catalog, error: t('passwordError'), i18n });
   }
 
-  if (!sites.length) {
-    return htmlResponse('No site configuration found.', 404);
-  }
-
   const privateUnlocked = adminAuthed || visitorPrivateAccess;
   const visibleSites = sites.filter((site) => canListSite(site, { adminAuthed, privateUnlocked }));
   const flatCategories = flattenCategories(categoryTree);
@@ -92,7 +90,8 @@ export async function renderHomePage(request, env, ctx) {
     : baseCurrentSites;
   const canDragSort = adminAuthed && !sortMode && !tagFilter && !privateCatalogLocked;
   const currentSites = sortSitesForView(taggedCurrentSites, sortMode);
-  const submissionEnabled = isSubmissionEnabled(env);
+  const submissionEnabled = isSubmissionEnabled(env, systemSettings);
+  const privateBookmarksVisible = systemSettings.privateBookmarksVisible !== 'false';
   const siteName = systemSettings.siteName || th('appName');
   const siteSubtitle = systemSettings.siteSubtitle || th('heroSubtitle');
   const siteIcon = sanitizeImageUrl(systemSettings.siteIcon) || sanitizeUrl(systemSettings.siteIcon) || '/pwa-icon.svg';
@@ -119,11 +118,16 @@ export async function renderHomePage(request, env, ctx) {
     buttonText: systemSettings.announcementButtonText || '我知道了',
   };
 
+  const allLinkHref = '?';
+  const spaceSwitcher = '';
+
   const categoryLinks = renderCategoryLinks(categoryTree, {
     catalog,
     catalogExists,
+    space: currentSpaceSlug,
     expandedNames: new Set(catalogExists ? getAncestorNames(categoryTree, catalog) : []),
     privateUnlocked,
+    privateBookmarksVisible,
   });
 
   const datalistOptions = datalistCategoryNames.map((cat) => `<option value="${escapeHTML(cat)}">`).join('');
@@ -134,7 +138,7 @@ export async function renderHomePage(request, env, ctx) {
     : (catalogExists
       ? `${catalog}${tagLabel ? ` · ${tagLabel}` : ''}${sortLabel ? ` · ${sortLabel}` : ''} · ${t('sitesCount', { count: currentSites.length })}`
       : `${tagLabel || sortLabel || '全部收藏'}${tagLabel && sortLabel ? ` · ${sortLabel}` : ''} · ${t('sitesCount', { count: currentSites.length })}`);
-  const sortLinks = renderSortLinks({ catalog, tag: tagFilter, sortMode, disabled: privateCatalogLocked, i18n });
+  const sortLinks = renderSortLinks({ catalog, tag: tagFilter, sortMode, space: currentSpaceSlug, disabled: privateCatalogLocked, i18n });
   const siteIndex = visibleSites.map((site) => ({
     id: site.id,
     name: site.name || '',
@@ -155,7 +159,7 @@ export async function renderHomePage(request, env, ctx) {
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHTML(siteName)}</title>
-  <meta name="theme-color" content="#254267">
+  <meta name="theme-color" content="${escapeHTML(defaultAccent === 'green' ? '#265c44' : (defaultAccent === 'purple' ? '#5b3b8c' : (defaultAccent === 'rose' ? '#9f3758' : (defaultAccent === 'amber' ? '#8a5a16' : '#254267'))))}">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="${escapeHTML(siteName)}">
@@ -202,7 +206,8 @@ export async function renderHomePage(request, env, ctx) {
     #expandSidebar{transition:opacity .3s ease,transform .3s ease;opacity:0;pointer-events:none;transform:translateX(-10px)}.sidebar-collapsed #expandSidebar{opacity:1;pointer-events:auto;transform:translateX(0)}
     .site-card.result-active{outline:2px solid var(--nav-accent);outline-offset:2px;box-shadow:0 0 0 4px color-mix(in srgb,var(--nav-accent) 18%,transparent)}
     .site-card{position:relative}.fav-btn{position:absolute;top:.5rem;right:.5rem;z-index:5;width:1.75rem;height:1.75rem;display:flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.06);font-size:.85rem;line-height:1;cursor:pointer;opacity:0;transition:opacity .18s ease,transform .18s ease,background .18s ease}.site-card:hover .fav-btn,.fav-btn.is-fav{opacity:1}.fav-btn:hover{transform:scale(1.15);background:rgba(255,255,255,1)}.fav-btn.is-fav{color:#f59e0b;opacity:1}
-    .usage-chip{display:inline-flex;align-items:center;gap:.35rem;border-radius:999px;padding:.3rem .65rem;background:var(--nav-primary-50);color:var(--nav-primary);cursor:pointer;transition:background .18s ease,box-shadow .18s ease;max-width:10rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.usage-chip:hover{background:color-mix(in srgb,var(--nav-primary) 14%,white);box-shadow:0 2px 8px rgba(0,0,0,.08)}.usage-chip .chip-remove{margin-left:.2rem;opacity:.5;font-size:.7rem;cursor:pointer}.usage-chip .chip-remove:hover{opacity:1;color:#ef4444}
+    .usage-chip{display:inline-flex;flex-shrink:0;align-items:center;gap:.35rem;border-radius:999px;padding:.3rem .65rem;background:var(--nav-primary-50);color:var(--nav-primary);cursor:pointer;transition:background .18s ease,box-shadow .18s ease;max-width:10rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.usage-chip:hover{background:color-mix(in srgb,var(--nav-primary) 14%,white);box-shadow:0 2px 8px rgba(0,0,0,.08)}.usage-chip .chip-remove{margin-left:.2rem;opacity:.5;font-size:.7rem;cursor:pointer}.usage-chip .chip-remove:hover{opacity:1;color:#ef4444}
+    .scrollbar-hide::-webkit-scrollbar{display:none} .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none} .snap-x{scroll-snap-type:x mandatory} .snap-x > *{scroll-snap-align:start}
     .usage-card .usage-empty{display:none}.usage-card:not(:has(.usage-chip)) .usage-empty{display:block}
     html.dark .fav-btn{background:rgba(30,41,59,.85);border-color:rgba(148,163,184,.28);color:#94a3b8}html.dark .fav-btn.is-fav{color:#fbbf24}html.dark .fav-btn:hover{background:rgba(30,41,59,1)}
     html.dark .usage-card{background:rgba(15,23,42,.86)!important;border-color:rgba(148,163,184,.24)!important}html.dark .usage-chip{background:rgba(37,99,235,.18);color:#93c5fd}html.dark .usage-chip:hover{background:rgba(37,99,235,.28)}
@@ -351,8 +356,8 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
           <button id="closeSidebar" class="lg:hidden p-1.5 text-2xl leading-none text-gray-600">×</button>
         </div>
       </div>
-      <div class="mb-6">
-        <input id="searchInput" type="text" placeholder="搜索书签..." class="w-full px-4 py-2 border border-primary-100 rounded-lg">
+      <div class="mb-6 sticky top-0 bg-white z-10 pt-2 pb-2 -mt-2">
+        <input id="searchInput" type="text" placeholder="搜索书签..." class="w-full px-4 py-2 border border-primary-100 rounded-lg shadow-sm">
         <div id="searchHistoryBox" class="mt-3 hidden">
           <div class="mb-1.5 flex items-center justify-between text-[11px] text-gray-500">
             <span>最近搜索</span>
@@ -361,22 +366,32 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
           <div id="searchHistoryList" class="flex flex-wrap gap-1.5"></div>
         </div>
       </div>
-      <h3 class="text-sm font-medium text-gray-500 uppercase mb-3">${th('categoryNav')}</h3>
+      ${spaceSwitcher}
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-medium text-gray-500 uppercase">${th('categoryNav')}</h3>
+        <input type="text" id="categoryFilterInput" placeholder="过滤分类..." class="w-28 px-2 py-1 text-xs border border-primary-100 rounded bg-gray-50 focus:bg-white outline-none focus:border-primary-300 transition dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
+      </div>
       <div class="space-y-1" id="categoryList">
-        <a href="?" class="category-all-button flex items-center px-3 py-2 rounded-lg w-full">${th('all')}</a>
+        <a href="${escapeHTML(allLinkHref)}" class="category-all-button flex items-center px-3 py-2 rounded-lg w-full">${th('all')}</a>
         ${categoryLinks}
       </div>
       <div class="mt-8 pt-6 border-t border-gray-200">
         ${submissionEnabled ? `<button id="addSiteBtnSidebar" class="w-full px-4 py-2 bg-accent-500 text-white rounded-lg">${th('addBookmark')}</button>` : `<div class="text-xs text-primary-600 border rounded-lg p-3">${th('submissionClosed')}</div>`}
         ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/" class="mt-3"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="w-full rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100">${th('exitPrivate')}</button></form>` : ''}
-        ${adminAuthed ? `<div class="mt-4 rounded-lg border border-accent-200 bg-accent-50 p-3 text-sm text-accent-700">${th('adminSortMode')}</div>` : ''}
         ${blogLink}
-        <a href="/admin" target="_blank" class="mt-4 flex items-center px-4 py-2 text-gray-600 hover:text-primary-500 transition duration-300">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A8.966 8.966 0 0112 15c2.21 0 4.236.8 5.879 2.129M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a9 9 0 100 18 9 9 0 000-18z" />
-          </svg>
-          ${th('adminPanel')}
+        <a href="/admin" target="_blank" class="mt-4 flex items-center justify-between gap-3 px-4 py-2 text-gray-600 hover:text-primary-500 transition duration-300">
+          <span class="flex min-w-0 items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A8.966 8.966 0 0112 15c2.21 0 4.236.8 5.879 2.129M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a9 9 0 100 18 9 9 0 000-18z" />
+            </svg>
+            <span class="truncate">${th('adminPanel')}</span>
+          </span>
+          ${adminAuthed ? `<span class="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-sky-500 text-white shadow-sm ring-2 ring-sky-100" title="管理员已认证，可在前台编辑和拖拽排序" aria-label="管理员已认证">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M16.704 5.296a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414l2.543 2.543 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+          </span>` : ''}
         </a>
       </div>
     </div>
@@ -396,20 +411,20 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
 
     <section class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <div id="myUsageSection" class="hidden mb-6 grid gap-4 md:grid-cols-2">
-        <div class="usage-card rounded-2xl border border-primary-100/60 bg-white/80 p-4 shadow-sm" data-usage="favorites">
+        <div class="usage-card rounded-2xl border border-primary-100/60 bg-white/80 p-4 shadow-sm min-w-0" data-usage="favorites">
           <div class="mb-2 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-700">⭐ 我的收藏</h3>
             <button type="button" data-usage-clear="favorites" class="text-[11px] text-gray-400 hover:text-primary-600">清空</button>
           </div>
-          <div data-usage-list="favorites" class="flex flex-wrap gap-1.5 text-xs"></div>
+          <div data-usage-list="favorites" class="flex gap-2 text-xs overflow-x-auto pb-1 scrollbar-hide snap-x"></div>
           <p class="usage-empty mt-1 text-[11px] text-gray-400">点击任意书签卡片右上角的 ⭐ 加入收藏</p>
         </div>
-        <div class="usage-card rounded-2xl border border-primary-100/60 bg-white/80 p-4 shadow-sm" data-usage="recent">
+        <div class="usage-card rounded-2xl border border-primary-100/60 bg-white/80 p-4 shadow-sm min-w-0" data-usage="recent">
           <div class="mb-2 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-700">🕘 最近访问</h3>
             <button type="button" data-usage-clear="recent" class="text-[11px] text-gray-400 hover:text-primary-600">清空</button>
           </div>
-          <div data-usage-list="recent" class="flex flex-wrap gap-1.5 text-xs"></div>
+          <div data-usage-list="recent" class="flex gap-2 text-xs overflow-x-auto pb-1 scrollbar-hide snap-x"></div>
           <p class="usage-empty mt-1 text-[11px] text-gray-400">访问书签后这里会自动记录最近 12 条</p>
         </div>
       </div>
@@ -529,7 +544,7 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
       <div id="aiChatBody" class="ai-chat-body space-y-3 p-4">
         <div class="ai-message assistant">你好，我是本站 AI 书签助理。你可以问我：“有没有图片压缩工具？”、“某个网站放在哪个分类？”、“帮我找设计相关书签”。</div>
       </div>
-      <form id="aiChatForm" class="border-t border-primary-100/60 p-3">
+      <form id="aiChatForm" class="border-t border-primary-100/60 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
         <div class="flex gap-2">
           <input id="aiChatInput" class="min-w-0 flex-1 rounded-xl border border-primary-100 px-3 py-2 text-sm outline-none focus:border-primary-300" placeholder="输入你想找的书签或问题..." autocomplete="off">
           <button id="aiSendBtn" type="submit" class="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white">发送</button>
@@ -622,6 +637,80 @@ window.addEventListener('storage',function(e){
 });
 
 document.addEventListener('DOMContentLoaded',function(){
+  // PWA 状态保存与恢复逻辑
+  const STATE_KEY = 'nav:pwa-state';
+  const isStandalone = window.matchMedia('(display-mode:standalone)').matches || window.navigator.standalone === true;
+
+  function saveCurrentState() {
+    try {
+      const state = {
+        scrollY: window.scrollY,
+        searchVal: document.getElementById('searchInput')?.value || '',
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem(STATE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn('[pwa] failed to save state', e);
+    }
+  }
+
+  function restoreCurrentState() {
+    try {
+      const raw = sessionStorage.getItem(STATE_KEY);
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      sessionStorage.removeItem(STATE_KEY);
+      
+      if (Date.now() - state.timestamp > 1800000) return; // 30分钟过期
+
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput && state.searchVal) {
+        searchInput.value = state.searchVal;
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      if (state.scrollY) {
+        setTimeout(function() {
+          window.scrollTo({ top: state.scrollY, behavior: 'instant' });
+        }, 100);
+      }
+    } catch (e) {
+      console.warn('[pwa] failed to restore state', e);
+    }
+  }
+
+  // 恢复状态
+  restoreCurrentState();
+
+  // 如果是 standalone 模式，拦截所有书签点击，强制在当前窗口打开，并附加当前 URL 参数
+  if (isStandalone) {
+    document.addEventListener('click', function(e) {
+      const link = e.target.closest('a');
+      if (link) {
+        const href = link.getAttribute('href');
+        
+        // 拦截书签跳转链接（以 /go/ 开头）
+        if (href && href.startsWith('/go/')) {
+          e.preventDefault();
+          saveCurrentState();
+          
+          // 将当前的 catalog, tag, sort 参数附加到 /go/ 链接后面
+          const currentUrl = new URL(window.location.href);
+          const catalog = currentUrl.searchParams.get('catalog') || '';
+          const tag = currentUrl.searchParams.get('tag') || '';
+          const sort = currentUrl.searchParams.get('sort') || '';
+          
+          const goUrl = new URL(href, window.location.origin);
+          if (catalog) goUrl.searchParams.set('from_catalog', catalog);
+          if (tag) goUrl.searchParams.set('from_tag', tag);
+          if (sort) goUrl.searchParams.set('from_sort', sort);
+          
+          window.location.href = goUrl.pathname + goUrl.search;
+        }
+      }
+    }, { capture: true });
+  }
+
   const announcementModal=document.getElementById('announcementModal');
   if(announcementModal){
     const key='nav:announcement:'+announcementModal.dataset.version;
@@ -727,16 +816,37 @@ document.addEventListener('DOMContentLoaded',function(){
   expandBtn?.addEventListener('click',function(){document.body.classList.remove('sidebar-collapsed');localStorage.removeItem('nav:sidebar-collapsed')});
   if(localStorage.getItem('nav:sidebar-collapsed')==='1'){document.body.classList.add('sidebar-collapsed')}
 
-  document.querySelectorAll('.category-toggle').forEach(btn=>btn.addEventListener('click',function(e){
-    e.preventDefault();
-    e.stopPropagation();
-    const target=document.getElementById(this.dataset.target);
-    if(!target)return;
-    const expanded=!target.classList.contains('hidden');
-    target.classList.toggle('hidden',expanded);
-    this.setAttribute('aria-expanded',String(!expanded));
-    this.querySelector('[data-role="toggle-icon"]').textContent=expanded?'＋':'－';
-  }));
+  const expandedCats = JSON.parse(localStorage.getItem('nav:expanded-cats') || '[]');
+  document.querySelectorAll('.category-toggle').forEach(btn=>{
+    const targetId = btn.dataset.target;
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    if (expandedCats.includes(targetId) && target.classList.contains('hidden')) {
+      target.classList.remove('hidden');
+      btn.setAttribute('aria-expanded', 'true');
+      const icon = btn.querySelector('[data-role="toggle-icon"]');
+      if (icon) icon.textContent = '－';
+    } else if (!target.classList.contains('hidden') && !expandedCats.includes(targetId)) {
+      expandedCats.push(targetId);
+      localStorage.setItem('nav:expanded-cats', JSON.stringify(expandedCats));
+    }
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      const expanded = !target.classList.contains('hidden');
+      target.classList.toggle('hidden', expanded);
+      this.setAttribute('aria-expanded', String(!expanded));
+      const icon = this.querySelector('[data-role="toggle-icon"]');
+      if (icon) icon.textContent = expanded ? '＋' : '－';
+      let cats = JSON.parse(localStorage.getItem('nav:expanded-cats') || '[]');
+      if (!expanded) {
+        if (!cats.includes(targetId)) cats.push(targetId);
+      } else {
+        cats = cats.filter(id => id !== targetId);
+      }
+      localStorage.setItem('nav:expanded-cats', JSON.stringify(cats));
+    });
+  });
 
   (function bindCategoryClickFeedback(){
     const listEl = document.getElementById('categoryList');
@@ -781,6 +891,55 @@ document.addEventListener('DOMContentLoaded',function(){
     });
     window.addEventListener('beforeunload', clearPending);
   })();
+
+  const categoryFilterInput = document.getElementById('categoryFilterInput');
+  if (categoryFilterInput) {
+    categoryFilterInput.addEventListener('input', function() {
+      const text = this.value.trim().toLowerCase();
+      const nodes = document.querySelectorAll('#categoryList .category-tree-node');
+      if (!text) {
+        nodes.forEach(node => {
+          node.style.display = '';
+          const toggleBtn = node.querySelector('.category-toggle');
+          const targetId = toggleBtn?.dataset.target;
+          if (targetId) {
+            const target = document.getElementById(targetId);
+            if (target) {
+              const shouldBeExpanded = expandedCats.includes(targetId);
+              target.classList.toggle('hidden', !shouldBeExpanded);
+              toggleBtn.setAttribute('aria-expanded', String(shouldBeExpanded));
+              const icon = toggleBtn.querySelector('[data-role="toggle-icon"]');
+              if (icon) icon.textContent = shouldBeExpanded ? '－' : '＋';
+            }
+          }
+        });
+        return;
+      }
+      
+      nodes.forEach(node => node.style.display = 'none');
+      document.querySelectorAll('#categoryList a.category-link').forEach(link => {
+        if (link.classList.contains('category-all-button')) return;
+        const catName = (link.dataset.categoryName || '').toLowerCase();
+        if (catName.includes(text)) {
+          let current = link.closest('.category-tree-node');
+          while (current && current.id !== 'categoryList') {
+            current.style.display = '';
+            const parentList = current.parentElement;
+            if (parentList && parentList.id && parentList.id.startsWith('category-children-')) {
+              parentList.classList.remove('hidden');
+              const toggleBtn = document.querySelector('.category-toggle[data-target="'+parentList.id+'"]');
+              if (toggleBtn) {
+                toggleBtn.setAttribute('aria-expanded', 'true');
+                const icon = toggleBtn.querySelector('[data-role="toggle-icon"]');
+                if (icon) icon.textContent = '－';
+              }
+            }
+            current = parentList ? parentList.closest('.category-tree-node') : null;
+          }
+        }
+      });
+    });
+  }
 
   document.querySelectorAll('.copy-btn').forEach(btn=>btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const url=this.dataset.url;if(!url)return;navigator.clipboard.writeText(url).then(()=>{this.textContent='已复制';setTimeout(()=>this.textContent='复制',1200)})}));
 
@@ -828,584 +987,3 @@ document.addEventListener('DOMContentLoaded',function(){
 </html>`);
 }
 
-function sortSitesForView(sites, sortMode, options = {}) {
-  const sorted = [...sites];
-  if (sortMode === 'hot') {
-    return sorted.sort((a, b) => {
-      const hitsDiff = (Number(b.hits) || 0) - (Number(a.hits) || 0);
-      if (hitsDiff !== 0) return hitsDiff;
-      return String(b.last_visit_time || b.create_time || '').localeCompare(String(a.last_visit_time || a.create_time || ''));
-    });
-  }
-
-  if (sortMode === 'recent') {
-    return sorted.sort((a, b) => {
-      const timeDiff = String(b.last_visit_time || '').localeCompare(String(a.last_visit_time || ''));
-      if (timeDiff !== 0) return timeDiff;
-      return (Number(b.hits) || 0) - (Number(a.hits) || 0);
-    });
-  }
-
-  if (options.newestFirst) {
-    return sorted.sort((a, b) => String(b.create_time || '').localeCompare(String(a.create_time || '')));
-  }
-
-  return sorted;
-}
-
-function renderSortLinks({ catalog, tag, sortMode, disabled, i18n }) {
-  if (disabled) return '';
-  const baseParams = new URLSearchParams();
-  if (catalog) baseParams.set('catalog', catalog);
-  if (tag) baseParams.set('tag', tag);
-
-  const buildHref = (mode) => {
-    const params = new URLSearchParams(baseParams);
-    if (mode) params.set('sort', mode);
-    const query = params.toString();
-    return query ? `?${query}` : '?';
-  };
-
-  const linkClass = (active) => `px-3 py-1.5 rounded-full text-sm border transition ${active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-primary-100 hover:bg-primary-50 hover:text-primary-700'}`;
-
-  return `
-    <a href="${escapeHTML(buildHref(''))}" class="${linkClass(!sortMode)}">默认</a>
-    <a href="${escapeHTML(buildHref('hot'))}" class="${linkClass(sortMode === 'hot')}">热门</a>
-    <a href="${escapeHTML(buildHref('recent'))}" class="${linkClass(sortMode === 'recent')}">最近访问</a>
-  `;
-}
-
-function getAncestorNames(nodes, targetName, ancestors = []) {
-  for (const node of nodes) {
-    const currentPath = [...ancestors, node.name];
-    if (node.name === targetName) {
-      return ancestors;
-    }
-    const found = getAncestorNames(node.children || [], targetName, currentPath);
-    if (found.length) {
-      return found;
-    }
-  }
-  return [];
-}
-
-function sanitizeCategorySvgIcon(value) {
-  let svg = String(value || '').trim();
-  if (!/^<svg[\s>]/i.test(svg) || !/<\/svg>$/i.test(svg)) return '';
-  svg = svg
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|[^\s>]*javascript:[^\s>]*)/gi, '')
-    .replace(/\sstyle\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  if (!/^<svg[\s>][\s\S]*<\/svg>$/i.test(svg)) return '';
-  return svg;
-}
-
-function renderCategoryIcon(icon) {
-  const raw = String(icon || '').trim();
-  if (!raw) return '';
-  const svg = sanitizeCategorySvgIcon(raw);
-  if (svg) return svg;
-  return escapeHTML(raw);
-}
-
-function getCategoryCssColor(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return { raw: '', color: '', isGradient: false };
-  if (/[;"'{}<>]/.test(raw) || /(?:url|javascript|expression|behavior|@import)/i.test(raw)) {
-    return { raw: '', color: '', isGradient: false };
-  }
-  if (/^linear-gradient\(/i.test(raw)) return { raw, color: raw, isGradient: true };
-  if (/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(raw)) return { raw, color: raw, isGradient: false };
-  if (/^rgba?\([^)]+\)$/i.test(raw) || /^hsla?\([^)]+\)$/i.test(raw)) return { raw, color: raw, isGradient: false };
-  if (/^(primary|accent|secondary)$/i.test(raw)) return { raw, color: `var(--nav-${raw.toLowerCase()})`, isGradient: false };
-  if (/^[a-z][a-z0-9-]{1,30}$/i.test(raw)) return { raw, color: raw, isGradient: false };
-  return { raw: '', color: '', isGradient: false };
-}
-
-function renderCategoryLinks(nodes, options, level = 0) {
-  const { catalog, catalogExists, expandedNames, privateUnlocked } = options;
-  return nodes.map((cat) => {
-    const safeName = escapeHTML(cat.name);
-    const active = false; // This will be handled by JS
-    const hasChildren = Array.isArray(cat.children) && cat.children.length > 0;
-    const expanded = expandedNames.has(cat.name);
-    const isPrivate = isPrivateBookmarkCategory(cat.name);
-    const iconText = renderCategoryIcon(cat.icon);
-    const safeDescription = escapeHTML(cat.description || '');
-    const colorInfo = getCategoryCssColor(cat.color);
-    const cssColor = colorInfo.color;
-    const iconMarkup = iconText ? `<span class="category-icon mr-2 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/80 text-sm leading-none shadow-sm ${active ? 'text-primary-600' : 'text-gray-400'}" data-has-color="${cssColor ? 'true' : 'false'}">${iconText}</span>` : '';
-    const textColor = colorInfo.isGradient ? 'var(--nav-primary)' : cssColor;
-    const mixColor = colorInfo.isGradient ? 'var(--nav-accent)' : cssColor;
-    const colorVars = cssColor ? `--cat-color:${textColor};--cat-color-dark:${colorInfo.isGradient ? '#f8fafc' : `color-mix(in srgb,${mixColor} 34%,white)`};--cat-bg:${colorInfo.isGradient ? cssColor : `color-mix(in srgb,${mixColor} 13%,white)`};--cat-bg-dark:color-mix(in srgb,${mixColor} 18%,#0f172a);--cat-bg-dark-hover:color-mix(in srgb,${mixColor} 25%,#0f172a);--cat-border-dark:color-mix(in srgb,${mixColor} 38%,transparent);--cat-line:${mixColor};` : '';
-    const itemStyle = colorVars;
-    const titleParts = [cat.name];
-    if (cat.description) titleParts.push(cat.description);
-    if (cat.color) titleParts.push(`颜色：${cat.color}`);
-    const title = escapeHTML(titleParts.join(' · '));
-    const childId = `category-children-${String(cat.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
-    const childMarkup = hasChildren
-      ? `<div id="${childId}" class="${expanded ? '' : 'hidden'} mt-1 space-y-1">${renderCategoryLinks(cat.children, options, level + 1)}</div>`
-      : '';
-
-    return `<div class="category-tree-node" data-level="${level}">
-      <div class="flex items-center gap-1">
-        <a href="?catalog=${encodeURIComponent(cat.name)}" class="category-link flex min-w-0 flex-1 items-center px-3 py-2 rounded-lg hover:bg-gray-100" data-category-name="${safeName}" data-has-color="${cssColor ? 'true' : 'false'}" data-has-icon="${iconText ? 'true' : 'false'}" style="padding-left:${12 + level * 14}px;${itemStyle}" title="${title}">
-          ${iconMarkup}
-          <span class="truncate">${safeName}</span>
-          ${safeDescription ? `<span class="ml-2 hidden truncate text-xs text-gray-400 sm:inline" title="${safeDescription}">${safeDescription}</span>` : ''}
-          ${isPrivate && !privateUnlocked ? '<span class="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">锁</span>' : ''}
-        </a>
-        ${hasChildren ? `<button type="button" class="category-toggle h-8 w-8 flex-shrink-0 rounded-lg text-gray-500 hover:bg-gray-100" data-target="${childId}" aria-expanded="${expanded ? 'true' : 'false'}" title="${expanded ? '收起子类' : '展开子类'}"><span data-role="toggle-icon">${expanded ? '－' : '＋'}</span></button>` : ''}
-      </div>
-      ${childMarkup}
-    </div>`;
-  }).join('');
-}
-
-function isUnhealthySite(site) {
-  const statusCode = Number(site?.last_status_code);
-  return Boolean(site?.last_error) || (Number.isFinite(statusCode) && (statusCode < 200 || statusCode >= 400));
-}
-
-function renderHealthBadge(site) {
-  if (!site?.last_checked_at || !isUnhealthySite(site)) return '';
-  const details = [
-    site.last_status_code ? `HTTP ${site.last_status_code}` : '',
-    site.last_error || '',
-    site.last_checked_at ? `最近检测：${String(site.last_checked_at).slice(0, 19)}` : '',
-  ].filter(Boolean).join(' · ');
-  return `<span class="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600" title="${escapeHTML(details || '最近检测异常')}">可能失效</span>`;
-}
-
-function renderMiniSiteLink(site, meta = '', i18n = null) {
-  const name = site.name || (i18n?.t?.('unnamed') || '未命名');
-  const catalog = site.catelog || (i18n?.t?.('uncategorized') || '未分类');
-  const normalizedUrl = sanitizeUrl(site.url);
-  const visitUrl = normalizedUrl ? `/go/${encodeURIComponent(site.id)}` : '#';
-  return `<a href="${escapeHTML(visitUrl)}" ${normalizedUrl ? 'target="_blank" rel="noopener noreferrer"' : ''} class="mini-site-link">
-    <span class="min-w-0 flex-1 truncate">${escapeHTML(name)}</span>
-    ${renderHealthBadge(site)}
-    <span class="flex-shrink-0 text-xs text-gray-400">${escapeHTML(meta || catalog)}</span>
-  </a>`;
-}
-
-function renderGroupedSites(sites, isAdmin = false, i18n = null) {
-  if (!sites.length) {
-    return `<div class="layout-section text-center text-sm text-gray-500">${escapeHTML(i18n?.t?.('noBookmarks') || '当前没有可展示的书签。')}</div>`;
-  }
-
-  const groups = new Map();
-  for (const site of sites) {
-    const catalog = site.catelog || (i18n?.t?.('uncategorized') || '未分类');
-    if (!groups.has(catalog)) groups.set(catalog, []);
-    groups.get(catalog).push(site);
-  }
-
-  return `<div class="space-y-4">
-    ${[...groups.entries()].map(([catalog, items]) => `
-      <section class="layout-section">
-        <div class="layout-section-title">
-          <span>${escapeHTML(catalog)}</span>
-          <span class="rounded-full bg-primary-50 px-2 py-0.5 text-xs text-primary-600">${escapeHTML(i18n?.t?.('itemCount', { count: items.length }) || `${items.length} 个`)}</span>
-        </div>
-        <div class="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
-          ${items.map((site) => renderMiniSiteLink(site, '', i18n)).join('')}
-        </div>
-      </section>
-    `).join('')}
-  </div>`;
-}
-
-function renderDashboardSites(sites, isAdmin = false, i18n = null) {
-  if (!sites.length) {
-    return `<div class="layout-section text-center text-sm text-gray-500">${escapeHTML(i18n?.t?.('noBookmarks') || '当前没有可展示的书签。')}</div>`;
-  }
-
-  const topHits = [...sites]
-    .sort((a, b) => (Number(b.hits) || 0) - (Number(a.hits) || 0))
-    .slice(0, 8);
-  const recentVisits = [...sites]
-    .filter((site) => site.last_visit_time)
-    .sort((a, b) => String(b.last_visit_time || '').localeCompare(String(a.last_visit_time || '')))
-    .slice(0, 8);
-  const newest = [...sites]
-    .sort((a, b) => String(b.create_time || '').localeCompare(String(a.create_time || '')))
-    .slice(0, 8);
-
-  const renderPanel = (title, subtitle, items, metaFn) => `
-    <section class="layout-section">
-      <div class="layout-section-title">
-        <span>${escapeHTML(title)}</span>
-        <span class="text-xs font-normal text-gray-400">${escapeHTML(subtitle)}</span>
-      </div>
-      <div class="space-y-1">
-        ${(items.length ? items : newest).map((site) => renderMiniSiteLink(site, metaFn(site), i18n)).join('')}
-      </div>
-    </section>
-  `;
-
-  return `<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-    ${renderPanel(i18n?.t?.('topSites') || '常用站点', i18n?.t?.('byHits') || '按访问次数', topHits, (site) => i18n?.t?.('hits', { count: Math.max(0, Number(site.hits) || 0) }) || `${Math.max(0, Number(site.hits) || 0)} 次`)}
-    ${renderPanel(i18n?.t?.('recent') || '最近访问', i18n?.t?.('byVisitTime') || '按访问时间', recentVisits, (site) => site.last_visit_time ? String(site.last_visit_time).slice(0, 10) : (i18n?.t?.('none') || '暂无'))}
-    ${renderPanel(i18n?.t?.('newest') || '新加入', i18n?.t?.('byCreateTime') || '按添加时间', newest, (site) => site.create_time ? String(site.create_time).slice(0, 10) : site.catelog || (i18n?.t?.('uncategorized') || '未分类'))}
-  </div>`;
-}
-
-function renderMarkdownContent(markdown = '') {
-  let text = escapeHTML(markdown || '').replace(/\r\n/g, '\n');
-  const codeBlocks = [];
-  text = text.replace(/```([\s\S]*?)```/g, (_, code) => {
-    const token = `@@CODE_${codeBlocks.length}@@`;
-    codeBlocks.push(`<pre><code>${code.trim()}</code></pre>`);
-    return token;
-  });
-  text = text
-    .replace(/^### (.*)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.*)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.*)$/gm, '<h1>$1</h1>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-  text = text
-    .replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g, '<ul>$1</ul>');
-  text = text.split(/\n{2,}/).map((part) => {
-    const p = part.trim();
-    if (!p) return '';
-    if (/^<(h1|h2|h3|ul|pre)/.test(p) || /^@@CODE_\d+@@$/.test(p)) return p;
-    return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-  }).join('');
-  codeBlocks.forEach((html, index) => {
-    text = text.replace(`@@CODE_${index}@@`, html);
-  });
-  return text;
-}
-
-function renderAnnouncementModal(announcement) {
-  const version = escapeHTML(announcement.version || '1');
-  const showOnce = announcement.showOnce ? 'true' : 'false';
-  return `<div id="announcementModal" class="announcement-modal hidden" data-version="${version}" data-show-once="${showOnce}" role="dialog" aria-modal="true" aria-labelledby="announcementTitle">
-    <div class="announcement-card">
-      <div class="announcement-head">
-        <h2 id="announcementTitle" class="text-lg font-semibold text-gray-900">${escapeHTML(announcement.title || '系统公告')}</h2>
-        <button type="button" class="announcement-close rounded-full px-2 py-1 text-gray-500 hover:bg-primary-50" aria-label="关闭公告">×</button>
-      </div>
-      <div class="announcement-body">${renderMarkdownContent(announcement.markdown || '')}</div>
-      <div class="announcement-actions">
-        <button type="button" class="announcement-close-today rounded-xl border border-primary-100 bg-white px-5 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50">今日不再提示</button>
-        <button type="button" class="announcement-close rounded-xl bg-primary-600 px-5 py-2 text-sm font-medium text-white hover:bg-primary-700">${escapeHTML(announcement.buttonText || '我知道了')}</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function renderPrivateBookmarkUnlockBox(catalog, i18n = null) {
-  return `<div class="col-span-full rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
-    <h3 class="text-lg font-semibold text-amber-900">${escapeHTML(i18n?.t?.('privateLockedHeading') || '私人书签已上锁')}</h3>
-    <p class="mt-2 text-sm text-amber-700">${escapeHTML(i18n?.t?.('privateLockedDesc') || '请输入访问密码后查看该分类；管理员已登录时可直接访问。')}</p>
-    <form method="post" action="?catalog=${encodeURIComponent(catalog)}" class="mx-auto mt-5 flex max-w-sm flex-col gap-3">
-      <input name="password" type="password" required autocomplete="current-password" placeholder="${escapeHTML(i18n?.t?.('accessPassword') || '访问密码')}" class="min-w-0 flex-1 rounded-lg border border-amber-200 bg-white px-4 py-2 outline-none focus:border-amber-400">
-      <div class="flex items-center gap-3">
-        <select name="duration" class="flex-1 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-amber-800 outline-none focus:border-amber-400">
-          <option value="session">仅本次会话</option>
-          <option value="1h">1 小时</option>
-          <option value="12h" selected>12 小时</option>
-          <option value="7d">7 天</option>
-          <option value="30d">30 天</option>
-        </select>
-        <button type="submit" class="rounded-lg bg-amber-500 px-5 py-2 font-medium text-white hover:bg-amber-600">${escapeHTML(i18n?.t?.('unlock') || '解锁')}</button>
-      </div>
-    </form>
-  </div>`;
-}
-
-function renderPrivateBookmarkPasswordPage({ catalog, error = '', i18n }) {
-  const fallbackI18n = i18n || { lang: 'zh-CN', dir: 'ltr', th: (key) => key };
-  const { lang, dir, th } = fallbackI18n;
-  return htmlResponse(`<!DOCTYPE html>
-<html lang="${escapeHTML(lang)}" dir="${escapeHTML(dir)}">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${th('privateBookmark')} - ${th('appName')}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen bg-amber-50 text-gray-800 flex items-center justify-center px-4">
-  <div class="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-8 shadow-xl">
-    <h1 class="text-center text-2xl font-semibold text-amber-900">${th('privateBookmark')}</h1>
-    <p class="mt-3 text-center text-sm text-amber-700">${th('privatePasswordDesc')}</p>
-    ${error ? `<div class="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">${escapeHTML(error)}</div>` : ''}
-    <form method="post" action="?catalog=${encodeURIComponent(catalog || PRIVATE_BOOKMARK_CATEGORY)}" class="mt-6 space-y-4">
-      <input name="password" type="password" required autofocus autocomplete="current-password" placeholder="${th('enterAccessPassword')}" class="w-full rounded-lg border border-amber-200 px-4 py-3 outline-none focus:border-amber-400">
-      <label class="block text-left text-xs text-amber-700">
-        <span class="mb-1 block">记住此次解锁</span>
-        <select name="duration" class="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-amber-800 outline-none focus:border-amber-400">
-          <option value="session">仅本次会话（关闭浏览器后失效）</option>
-          <option value="1h">1 小时</option>
-          <option value="12h" selected>12 小时</option>
-          <option value="7d">7 天</option>
-          <option value="30d">30 天</option>
-        </select>
-      </label>
-      <button type="submit" class="w-full rounded-lg bg-amber-500 px-4 py-3 font-medium text-white hover:bg-amber-600">${th('unlockAccess')}</button>
-    </form>
-    <a href="/" class="mt-5 block text-center text-sm text-gray-500 hover:text-amber-700">${th('backHome')}</a>
-  </div>
-</body>
-</html>`);
-}
-
-function renderSiteCard(site, draggable, isAdmin = false, i18n = null) {
-  const name = site.name || (i18n?.t?.('unnamed') || '未命名');
-  const catalog = site.catelog || (i18n?.t?.('uncategorized') || '未分类');
-  const desc = site.desc || (i18n?.t?.('noDescription') || '暂无描述');
-  const normalizedUrl = sanitizeUrl(site.url);
-  const logoUrl = sanitizeImageUrl(site.logo);
-  const initial = escapeHTML((name.trim().charAt(0) || '站').toUpperCase());
-  const safeDesc = escapeHTML(desc);
-  const visitUrl = normalizedUrl ? `/go/${encodeURIComponent(site.id)}` : '#';
-  const hits = Math.max(0, Number(site.hits) || 0);
-  const tags = Array.isArray(site.tags) ? site.tags : [];
-  const tagLinks = tags.length
-    ? `<div class="mt-3 flex flex-wrap gap-1.5">${tags.map((tag) => `<a href="?tag=${encodeURIComponent(tag)}" class="rounded-full bg-primary-50 px-2 py-0.5 text-[11px] text-primary-600 hover:bg-primary-100" onclick="event.stopPropagation()">#${escapeHTML(tag)}</a>`).join('')}</div>`
-    : '';
-  const adminActions = isAdmin
-    ? `<div class="mt-3 flex gap-2 border-t border-primary-50 pt-3"><button type="button" class="front-edit-btn flex-1 rounded-lg bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100" data-id="${site.id}">${escapeHTML(i18n?.t?.('edit') || '编辑')}</button><button type="button" class="front-delete-btn flex-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100" data-id="${site.id}" data-name="${escapeHTML(name)}">${escapeHTML(i18n?.t?.('delete') || '删除')}</button></div>`
-    : '';
-  return `<div class="site-card group bg-white border border-primary-100/60 rounded-xl shadow-sm overflow-hidden ${draggable ? 'cursor-move' : ''}" data-id="${site.id}" data-name="${escapeHTML(name)}" data-url="${escapeHTML(normalizedUrl || site.url || '')}" data-catalog="${escapeHTML(catalog)}" data-tags="${escapeHTML(tags.join(' '))}" ${draggable ? 'draggable="true"' : ''}>
-    <div class="p-5">
-      <a href="${escapeHTML(visitUrl)}" ${normalizedUrl ? 'target="_blank" rel="noopener noreferrer"' : ''} class="block">
-        <div class="flex items-start"><div class="flex-shrink-0 mr-4">${logoUrl ? `<img src="${escapeHTML(logoUrl)}" alt="${escapeHTML(name)}" class="w-10 h-10 rounded-lg object-cover bg-gray-100" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="w-10 h-10 rounded-lg bg-primary-600 items-center justify-center text-white font-semibold text-lg" style="display:none">${initial}</div>` : `<div class="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center text-white font-semibold text-lg">${initial}</div>`}</div>
-        <div class="flex-1 min-w-0"><h3 class="text-base font-medium text-gray-900 truncate">${escapeHTML(name)}</h3><div class="mt-1 flex flex-wrap items-center gap-1.5"><span class="inline-flex items-center px-2 py-.5 rounded-full text-xs font-medium bg-secondary-100 text-primary-700">${escapeHTML(catalog)}</span>${renderHealthBadge(site)}</div></div></div>
-        <p class="mt-2 text-sm text-gray-600 line-clamp-2" title="${safeDesc}">${safeDesc}</p>
-      </a>
-      ${tagLinks}
-      <div class="mt-3 flex items-center justify-between gap-2"><span class="text-xs text-primary-600 truncate max-w-[140px]">${escapeHTML(normalizedUrl || site.url || (i18n?.t?.('noLink') || '未提供链接'))}</span><div class="flex flex-shrink-0 items-center gap-2"><span class="text-[11px] text-gray-400" title="${escapeHTML(i18n?.t?.('visitCount') || '访问次数')}">${escapeHTML(i18n?.t?.('hits', { count: hits }) || `${hits} 次`)}</span><button class="copy-btn px-2 py-1 rounded-full text-xs bg-accent-100 text-accent-700" data-url="${escapeHTML(normalizedUrl)}">${escapeHTML(i18n?.t?.('copy') || '复制')}</button></div></div>
-      ${adminActions}
-    </div>
-  </div>`;
-}
-
-function renderFrontAdminModal(datalistOptions, i18n = null) {
-  return `<div id="frontAdminEditModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 opacity-0 invisible transition-all">
-    <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-      <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-xl font-semibold text-gray-900">编辑书签</h2>
-        <button type="button" id="frontAdminCloseEdit" class="text-2xl leading-none text-gray-500 hover:text-gray-800">×</button>
-      </div>
-      <form id="frontAdminEditForm" class="space-y-3">
-        <input type="hidden" id="frontAdminEditId">
-        <input id="frontAdminEditName" required placeholder="名称" class="block w-full rounded-lg border border-primary-100 px-3 py-2">
-        <input id="frontAdminEditUrl" required placeholder="网址" class="block w-full rounded-lg border border-primary-100 px-3 py-2">
-        <input id="frontAdminEditLogo" placeholder="Logo 可选" class="block w-full rounded-lg border border-primary-100 px-3 py-2">
-        <textarea id="frontAdminEditDesc" rows="2" placeholder="描述 可选" class="block w-full rounded-lg border border-primary-100 px-3 py-2"></textarea>
-        <input id="frontAdminEditCatelog" required list="frontAdminCatalogList" placeholder="分类" class="block w-full rounded-lg border border-primary-100 px-3 py-2">
-        <input id="frontAdminEditTags" placeholder="标签，可用逗号/空格分隔" class="block w-full rounded-lg border border-primary-100 px-3 py-2">
-        <input id="frontAdminEditSortOrder" type="number" placeholder="排序值，留空为默认" class="block w-full rounded-lg border border-primary-100 px-3 py-2">
-        <datalist id="frontAdminCatalogList">${datalistOptions}</datalist>
-        <div class="flex justify-end gap-3 pt-2">
-          <button type="button" id="frontAdminCancelEdit" class="rounded-lg border border-gray-200 px-4 py-2 text-gray-600 hover:bg-gray-50">取消</button>
-          <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 font-medium text-white hover:bg-primary-700">保存修改</button>
-        </div>
-      </form>
-    </div>
-  </div>`;
-}
-
-function renderSubmitModal(datalistOptions, i18n = null) {
-  const fieldClass = 'block w-full rounded-lg border border-primary-100 bg-white px-3 py-2 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary-300 focus:ring-2 focus:ring-primary-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-blue-400 dark:focus:ring-blue-500/20';
-  const smallBtnClass = 'inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium transition disabled:opacity-60';
-  return `<div id="addSiteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 opacity-0 invisible transition-all backdrop-blur-sm">
-    <div class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-white/70 bg-white p-6 text-gray-900 shadow-2xl dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100 dark:shadow-black/40">
-      <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-slate-50">添加新书签</h2>
-        <button type="button" id="closeModal" class="rounded-full px-2 py-1 text-2xl leading-none text-gray-500 transition hover:bg-primary-50 hover:text-gray-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100" aria-label="关闭">×</button>
-      </div>
-      <form id="addSiteForm" class="space-y-4">
-        <div class="relative">
-          <input id="addSiteUrl" required placeholder="网址（输入后可自动抓取信息）" class="${fieldClass} pr-16">
-          <button type="button" id="autoFetchMetaBtn" class="absolute right-1.5 top-1/2 -translate-y-1/2 ${smallBtnClass} bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-slate-700 dark:text-blue-200 dark:hover:bg-slate-600" title="自动抓取网站标题、描述和图标">抓取</button>
-        </div>
-        <div id="autoFetchStatus" class="hidden rounded-lg border border-primary-100 bg-primary-50/60 px-3 py-2 text-xs text-primary-700 dark:border-slate-600 dark:bg-slate-800 dark:text-blue-200"></div>
-        <input id="addSiteName" required placeholder="名称" class="${fieldClass}">
-        <div class="relative">
-          <input id="addSiteLogo" placeholder="Logo 可选" class="${fieldClass} pr-12">
-          <button type="button" id="fetchFaviconBtn" class="absolute right-1.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-primary-50/80 text-primary-600 transition hover:bg-primary-100 hover:text-primary-700 disabled:opacity-60 dark:bg-slate-700 dark:text-blue-200 dark:hover:bg-slate-600 dark:hover:text-white" title="自动获取图标" aria-label="自动获取图标">✨</button>
-        </div>
-        <textarea id="addSiteDesc" rows="2" placeholder="描述 可选" class="${fieldClass}"></textarea>
-        <div class="flex gap-2">
-          <input id="addSiteCatelog" required list="catalogList" placeholder="分类" class="${fieldClass} flex-1">
-          <button type="button" id="submitSuggestCategoryBtn" class="${smallBtnClass} bg-accent-50 text-accent-700 hover:bg-accent-100 dark:bg-slate-700 dark:text-emerald-200 dark:hover:bg-slate-600" title="AI 推荐分类">🗂️</button>
-        </div>
-        <div class="flex gap-2">
-          <input id="addSiteTags" placeholder="标签 可选，逗号/空格分隔" class="${fieldClass} flex-1">
-          <button type="button" id="submitSuggestTagsBtn" class="${smallBtnClass} bg-accent-50 text-accent-700 hover:bg-accent-100 dark:bg-slate-700 dark:text-emerald-200 dark:hover:bg-slate-600" title="AI 推荐标签">🏷️</button>
-        </div>
-        <datalist id="catalogList">${datalistOptions}</datalist>
-        <input id="addSiteReason" placeholder="推荐理由 可选，帮助管理员了解为什么推荐" class="${fieldClass}">
-        <div class="flex justify-end gap-3 pt-1">
-          <button type="button" id="cancelAddSite" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-gray-600 transition hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">取消</button>
-          <button type="submit" class="rounded-lg bg-accent-500 px-4 py-2 font-medium text-white transition hover:bg-accent-600">提交</button>
-        </div>
-      </form>
-    </div>
-  </div>`;
-}
-
-function frontAdminScript() {
-  return `
-  const frontAdminModal=document.getElementById('frontAdminEditModal');
-  function frontAdminClose(){frontAdminModal?.classList.add('opacity-0','invisible')}
-  function frontAdminOpen(){frontAdminModal?.classList.remove('opacity-0','invisible')}
-  document.getElementById('frontAdminCloseEdit')?.addEventListener('click',frontAdminClose);
-  document.getElementById('frontAdminCancelEdit')?.addEventListener('click',frontAdminClose);
-  frontAdminModal?.addEventListener('click',(e)=>{if(e.target===frontAdminModal)frontAdminClose()});
-
-  document.querySelectorAll('.front-edit-btn').forEach(btn=>btn.addEventListener('click',function(e){
-    e.preventDefault();
-    e.stopPropagation();
-    const id=this.dataset.id;
-    if(!id)return;
-    this.disabled=true;
-    const originalText=this.textContent;
-    this.textContent='加载中';
-    fetch('/api/config/'+encodeURIComponent(id)).then(r=>r.json()).then(d=>{
-      if(d.code!==200||!d.data)throw new Error(d.message||'读取书签失败');
-      const c=d.data;
-      document.getElementById('frontAdminEditId').value=c.id||'';
-      document.getElementById('frontAdminEditName').value=c.name||'';
-      document.getElementById('frontAdminEditUrl').value=c.url||'';
-      document.getElementById('frontAdminEditLogo').value=c.logo||'';
-      document.getElementById('frontAdminEditDesc').value=c.desc||'';
-      document.getElementById('frontAdminEditCatelog').value=c.catelog||'';
-      document.getElementById('frontAdminEditTags').value=Array.isArray(c.tags)?c.tags.join(', '):'';
-      document.getElementById('frontAdminEditSortOrder').value=Number(c.sort_order)===9999?'':(c.sort_order||'');
-      frontAdminOpen();
-    }).catch(err=>alert(err.message||'读取书签失败')).finally(()=>{
-      this.disabled=false;
-      this.textContent=originalText;
-    });
-  }));
-
-  document.querySelectorAll('.front-delete-btn').forEach(btn=>btn.addEventListener('click',function(e){
-    e.preventDefault();
-    e.stopPropagation();
-    const id=this.dataset.id;
-    const name=this.dataset.name||'该书签';
-    if(!id||!confirm('确认删除“'+name+'”？此操作不可恢复。'))return;
-    this.disabled=true;
-    this.textContent='删除中';
-    fetch('/api/config/'+encodeURIComponent(id),{method:'DELETE'}).then(r=>r.json()).then(d=>{
-      if(d.code===200){
-        localStorage.setItem('nav:front-refresh',JSON.stringify({reason:'front-admin-deleted',time:Date.now()}));
-        window.location.reload();
-      }else{
-        alert(d.message||'删除失败');
-        this.disabled=false;
-        this.textContent='删除';
-      }
-    }).catch(()=>{
-      alert('网络错误，删除失败');
-      this.disabled=false;
-      this.textContent='删除';
-    });
-  }));
-
-  document.getElementById('frontAdminEditForm')?.addEventListener('submit',function(e){
-    e.preventDefault();
-    const id=document.getElementById('frontAdminEditId').value;
-    const sort=document.getElementById('frontAdminEditSortOrder').value;
-    const payload={
-      name:document.getElementById('frontAdminEditName').value.trim(),
-      url:document.getElementById('frontAdminEditUrl').value.trim(),
-      logo:document.getElementById('frontAdminEditLogo').value.trim(),
-      desc:document.getElementById('frontAdminEditDesc').value.trim(),
-      catelog:document.getElementById('frontAdminEditCatelog').value.trim(),
-      tags:document.getElementById('frontAdminEditTags').value.trim()
-    };
-    if(sort!=='')payload.sort_order=Number(sort);
-    if(!payload.name||!payload.url||!payload.catelog){alert('名称、网址、分类不能为空');return;}
-    const submitBtn=this.querySelector('button[type="submit"]');
-    const originalText=submitBtn?.textContent||'保存修改';
-    if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='保存中...';}
-    fetch('/api/config/'+encodeURIComponent(id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()).then(d=>{
-      if(d.code===200){
-        localStorage.setItem('nav:front-refresh',JSON.stringify({reason:'front-admin-updated',time:Date.now()}));
-        window.location.reload();
-      }else{
-        alert(d.message||'保存失败');
-      }
-    }).catch(()=>alert('网络错误，保存失败')).finally(()=>{
-      if(submitBtn){submitBtn.disabled=false;submitBtn.textContent=originalText;}
-    });
-  });
-  `;
-}
-
-function dragScript(i18n = null) {
-  const saveDragSortText = escapeHTML(i18n?.t?.('saveDragSort') || '保存拖拽排序');
-  return `
-  const saveBtn=document.getElementById('saveOrderBtn');let dragged=null,dirty=false,lastDragY=0,autoScrollTimer=null;
-  function startAutoScroll(){
-    if(autoScrollTimer)return;
-    autoScrollTimer=setInterval(()=>{
-      if(!dragged)return;
-      const edge=80;
-      const maxSpeed=22;
-      let delta=0;
-      if(lastDragY<edge){
-        delta=-Math.max(6,Math.round((edge-lastDragY)/edge*maxSpeed));
-      }else if(window.innerHeight-lastDragY<edge){
-        delta=Math.max(6,Math.round((edge-(window.innerHeight-lastDragY))/edge*maxSpeed));
-      }
-      if(delta!==0)window.scrollBy({top:delta,left:0,behavior:'auto'});
-    },16);
-  }
-  function stopAutoScroll(){
-    if(autoScrollTimer){clearInterval(autoScrollTimer);autoScrollTimer=null;}
-  }
-  document.addEventListener('dragover',(e)=>{lastDragY=e.clientY;});
-  document.querySelectorAll('.site-card').forEach(card=>{
-    card.addEventListener('dragstart',(e)=>{dragged=card;lastDragY=e.clientY||0;card.classList.add('dragging');startAutoScroll();console.log('[drag] start site='+card.dataset.id)});
-    card.addEventListener('dragend',()=>{card.classList.remove('dragging');document.querySelectorAll('.drag-over').forEach(i=>i.classList.remove('drag-over'));stopAutoScroll();dragged=null;});
-    card.addEventListener('dragover',(e)=>{e.preventDefault();lastDragY=e.clientY;card.classList.add('drag-over')});
-    card.addEventListener('dragleave',()=>card.classList.remove('drag-over'));
-    card.addEventListener('drop',(e)=>{e.preventDefault();lastDragY=e.clientY;card.classList.remove('drag-over');if(!dragged||dragged===card)return;const grid=document.getElementById('sitesGrid');const cards=[...grid.querySelectorAll('.site-card:not(.hidden)')];const from=cards.indexOf(dragged),to=cards.indexOf(card);console.log('[drag] drop from='+from+' to='+to);if(from<to)card.after(dragged);else card.before(dragged);dirty=true;saveBtn.disabled=false;stopAutoScroll();dragged=null;});
-  });
-  saveBtn?.addEventListener('click',()=>{const items=[...document.querySelectorAll('#sitesGrid .site-card:not(.hidden)')].map((card,i)=>({id:Number(card.dataset.id),sort_order:(i+1)*10}));console.log('[drag] save count='+items.length);saveBtn.disabled=true;saveBtn.textContent='保存中...';fetch('/api/config/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})}).then(r=>r.json()).then(d=>{if(d.code===200){dirty=false;saveBtn.textContent='已保存';setTimeout(()=>saveBtn.textContent='${saveDragSortText}',1200)}else{alert(d.message||'保存失败');saveBtn.disabled=false;saveBtn.textContent='${saveDragSortText}'}}).catch(()=>{alert('网络错误');saveBtn.disabled=false;saveBtn.textContent='${saveDragSortText}'});});
-  `;
-}
-
-function myUsageScript() {
-  return `
-  (function(){
-    var FAV_KEY='nav:favorites',RECENT_KEY='nav:recent-visits',MAX_FAV=24,MAX_RECENT=12;
-    var usageSection=document.getElementById('myUsageSection');
-    var siteIndex=Array.isArray(window.__SITE_INDEX__)?window.__SITE_INDEX__:[];
-    var siteMap=new Map(siteIndex.map(function(s){return[String(s.id),s]}));
-    function readJson(key){try{var v=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}}
-    function writeJson(key,arr){try{localStorage.setItem(key,JSON.stringify(arr.slice(0,key===FAV_KEY?MAX_FAV:MAX_RECENT)))}catch(e){}}
-    function getFavIds(){return readJson(FAV_KEY).map(String)}
-    function setFavIds(ids){writeJson(FAV_KEY,[...new Set(ids.map(String))])}
-    function isFav(id){return getFavIds().includes(String(id))}
-    function toggleFav(id){var ids=getFavIds(),sid=String(id),idx=ids.indexOf(sid);if(idx>=0)ids.splice(idx,1);else ids.unshift(sid);setFavIds(ids);return ids.includes(sid)}
-    function getRecentIds(){return readJson(RECENT_KEY).filter(function(item){return item&&item.id}).map(function(item){return String(item.id)})}
-    function addRecentId(id){if(!id)return;var sid=String(id),now=Date.now();var list=readJson(RECENT_KEY).filter(function(item){return String(item&&item.id)!==sid});list.unshift({id:sid,time:now});writeJson(RECENT_KEY,list);renderUsage()}
-    function clearUsage(key){localStorage.removeItem(key);renderUsage();syncFavStates()}
-    function renderChips(container,ids,onRemove){if(!container)return 0;container.innerHTML='';var count=0;ids.forEach(function(id){var site=siteMap.get(String(id));if(!site)return;count++;var chip=document.createElement('a');chip.className='usage-chip';chip.href=site.id?'/go/'+encodeURIComponent(site.id):(site.url||'#');if(site.url){chip.target='_blank';chip.rel='noopener noreferrer'}chip.title=(site.name||'')+(site.catelog?' \\u00b7 '+site.catelog:'');chip.dataset.siteId=String(site.id);if(site.logo){var img=document.createElement('img');img.src=site.logo;img.alt='';img.className='h-3 w-3 rounded';chip.appendChild(img)}var label=document.createElement('span');label.textContent=site.name||'\\u672a\\u547d\\u540d';label.className='truncate';chip.appendChild(label);var remove=document.createElement('span');remove.className='chip-remove';remove.textContent='\\u00d7';remove.title='\\u79fb\\u9664';remove.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();onRemove(String(site.id))});chip.appendChild(remove);container.appendChild(chip)});return count}
-    function renderUsage(){if(!usageSection)return;var favIds=getFavIds(),recentIds=getRecentIds();var favCount=renderChips(usageSection.querySelector('[data-usage-list="favorites"]'),favIds,function(id){var ids=getFavIds().filter(function(x){return x!==id});setFavIds(ids);renderUsage();syncFavStates()});var recentCount=renderChips(usageSection.querySelector('[data-usage-list="recent"]'),recentIds,function(id){var list=readJson(RECENT_KEY).filter(function(item){return String(item&&item.id)!==id});writeJson(RECENT_KEY,list);renderUsage()});usageSection.classList.toggle('hidden',(favCount||0)===0&&(recentCount||0)===0)}
-    function injectFavButton(card){if(!card||card.querySelector('.fav-btn'))return;var id=card.dataset.id;if(!id)return;var btn=document.createElement('button');btn.type='button';btn.className='fav-btn'+(isFav(id)?' is-fav':'');btn.dataset.siteId=id;btn.setAttribute('aria-label','\\u6536\\u85cf');btn.textContent=isFav(id)?'\\u2605':'\\u2606';btn.title=isFav(id)?'\\u53d6\\u6d88\\u6536\\u85cf':'\\u52a0\\u5165\\u6536\\u85cf';btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var nowFav=toggleFav(id);btn.textContent=nowFav?'\\u2605':'\\u2606';btn.classList.toggle('is-fav',nowFav);btn.title=nowFav?'\\u53d6\\u6d88\\u6536\\u85cf':'\\u52a0\\u5165\\u6536\\u85cf';renderUsage()});card.appendChild(btn)}
-    function syncFavStates(){document.querySelectorAll('.site-card .fav-btn').forEach(function(btn){var id=btn.dataset.siteId;if(!id)return;var fav=isFav(id);btn.textContent=fav?'\\u2605':'\\u2606';btn.classList.toggle('is-fav',fav);btn.title=fav?'\\u53d6\\u6d88\\u6536\\u85cf':'\\u52a0\\u5165\\u6536\\u85cf'})}
-    function injectAllFavButtons(){document.querySelectorAll('.site-card[data-id]').forEach(injectFavButton)}
-    injectAllFavButtons();
-    renderUsage();
-    var gridEl=document.getElementById('sitesGrid');
-    if(gridEl&&typeof MutationObserver!=='undefined'){new MutationObserver(function(){injectAllFavButtons()}).observe(gridEl,{childList:true,subtree:false})}
-    document.body.addEventListener('click',function(e){var link=e.target.closest('a[href]');if(!link)return;var card=link.closest('.site-card[data-id]');if(card){var id=card.dataset.id;if(id&&link.getAttribute('href')!=='#'&&!link.classList.contains('fav-btn')){addRecentId(id)}return}var chip=e.target.closest('.usage-chip[data-site-id]');if(chip&&!e.target.closest('.chip-remove')){addRecentId(chip.dataset.siteId)}});
-    if(usageSection){usageSection.querySelectorAll('[data-usage-clear]').forEach(function(btn){btn.addEventListener('click',function(){clearUsage(btn.dataset.usageClear==='favorites'?FAV_KEY:RECENT_KEY)})})}
-    window.addEventListener('storage',function(e){if(e.key===FAV_KEY||e.key===RECENT_KEY){renderUsage();syncFavStates()}});
-  })();
-  `;
-}

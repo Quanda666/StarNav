@@ -1,3 +1,4 @@
+deplo
 # 浏览器插件使用指南
 
 StarNav 内置一个 Manifest V3 浏览器插件，用于把当前网页快速收藏到自己的 StarNav 站点。

@@ -97,6 +97,8 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
+function escapeHTML(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
 function renderDatalist(el, items, getValue) {
   el.innerHTML = '';
   for (const item of items || []) {
@@ -142,15 +144,19 @@ function showDuplicate(duplicate) {
 }
 
 async function loadConfig() {
-  config = await chrome.storage.sync.get([
+  const syncData = await chrome.storage.sync.get([
     'baseUrl',
     'token',
     'defaultCategory',
     'defaultTags',
-    'categories',
-    'tags',
     'siteIcon',
   ]);
+  const localData = await chrome.storage.local.get([
+    'categories',
+    'tags',
+  ]);
+
+  config = { ...syncData, ...localData };
 
   renderDatalist(els.categoryList, config.categories || [], (item) => item.name || item.catelog || item);
   renderDatalist(els.tagList, config.tags || [], (item) => item.name || item.tag || item);
@@ -300,5 +306,66 @@ els.url.addEventListener('change', () => {
   showDuplicate(null);
   autoCheckDuplicate().catch(() => {});
 });
+
+// 插件内搜索逻辑
+const searchInput = document.getElementById('pluginSearchInput');
+const searchResults = document.getElementById('pluginSearchResults');
+
+if (searchInput && searchResults) {
+  let debounceTimer;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const keyword = searchInput.value.trim();
+    if (!keyword) {
+      searchResults.style.display = 'none';
+      searchResults.innerHTML = '';
+      return;
+    }
+
+    debounceTimer = setTimeout(async () => {
+      try {
+        const result = await apiFetch(`/api/config?keyword=${encodeURIComponent(keyword)}&pageSize=10`);
+        const list = result?.data || [];
+        if (!list.length) {
+          searchResults.style.display = 'block';
+          searchResults.innerHTML = '<div style="padding: 6px; color: var(--muted); font-size: 12px; text-align: center;">未找到匹配的书签</div>';
+          return;
+        }
+
+        searchResults.style.display = 'block';
+        searchResults.innerHTML = list.map(item => {
+          const name = escapeHTML(item.name || '未命名');
+          const url = escapeHTML(item.url || '');
+          const catelog = escapeHTML(item.catelog || '未分类');
+          return `
+            <div class="search-item" style="padding: 6px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;" data-url="${url}">
+              <div style="font-weight: bold; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
+              <div style="font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${catelog} · ${url}</div>
+            </div>
+          `;
+        }).join('');
+
+        // 绑定点击事件
+        searchResults.querySelectorAll('.search-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const targetUrl = item.dataset.url;
+            if (targetUrl) {
+              chrome.tabs.create({ url: targetUrl });
+            }
+          });
+          item.addEventListener('mouseover', () => {
+            item.style.background = 'var(--bg)';
+          });
+          item.addEventListener('mouseout', () => {
+            item.style.background = 'transparent';
+          });
+        });
+      } catch (err) {
+        searchResults.style.display = 'block';
+        searchResults.innerHTML = `<div style="padding: 6px; color: var(--danger); font-size: 12px; text-align: center;">搜索失败: ${err.message}</div>`;
+      }
+    }, 300);
+  });
+}
 
 initPopup();

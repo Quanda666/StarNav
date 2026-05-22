@@ -122,7 +122,26 @@ curl "https://你的域名/api/site/preview?url=https://example.com" \
 
 `/api/site/preview` 会尝试抓取 title、description、favicon，并返回重复书签提示。
 
-## 8. 错误响应
+## 8. 管理员导出
+
+后台管理员 Cookie 登录后可使用配置导出接口：
+
+```bash
+curl "https://你的域名/api/config/export?format=json" \
+  -H "Cookie: admin_auth=你的后台登录 Cookie"
+
+curl "https://你的域名/api/config/export?format=csv" \
+  -H "Cookie: admin_auth=你的后台登录 Cookie"
+```
+
+说明：
+
+- 导出接口始终导出当前后台配置中的全部书签和分类数据。
+- CSV 导出默认下载文件名为 `bookmarks.csv`。
+- 如需筛选异常链接，请使用后台书签列表的健康状态筛选或公开列表接口的 `health=bad` 查询参数查看；配置导出接口不提供异常链接专用导出。
+- 该接口属于后台管理能力，需要管理员 Cookie，不属于公开只读 API。
+
+## 9. 错误响应
 
 API 错误响应兼容旧字段，同时提供标准化 `error` 对象：
 

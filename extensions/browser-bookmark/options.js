@@ -114,22 +114,24 @@ function renderDatalist(el, items, getValue) {
 }
 
 async function loadOptions() {
-  const data = await chrome.storage.sync.get([
+  const syncData = await chrome.storage.sync.get([
     'baseUrl',
     'token',
     'defaultCategory',
     'defaultTags',
+  ]);
+  const localData = await chrome.storage.local.get([
     'categories',
     'tags',
   ]);
 
-  els.baseUrl.value = data.baseUrl || '';
-  els.token.value = data.token || '';
-  els.defaultCategory.value = data.defaultCategory || '';
-  els.defaultTags.value = data.defaultTags || '';
+  els.baseUrl.value = syncData.baseUrl || '';
+  els.token.value = syncData.token || '';
+  els.defaultCategory.value = syncData.defaultCategory || '';
+  els.defaultTags.value = syncData.defaultTags || '';
 
-  renderDatalist(els.categoryList, data.categories || [], (item) => item.name || item.catelog || item);
-  renderDatalist(els.tagList, data.tags || [], (item) => item.name || item.tag || item);
+  renderDatalist(els.categoryList, localData.categories || [], (item) => item.name || item.catelog || item);
+  renderDatalist(els.tagList, localData.tags || [], (item) => item.name || item.tag || item);
 }
 
 async function saveOptions({ silent = false } = {}) {
@@ -169,7 +171,8 @@ async function refreshMetadata() {
   const categories = categoriesRes?.data || [];
   const tags = tagsRes?.data || [];
 
-  await chrome.storage.sync.set({
+  // 大体积的分类和标签缓存改用 chrome.storage.local 存储，避免 sync 8KB 单项配额超限错误
+  await chrome.storage.local.set({
     categories,
     tags,
     metadataUpdatedAt: new Date().toISOString(),
@@ -183,7 +186,10 @@ async function refreshMetadata() {
 }
 
 async function clearOptions() {
-  await chrome.storage.sync.clear();
+  await Promise.all([
+    chrome.storage.sync.clear(),
+    chrome.storage.local.clear()
+  ]);
   els.baseUrl.value = '';
   els.token.value = '';
   els.defaultCategory.value = '';

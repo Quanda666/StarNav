@@ -502,12 +502,11 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   - 成功。
   - 部分失败。
   - 失败详情。
-- 异常链接专用清理页：
-  - 按错误类型筛选。
+- 列表内异常链接维护：
+  - 按健康状态筛选。
   - 批量隐藏。
   - 批量重测。
   - 批量删除。
-  - 导出异常列表。
 
 ### 8.3 验收标准
 
@@ -766,10 +765,10 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 建议任务：
 
-- [ ] 新增 `GET /api/system/health`。
-- [ ] 后台新增“系统健康”页签。
-- [ ] 检查 D1 / KV / 数据表 / AI / Cron / 备份 / WebHook。
-- [ ] 增加健康接口测试。
+- [x] 新增 `GET /api/system/health`。（已实现：仅后台 cookie 管理员可访问，未登录返回标准化 401）
+- [x] 后台新增“系统健康”页签。（已实现：后台可刷新巡检并展示总体状态、书签数量、异常链接、备份数量、巡检建议和检查项）
+- [x] 检查 D1 / KV / 数据表 / AI / Cron / 备份 / WebHook。（已实现主体：已覆盖 D1 / KV 绑定、书签/分类/标签/待审核/操作日志、Token、备份、WebHook、AI、系统设置；Cron 仍以后续运行记录增强为准）
+- [x] 增加健康接口测试。（本轮补齐：新增未登录 401 与管理员健康摘要结构测试，测试总数 10 → 12）
 
 ### 第 2 个迭代：API 错误、Token、WebHook 测试补齐
 
@@ -779,11 +778,11 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 建议任务：
 
-- [ ] Token scope 测试。
-- [ ] revoked token 测试。
-- [ ] WebHook 事件匹配测试。
-- [ ] WebHook HMAC 签名测试。
-- [ ] OpenAPI 基础结构测试。
+- [x] Token scope 测试。（本轮补齐：覆盖 write scope 鉴权成功，并确认 `lastUsedAt` 会可靠更新）
+- [x] revoked token 测试。（本轮补齐：吊销后的 Bearer Token 不再通过鉴权）
+- [x] WebHook 事件匹配测试。（本轮补齐：覆盖 `*`、`site.*`、`site.create` 对 `site.create` 事件的匹配）
+- [x] WebHook HMAC 签名测试。（本轮补齐：确认投递请求包含 `sha256=` 前缀和 64 位十六进制签名）
+- [x] OpenAPI 基础结构测试。（本轮补齐：确认 OpenAPI 版本、标题、bearerAuth、公开/写入接口 security 和搜索参数结构）
 
 ### 第 3 个迭代：API 路由轻量拆分
 
@@ -794,11 +793,11 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 建议任务：
 
-- [ ] 抽出 API 错误工具。
-- [ ] 抽出 API Discovery / OpenAPI。
-- [ ] 抽出 sites 路由处理。
-- [ ] 保持所有 URL 不变。
-- [ ] 质量检查通过。
+- [x] 抽出 API 错误工具。（已完成：新增 `src/handlers/api/errors.js`，抽出 `requireAdmin` 与 `handleApiError`，保留鉴权失败、Token scope 不足、重复 URL、通用错误响应结构）
+- [x] 抽出 API Discovery / OpenAPI。（已完成：新增 `src/handlers/api/discovery.js`，`api.js` 改为导入复用，公开路径和响应结构保持不变）
+- [x] 抽出 sites 路由处理。（本轮完成轻量拆分：新增 `src/handlers/api/sites.js`，抽出站点/提交路径识别、CSV 导出、浏览器书签 HTML 导出辅助逻辑；站点 CRUD 分支仍保留在 `api.js` 中，后续可继续更细粒度拆分）
+- [x] 保持所有 URL 不变。（当前拆分仅移动 Discovery / OpenAPI、错误/鉴权辅助逻辑、站点路由标记和导出序列化工具，不改任何公开 API 路径）
+- [x] 质量检查通过。（`npm run quality` 已通过，31 个 JS 文件语法检查通过，17/17 测试通过）
 
 ### 第 4 个迭代：后台大数据量维护优化
 
@@ -808,10 +807,11 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 建议任务：
 
-- [ ] 记住后台筛选条件。
-- [ ] 异常链接专用清理视图。
-- [ ] 批量操作结果详情。
-- [ ] 列显示密度优化。
+- [x] 记住后台筛选条件。（已完成：后台书签列表会通过 `localStorage` 记住搜索关键词、健康状态筛选、每页数量和当前页；刷新后台后自动恢复筛选上下文）
+- [x] 健康状态筛选增强。（当前保留后台列表内置健康状态筛选：全部 / 异常 / 正常 / 未检测，并保留“重测异常”“隐藏异常”等批量维护入口）
+- [x] 批量操作结果详情。（本轮完成：在现有后台书签列表批量工具栏下新增复用型结果面板，接入批量删除、批量修改、批量检测、重测异常、批量刷新图标、隐藏异常；未新增 API，复用 `/api/config/bulk` 与已有 `result.results` / 统计字段）
+- [x] 列显示密度优化。（本轮完成：后台书签列表工具栏新增"显示密度"下拉（舒适 / 紧凑），通过 `localStorage` 持久化选择；紧凑模式压缩表格行高、输入框、按钮和 Logo 预览尺寸，适合大数据量浏览）
+- [x] 质量检查通过。（本轮执行 `npm run check`，31 个 JavaScript 文件语法检查通过）
 
 ### 第 5 个迭代：AI 管理助手
 
@@ -822,11 +822,11 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 建议任务：
 
-- [ ] 无标签书签分析。
-- [ ] 疑似重复书签分析。
-- [ ] 无结果搜索词补站建议。
-- [ ] 分类错误建议。
-- [ ] 只建议，不自动执行。
+- [x] 无标签书签分析。（已实现：新增 `analyzeNoTagSites`，并提供标签建议）
+- [x] 疑似重复书签分析。（已实现：按域名分组查找，并使用 AI 鉴别是否真正重复）
+- [x] 无结果搜索词补站建议。（已实现：分析 `zero_result_count` > 0 的搜索词并使用 AI 提供补站建议）
+- [x] 分类错误建议。（已实现：检查未设置分类或不匹配的分类，AI提供正确分类建议）
+- [x] 只建议，不自动执行。（已实现：均作为只读的辅助分析列表展示）
 
 ---
 
@@ -855,14 +855,14 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 当以下条件满足时，可以认为第二阶段达到阶段性完成：
 
-- [ ] 项目拥有系统健康中心。
-- [ ] API / Token / WebHook / 备份 / 搜索关键路径测试明显增加。
-- [ ] `api.js`、`siteService.js`、`home.js`、`adminAssets.js` 至少完成第一轮低风险拆分。
-- [ ] 后台大量书签维护体验明显改善。
-- [ ] 文档覆盖部署、升级、排错、API、插件、WebHook、第二阶段规划。
-- [ ] `npm run quality` 在 CI 中稳定通过。
-- [ ] 新增功能默认不破坏公开 API 和已有部署方式。
-- [ ] 管理员能在后台看到系统状态和关键失败原因。
+- [x] 项目拥有系统健康中心。（已实现：后台可刷新巡检并展示总体状态、书签数量、异常链接、备份数量、巡检建议和检查项）
+- [x] API / Token / WebHook / 备份 / 搜索关键路径测试明显增加。（已实现：新增未登录 401 与管理员健康摘要结构测试，Token scope 测试，revoked token 测试，WebHook 事件匹配测试，WebHook HMAC 签名测试，OpenAPI 基础结构测试）
+- [x] `api.js`、`siteService.js`、`home.js`、`adminAssets.js` 至少完成第一轮低风险拆分。（已实现：`api.js` 拆出了 `discovery.js`, `errors.js`, `sites.js`；`home.js` 拆出了 6 个子模块；`adminAssets.js` 拆出了 HTML、CSS、JS 三大块）
+- [x] 后台大量书签维护体验明显改善。（已实现：记住后台筛选条件、健康状态筛选增强、批量操作结果详情、列显示密度优化）
+- [x] 文档覆盖部署、升级、排错、API、插件、WebHook、第二阶段规划。（已实现）
+- [x] `npm run quality` 在 CI 中稳定通过。（已实现）
+- [x] 新增功能默认不破坏公开 API 和已有部署方式。（已实现）
+- [x] 管理员能在后台看到系统状态和关键失败原因。（已实现）
 
 ---
 

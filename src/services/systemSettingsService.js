@@ -10,6 +10,8 @@ export const DEFAULT_SYSTEM_SETTINGS = {
   footerText: '',
   backgroundImage: '',
   heroVisible: 'true',
+  publicSubmissionEnabled: 'true',
+  privateBookmarksVisible: 'true',
   blogVisible: 'true',
   blogUrl: 'https://blog.110995.xyz/',
   blogLabel: '访问博客',
@@ -62,6 +64,8 @@ export async function getSystemSettings(env) {
   settings.footerText = limitText(settings.footerText, 'footerText');
   settings.backgroundImage = sanitizeImageUrl(settings.backgroundImage) || '';
   settings.heroVisible = boolString(settings.heroVisible, 'true');
+  settings.publicSubmissionEnabled = boolString(settings.publicSubmissionEnabled, 'true');
+  settings.privateBookmarksVisible = boolString(settings.privateBookmarksVisible, 'true');
   settings.blogVisible = boolString(settings.blogVisible, 'true');
   settings.blogUrl = sanitizeUrl(settings.blogUrl) || DEFAULT_SYSTEM_SETTINGS.blogUrl;
   settings.blogLabel = limitText(settings.blogLabel, 'blogLabel') || DEFAULT_SYSTEM_SETTINGS.blogLabel;
@@ -86,6 +90,8 @@ export async function updateSystemSettings(env, payload = {}) {
     footerText: limitText(payload.footerText, 'footerText'),
     backgroundImage: sanitizeImageUrl(payload.backgroundImage) || '',
     heroVisible: boolString(payload.heroVisible, 'true'),
+    publicSubmissionEnabled: boolString(payload.publicSubmissionEnabled, 'true'),
+    privateBookmarksVisible: boolString(payload.privateBookmarksVisible, 'true'),
     blogVisible: boolString(payload.blogVisible, 'true'),
     blogUrl: sanitizeUrl(payload.blogUrl) || DEFAULT_SYSTEM_SETTINGS.blogUrl,
     blogLabel: limitText(payload.blogLabel, 'blogLabel') || DEFAULT_SYSTEM_SETTINGS.blogLabel,
