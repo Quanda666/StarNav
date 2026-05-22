@@ -12,26 +12,54 @@ function validateSlug(slug) {
 }
 
 export async function listSpaces(env) {
-  const { results } = await env.NAV_DB.prepare(`
-    SELECT * FROM spaces
-    ORDER BY sort_order ASC, name ASC
-  `).all();
-  return results || [];
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT * FROM spaces
+      ORDER BY sort_order ASC, name ASC
+    `).all();
+    return results || [];
+  } catch (error) {
+    console.warn(`[spaces] list fallback: ${error?.message || error}`);
+    return [{
+      id: null,
+      name: '默认空间',
+      slug: 'default',
+      icon: null,
+      color: null,
+      description: '空间数据表尚未初始化，当前使用默认空间兼容模式。',
+      visibility: 'public',
+      sort_order: 1,
+    }];
+  }
 }
 
 export async function getDefaultSpace(env) {
-  let space = await env.NAV_DB.prepare("SELECT * FROM spaces WHERE slug = 'default'").first();
-  if (space) return space;
+  try {
+    let space = await env.NAV_DB.prepare("SELECT * FROM spaces WHERE slug = 'default'").first();
+    if (space) return space;
 
-  await env.NAV_DB.prepare(`
-    INSERT INTO spaces (name, slug, description, visibility, sort_order)
-    VALUES ('默认空间', 'default', '系统自动创建的默认导航空间', 'public', 1)
-    ON CONFLICT(slug) DO NOTHING
-  `).run();
+    await env.NAV_DB.prepare(`
+      INSERT INTO spaces (name, slug, description, visibility, sort_order)
+      VALUES ('默认空间', 'default', '系统自动创建的默认导航空间', 'public', 1)
+      ON CONFLICT(slug) DO NOTHING
+    `).run();
 
-  space = await env.NAV_DB.prepare("SELECT * FROM spaces WHERE slug = 'default'").first();
-  if (!space) throw new Error('Default space not found');
-  return space;
+    space = await env.NAV_DB.prepare("SELECT * FROM spaces WHERE slug = 'default'").first();
+    if (space) return space;
+  } catch (error) {
+    console.warn(`[spaces] default fallback: ${error?.message || error}`);
+  }
+
+  return {
+    id: null,
+    name: '默认空间',
+    slug: 'default',
+    icon: null,
+    color: null,
+    description: '空间数据表尚未初始化，当前使用默认空间兼容模式。',
+    visibility: 'public',
+    sort_order: 1,
+  };
 }
 
 export async function resolveSpace(env, spaceOrSlug) {
@@ -134,8 +162,13 @@ export async function deleteSpace(env, id) {
 }
 
 export async function findSpace(env, idOrSlug) {
-  if (/^\d+$/.test(String(idOrSlug))) {
-    return env.NAV_DB.prepare('SELECT * FROM spaces WHERE id = ?').bind(Number(idOrSlug)).first();
+  try {
+    if (/^\d+$/.test(String(idOrSlug))) {
+      return env.NAV_DB.prepare('SELECT * FROM spaces WHERE id = ?').bind(Number(idOrSlug)).first();
+    }
+    return env.NAV_DB.prepare('SELECT * FROM spaces WHERE slug = ?').bind(String(idOrSlug)).first();
+  } catch (error) {
+    console.warn(`[spaces] find fallback: ${error?.message || error}`);
+    return null;
   }
-  return env.NAV_DB.prepare('SELECT * FROM spaces WHERE slug = ?').bind(String(idOrSlug)).first();
 }

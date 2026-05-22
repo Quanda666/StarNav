@@ -243,36 +243,37 @@ async function runMigration(env) {
       AND EXISTS (SELECT 1 FROM categories WHERE categories.name = sites.catelog)
   `).run();
 
-  console.log('[migration] ensuring default space exists');
-  let defaultSpace = await env.NAV_DB.prepare("SELECT id FROM spaces WHERE slug = 'default'").first();
-  if (!defaultSpace) {
-    const reusableSpace = await env.NAV_DB.prepare('SELECT id FROM spaces WHERE slug IS NULL OR TRIM(slug) = ? OR name = ? ORDER BY id ASC LIMIT 1').bind('', '默认空间').first();
-    if (reusableSpace?.id) {
-      console.log('[migration] repairing existing space as default space');
-      await env.NAV_DB.prepare(`
-        UPDATE spaces
-        SET name = '默认空间',
-            slug = 'default',
-            description = COALESCE(description, '系统自动创建的默认导航空间'),
-            visibility = COALESCE(NULLIF(TRIM(visibility), ''), 'public'),
-            sort_order = 1,
-            update_time = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).bind(reusableSpace.id).run();
-    } else {
-      console.log('[migration] creating default space');
-      await env.NAV_DB.prepare(`
-        INSERT INTO spaces (name, slug, description, visibility, sort_order)
-        VALUES ('默认空间', 'default', '系统自动创建的默认导航空间', 'public', 1)
-      `).run();
+  try {
+    console.log('[migration] ensuring default space exists');
+    let defaultSpace = await env.NAV_DB.prepare("SELECT id FROM spaces WHERE slug = 'default'").first();
+    if (!defaultSpace) {
+      const reusableSpace = await env.NAV_DB.prepare('SELECT id FROM spaces WHERE slug IS NULL OR TRIM(slug) = ? OR name = ? ORDER BY id ASC LIMIT 1').bind('', '默认空间').first();
+      if (reusableSpace?.id) {
+        console.log('[migration] repairing existing space as default space');
+        await env.NAV_DB.prepare(`
+          UPDATE spaces
+          SET name = '默认空间',
+              slug = 'default',
+              description = COALESCE(description, '系统自动创建的默认导航空间'),
+              visibility = COALESCE(NULLIF(TRIM(visibility), ''), 'public'),
+              sort_order = 1,
+              update_time = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).bind(reusableSpace.id).run();
+      } else {
+        console.log('[migration] creating default space');
+        await env.NAV_DB.prepare(`
+          INSERT INTO spaces (name, slug, description, visibility, sort_order)
+          VALUES ('默认空间', 'default', '系统自动创建的默认导航空间', 'public', 1)
+        `).run();
+      }
+      defaultSpace = await env.NAV_DB.prepare("SELECT id FROM spaces WHERE slug = 'default'").first();
     }
-    defaultSpace = await env.NAV_DB.prepare("SELECT id FROM spaces WHERE slug = 'default'").first();
-  }
-  if (defaultSpace && defaultSpace.id) {
-    const defaultSpaceId = defaultSpace.id;
-    console.log(`[migration] migrating categories and sites to default space (ID: ${defaultSpaceId})`);
-    await env.NAV_DB.prepare('UPDATE categories SET space_id = ? WHERE space_id IS NULL').bind(defaultSpaceId).run();
-    await env.NAV_DB.prepare('UPDATE sites SET space_id = ? WHERE space_id IS NULL').bind(defaultSpaceId).run();
+    if (defaultSpace && defaultSpace.id) {
+      console.log(`[migration] default space ready (ID: ${defaultSpace.id})`);
+    }
+  } catch (error) {
+    console.warn(`[migration] default space skipped: ${error?.message || error}`);
   }
 
   console.log('[migration] completed');

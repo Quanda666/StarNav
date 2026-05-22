@@ -496,26 +496,89 @@ export async function getSites(env, { page = 1, pageSize = 10, catalog = '', key
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const fromSql = 'FROM sites s LEFT JOIN categories c ON c.id = s.category_id';
   const selectSql = `SELECT ${SITE_SELECT_COLUMNS}`;
-  const { results } = await env.NAV_DB.prepare(`
-    ${selectSql}
-    ${fromSql}
-    ${whereSql}
-    ${orderSql}
-    LIMIT ? OFFSET ?
-  `).bind(...binds, safePageSize, offset).all();
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      ${selectSql}
+      ${fromSql}
+      ${whereSql}
+      ${orderSql}
+      LIMIT ? OFFSET ?
+    `).bind(...binds, safePageSize, offset).all();
 
-  const countResult = await env.NAV_DB.prepare(`
-    SELECT COUNT(*) AS total
-    ${fromSql}
-    ${whereSql}
-  `).bind(...binds).first();
+    const countResult = await env.NAV_DB.prepare(`
+      SELECT COUNT(*) AS total
+      ${fromSql}
+      ${whereSql}
+    `).bind(...binds).first();
 
-  return {
-    data: await attachTagsToSites(env, results || []),
-    total: countResult?.total || 0,
-    page: safePage,
-    pageSize: safePageSize,
-  };
+    return {
+      data: await attachTagsToSites(env, results || []),
+      total: countResult?.total || 0,
+      page: safePage,
+      pageSize: safePageSize,
+    };
+  } catch (error) {
+    console.warn(`[sites] primary list fallback: ${error?.message || error}`);
+  }
+
+  const fallbackWhere = [];
+  const fallbackBinds = [];
+
+  if (catalog) {
+    fallbackWhere.push('s.catelog = ?');
+    fallbackBinds.push(catalog);
+  }
+
+  const fallbackLikeKeyword = toSafeLikePattern(keyword);
+  if (fallbackLikeKeyword) {
+    fallbackWhere.push("(s.name LIKE ? ESCAPE '\\' OR s.url LIKE ? ESCAPE '\\' OR s.catelog LIKE ? ESCAPE '\\')");
+    fallbackBinds.push(fallbackLikeKeyword, fallbackLikeKeyword, fallbackLikeKeyword);
+  }
+
+  const fallbackWhereSql = fallbackWhere.length ? `WHERE ${fallbackWhere.join(' AND ')}` : '';
+
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT
+        s.id,
+        s.name,
+        s.url,
+        s.logo,
+        s.desc,
+        s.catelog,
+        NULL AS category_id,
+        NULL AS space_id,
+        'public' AS visibility,
+        9999 AS sort_order,
+        0 AS hits,
+        NULL AS last_visit_time,
+        NULL AS last_checked_at,
+        NULL AS last_status_code,
+        NULL AS last_error,
+        s.create_time,
+        s.create_time AS update_time
+      FROM sites s
+      ${fallbackWhereSql}
+      ORDER BY datetime(s.create_time) DESC, s.id DESC
+      LIMIT ? OFFSET ?
+    `).bind(...fallbackBinds, safePageSize, offset).all();
+
+    const countResult = await env.NAV_DB.prepare(`
+      SELECT COUNT(*) AS total
+      FROM sites s
+      ${fallbackWhereSql}
+    `).bind(...fallbackBinds).first();
+
+    return {
+      data: results || [],
+      total: countResult?.total || 0,
+      page: safePage,
+      pageSize: safePageSize,
+    };
+  } catch (fallbackError) {
+    console.warn(`[sites] legacy list fallback failed: ${fallbackError?.message || fallbackError}`);
+    return { data: [], total: 0, page: safePage, pageSize: safePageSize };
+  }
 }
 
 /**
@@ -540,14 +603,55 @@ export async function getAllSites(env, { space = '', space_id = null } = {}) {
   }
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const { results } = await env.NAV_DB.prepare(`
-    SELECT ${SITE_SELECT_COLUMNS}
-    FROM sites s
-    LEFT JOIN categories c ON c.id = s.category_id
-    ${whereSql}
-    ORDER BY s.sort_order ASC, datetime(s.create_time) DESC, s.id DESC
-  `).bind(...binds).all();
-  return attachTagsToSites(env, results || []);
+
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT ${SITE_SELECT_COLUMNS}
+      FROM sites s
+      LEFT JOIN categories c ON c.id = s.category_id
+      ${whereSql}
+      ORDER BY s.sort_order ASC, datetime(s.create_time) DESC, s.id DESC
+    `).bind(...binds).all();
+
+    try {
+      return await attachTagsToSites(env, results || []);
+    } catch (tagError) {
+      console.warn(`[sites] attach tags skipped for all-sites: ${tagError?.message || tagError}`);
+      return (results || []).map((site) => ({ ...site, tags: [] }));
+    }
+  } catch (error) {
+    console.warn(`[sites] all-sites primary fallback: ${error?.message || error}`);
+  }
+
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT
+        s.id,
+        s.name,
+        s.url,
+        s.logo,
+        s.desc,
+        s.catelog,
+        NULL AS category_id,
+        NULL AS space_id,
+        'public' AS visibility,
+        9999 AS sort_order,
+        0 AS hits,
+        NULL AS last_visit_time,
+        NULL AS last_checked_at,
+        NULL AS last_status_code,
+        NULL AS last_error,
+        s.create_time,
+        s.create_time AS update_time
+      FROM sites s
+      ORDER BY datetime(s.create_time) DESC, s.id DESC
+    `).all();
+
+    return (results || []).map((site) => ({ ...site, tags: [] }));
+  } catch (fallbackError) {
+    console.warn(`[sites] all-sites legacy fallback failed: ${fallbackError?.message || fallbackError}`);
+    return [];
+  }
 }
 
 /**
@@ -786,18 +890,72 @@ export async function searchSites(env, { keyword = '', limit = 50, includePrivat
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const candidateLimit = Math.max(safeLimit * 6, 80);
-  const { results } = await env.NAV_DB.prepare(`
-    SELECT DISTINCT ${SITE_SELECT_COLUMNS}
-    FROM sites s
-    LEFT JOIN categories c ON c.id = s.category_id
-    LEFT JOIN site_tags st ON st.site_id = s.id
-    LEFT JOIN tags t ON t.id = st.tag_id
-    ${whereSql}
-    ORDER BY datetime(s.update_time) DESC, datetime(s.create_time) DESC
-    LIMIT ?
-  `).bind(...binds, candidateLimit).all();
+  let candidateRows = [];
 
-  let candidateRows = results || [];
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT DISTINCT ${SITE_SELECT_COLUMNS}
+      FROM sites s
+      LEFT JOIN categories c ON c.id = s.category_id
+      LEFT JOIN site_tags st ON st.site_id = s.id
+      LEFT JOIN tags t ON t.id = st.tag_id
+      ${whereSql}
+      ORDER BY datetime(s.update_time) DESC, datetime(s.create_time) DESC
+      LIMIT ?
+    `).bind(...binds, candidateLimit).all();
+
+    candidateRows = results || [];
+  } catch (error) {
+    console.warn(`[search] primary query fallback: ${error?.message || error}`);
+
+    const fallbackWhere = [];
+    const fallbackBinds = [];
+    const rawLike = toSafeLikePattern(query.raw);
+
+    if (rawLike) {
+      fallbackWhere.push("(s.name LIKE ? ESCAPE '\\' OR s.url LIKE ? ESCAPE '\\' OR COALESCE(s.desc, '') LIKE ? ESCAPE '\\' OR s.catelog LIKE ? ESCAPE '\\')");
+      fallbackBinds.push(rawLike, rawLike, rawLike, rawLike);
+    }
+
+    if (!adminAuthed && !privateUnlocked) {
+      fallbackWhere.push('s.catelog <> ?');
+      fallbackBinds.push(PRIVATE_BOOKMARK_CATEGORY);
+    }
+
+    const fallbackWhereSql = fallbackWhere.length ? `WHERE ${fallbackWhere.join(' AND ')}` : '';
+
+    try {
+      const { results } = await env.NAV_DB.prepare(`
+        SELECT
+          s.id,
+          s.name,
+          s.url,
+          s.logo,
+          s.desc,
+          s.catelog,
+          NULL AS category_id,
+          NULL AS space_id,
+          'public' AS visibility,
+          9999 AS sort_order,
+          0 AS hits,
+          NULL AS last_visit_time,
+          NULL AS last_checked_at,
+          NULL AS last_status_code,
+          NULL AS last_error,
+          s.create_time,
+          s.create_time AS update_time
+        FROM sites s
+        ${fallbackWhereSql}
+        ORDER BY datetime(s.create_time) DESC, s.id DESC
+        LIMIT ?
+      `).bind(...fallbackBinds, candidateLimit).all();
+
+      candidateRows = (results || []).map((site) => ({ ...site, tags: [] }));
+    } catch (fallbackError) {
+      console.warn(`[search] legacy query fallback failed: ${fallbackError?.message || fallbackError}`);
+      return [];
+    }
+  }
   const needsBroadRecall = candidateRows.length < safeLimit && query.terms.some((term) => /^[a-z0-9]{2,16}$/i.test(term));
   if (needsBroadRecall) {
     const fallbackWhere = [];
@@ -841,7 +999,14 @@ export async function searchSites(env, { keyword = '', limit = 50, includePrivat
     }
   }
 
-  const withTags = await attachTagsToSites(env, candidateRows);
+  let withTags = candidateRows;
+  try {
+    withTags = await attachTagsToSites(env, candidateRows);
+  } catch (tagError) {
+    console.warn(`[search] attach tags skipped: ${tagError?.message || tagError}`);
+    withTags = candidateRows.map((site) => ({ ...site, tags: Array.isArray(site.tags) ? site.tags : [] }));
+  }
+
   return withTags
     .filter((site) => matchesAdvancedFilters(site, query.filters))
     .map((site) => {
@@ -1042,7 +1207,7 @@ function buildDuplicateError(duplicate, scope = 'site') {
  */
 export async function createSite(env, config, { force = false } = {}) {
   const site = normalizeSitePayload(config);
-  const spaceId = site.space_id || await resolveSpaceId(env, site.space);
+  const spaceId = null;
   if (!force) {
     const duplicate = await findDuplicateSite(env, site.url);
     if (duplicate) throw buildDuplicateError(duplicate, 'create');
@@ -1088,8 +1253,8 @@ export async function updateSite(env, id, config, { force = false } = {}) {
     const duplicate = await findDuplicateSite(env, site.url, { excludeId: id });
     if (duplicate) throw buildDuplicateError(duplicate, 'update');
   }
-  const spaceId = site.space_id || existing.space_id || await resolveSpaceId(env, site.space);
-  const category = await upsertCategoryByName(env, site.catelog, site.sort_order, spaceId);
+  const spaceId = site.space_id || existing.space_id || null;
+  const category = await upsertCategoryByName(env, site.catelog, site.sort_order);
 
   const result = await env.NAV_DB.prepare(`
     UPDATE sites
@@ -1197,37 +1362,76 @@ export async function getPendingSites(env, { page = 1, pageSize = 10, status = '
     ? String(status).toLowerCase()
     : 'pending';
 
-  const { results } = await env.NAV_DB.prepare(`
-    SELECT * FROM pending_sites
-    WHERE COALESCE(status, 'pending') = ?
-    ORDER BY datetime(COALESCE(reviewed_at, create_time)) DESC, id DESC
-    LIMIT ? OFFSET ?
-  `).bind(safeStatus, safePageSize, offset).all();
-
-  const countResult = await env.NAV_DB.prepare(`
-    SELECT COUNT(*) AS total FROM pending_sites WHERE COALESCE(status, 'pending') = ?
-  `).bind(safeStatus).first();
-
-  const stats = await env.NAV_DB.prepare(`
-    SELECT
-      SUM(CASE WHEN COALESCE(status, 'pending') = 'pending' THEN 1 ELSE 0 END) AS pending_count,
-      SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved_count,
-      SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected_count
-    FROM pending_sites
-  `).first();
-
-  return {
-    data: (results || []).map((site) => ({ ...site, tags: parseStoredTags(site.tags) })),
-    total: countResult?.total || 0,
+  const emptyResult = {
+    data: [],
+    total: 0,
     page: safePage,
     pageSize: safePageSize,
     status: safeStatus,
-    stats: {
-      pending: Number(stats?.pending_count) || 0,
-      approved: Number(stats?.approved_count) || 0,
-      rejected: Number(stats?.rejected_count) || 0,
-    },
+    stats: { pending: 0, approved: 0, rejected: 0 },
   };
+
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT * FROM pending_sites
+      WHERE COALESCE(status, 'pending') = ?
+      ORDER BY datetime(COALESCE(reviewed_at, create_time)) DESC, id DESC
+      LIMIT ? OFFSET ?
+    `).bind(safeStatus, safePageSize, offset).all();
+
+    const countResult = await env.NAV_DB.prepare(`
+      SELECT COUNT(*) AS total FROM pending_sites WHERE COALESCE(status, 'pending') = ?
+    `).bind(safeStatus).first();
+
+    const stats = await env.NAV_DB.prepare(`
+      SELECT
+        SUM(CASE WHEN COALESCE(status, 'pending') = 'pending' THEN 1 ELSE 0 END) AS pending_count,
+        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved_count,
+        SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected_count
+      FROM pending_sites
+    `).first();
+
+    return {
+      data: (results || []).map((site) => ({ ...site, tags: parseStoredTags(site.tags) })),
+      total: countResult?.total || 0,
+      page: safePage,
+      pageSize: safePageSize,
+      status: safeStatus,
+      stats: {
+        pending: Number(stats?.pending_count) || 0,
+        approved: Number(stats?.approved_count) || 0,
+        rejected: Number(stats?.rejected_count) || 0,
+      },
+    };
+  } catch (error) {
+    console.warn(`[pending] primary query fallback: ${error?.message || error}`);
+  }
+
+  if (safeStatus !== 'pending') return emptyResult;
+
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT id, name, url, logo, desc, catelog, create_time
+      FROM pending_sites
+      ORDER BY datetime(create_time) DESC, id DESC
+      LIMIT ? OFFSET ?
+    `).bind(safePageSize, offset).all();
+
+    const countResult = await env.NAV_DB.prepare('SELECT COUNT(*) AS total FROM pending_sites').first();
+    const total = Number(countResult?.total) || 0;
+
+    return {
+      data: (results || []).map((site) => ({ ...site, status: 'pending', tags: [] })),
+      total,
+      page: safePage,
+      pageSize: safePageSize,
+      status: safeStatus,
+      stats: { pending: total, approved: 0, rejected: 0 },
+    };
+  } catch (error) {
+    console.warn(`[pending] legacy query fallback: ${error?.message || error}`);
+    return emptyResult;
+  }
 }
 
 export async function getSubmissionAnalytics(env, { days = 30 } = {}) {
@@ -1458,9 +1662,9 @@ export async function approvePendingSite(env, id, { force = false } = {}) {
     if (duplicate) throw buildDuplicateError(duplicate, 'approve');
   }
 
-  const spaceId = await resolveSpaceId(env, null); // 批准后默认进入默认空间
+  const spaceId = null; // 批准后进入默认空空间，避免空间表异常影响审核流程
   const sortOrder = await getPrependSortOrder(env, spaceId);
-  const category = await upsertCategoryByName(env, config.catelog, sortOrder, spaceId);
+  const category = await upsertCategoryByName(env, config.catelog, sortOrder);
 
   const visibility = normalizeVisibility(config.visibility, config.catelog);
   const result = await env.NAV_DB.prepare(`
@@ -1678,8 +1882,8 @@ export async function importSites(env, jsonData, { mode = 'merge' } = {}) {
         continue;
       }
       seenKeys.add(key);
-      const spaceId = await resolveSpaceId(env, site.space);
-      const category = await upsertCategoryByName(env, site.catelog, site.sort_order, spaceId);
+      const spaceId = null;
+      const category = await upsertCategoryByName(env, site.catelog, site.sort_order);
       const result = await env.NAV_DB.prepare(`
         INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

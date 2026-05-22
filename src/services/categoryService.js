@@ -1,6 +1,5 @@
 import { buildTree, cleanText, normalizeSortOrder } from '../lib/utils.js';
 import { PRIVATE_BOOKMARK_CATEGORY } from './privateBookmarkService.js';
-import { resolveSpaceId } from './spaceService.js';
 
 function cleanCategoryColor(value) {
   const text = cleanText(value);
@@ -40,26 +39,39 @@ async function getDescendantCategoryIds(env, categoryId) {
 
 async function ensurePrivateBookmarkCategory(env) {
   const legacyPrivateDescription = String.fromCharCode(38656,35201,35775,38382,23494,30721,30340,31169,20154,20070,31614,20998,31867);
-  await env.NAV_DB.batch([
-    env.NAV_DB.prepare(`
-      INSERT INTO categories (name, sort_order, icon, description)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(name) DO NOTHING
-    `).bind(PRIVATE_BOOKMARK_CATEGORY, 2147483647, null, null),
-    env.NAV_DB.prepare(`
-      INSERT INTO category_orders (catelog, sort_order)
-      VALUES (?, ?)
-      ON CONFLICT(catelog) DO UPDATE SET sort_order = excluded.sort_order
-    `).bind(PRIVATE_BOOKMARK_CATEGORY, 2147483647),
-    env.NAV_DB.prepare(`
-      UPDATE categories
-      SET
-        icon = CASE WHEN icon = 'lock' THEN NULL ELSE icon END,
-        description = CASE WHEN description = ? THEN NULL ELSE description END,
-        update_time = CURRENT_TIMESTAMP
-      WHERE name = ? AND (icon = 'lock' OR description = ?)
-    `).bind(legacyPrivateDescription, PRIVATE_BOOKMARK_CATEGORY, legacyPrivateDescription),
-  ]);
+  try {
+    await env.NAV_DB.batch([
+      env.NAV_DB.prepare(`
+        INSERT INTO categories (name, sort_order, icon, description)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(name) DO NOTHING
+      `).bind(PRIVATE_BOOKMARK_CATEGORY, 2147483647, null, null),
+      env.NAV_DB.prepare(`
+        INSERT INTO category_orders (catelog, sort_order)
+        VALUES (?, ?)
+        ON CONFLICT(catelog) DO UPDATE SET sort_order = excluded.sort_order
+      `).bind(PRIVATE_BOOKMARK_CATEGORY, 2147483647),
+      env.NAV_DB.prepare(`
+        UPDATE categories
+        SET
+          icon = CASE WHEN icon = 'lock' THEN NULL ELSE icon END,
+          description = CASE WHEN description = ? THEN NULL ELSE description END,
+          update_time = CURRENT_TIMESTAMP
+        WHERE name = ? AND (icon = 'lock' OR description = ?)
+      `).bind(legacyPrivateDescription, PRIVATE_BOOKMARK_CATEGORY, legacyPrivateDescription),
+    ]);
+  } catch (error) {
+    console.warn(`[categories] private category full ensure fallback: ${error?.message || error}`);
+    try {
+      await env.NAV_DB.prepare(`
+        INSERT INTO categories (name, sort_order)
+        VALUES (?, ?)
+        ON CONFLICT(name) DO NOTHING
+      `).bind(PRIVATE_BOOKMARK_CATEGORY, 2147483647).run();
+    } catch (fallbackError) {
+      console.warn(`[categories] private category minimal ensure skipped: ${fallbackError?.message || fallbackError}`);
+    }
+  }
 }
 
 export async function listCategories(env, { space = '' } = {}) {
@@ -67,32 +79,70 @@ export async function listCategories(env, { space = '' } = {}) {
 
   const where = [];
   const binds = [];
-
-  if (space) {
-    const spaceId = await resolveSpaceId(env, space);
-    if (spaceId) {
-      if (String(space).trim() === 'default') {
-        where.push('(c.space_id = ? OR c.space_id IS NULL)');
-      } else {
-        where.push('c.space_id = ?');
-      }
-      binds.push(spaceId);
-    }
-  }
-
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-  const { results } = await env.NAV_DB.prepare(`
-    SELECT
-      c.*,
-      (SELECT COUNT(*) FROM sites s WHERE s.category_id = c.id OR (s.category_id IS NULL AND s.catelog = c.name)) AS site_count,
-      (SELECT COUNT(*) FROM categories child WHERE child.parent_id = c.id) AS child_count
-    FROM categories c
-    ${whereSql}
-    ORDER BY c.sort_order ASC, c.name ASC
-  `).bind(...binds).all();
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT
+        c.*,
+        (SELECT COUNT(*) FROM sites s WHERE s.category_id = c.id OR (s.category_id IS NULL AND s.catelog = c.name)) AS site_count,
+        (SELECT COUNT(*) FROM categories child WHERE child.parent_id = c.id) AS child_count
+      FROM categories c
+      ${whereSql}
+      ORDER BY c.sort_order ASC, c.name ASC
+    `).bind(...binds).all();
 
-  return results || [];
+    return results || [];
+  } catch (error) {
+    console.warn(`[categories] list fallback: ${error?.message || error}`);
+  }
+
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT
+        c.id,
+        c.name,
+        NULL AS parent_id,
+        9999 AS sort_order,
+        NULL AS icon,
+        NULL AS color,
+        NULL AS description,
+        COUNT(s.id) AS site_count,
+        0 AS child_count
+      FROM categories c
+      LEFT JOIN sites s ON s.catelog = c.name
+      GROUP BY c.id, c.name
+      ORDER BY c.name ASC
+    `).all();
+
+    return results || [];
+  } catch (legacyError) {
+    console.warn(`[categories] legacy list fallback: ${legacyError?.message || legacyError}`);
+  }
+
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT
+        ROW_NUMBER() OVER (ORDER BY catelog ASC) AS id,
+        catelog AS name,
+        NULL AS parent_id,
+        9999 AS sort_order,
+        NULL AS icon,
+        NULL AS color,
+        NULL AS description,
+        COUNT(*) AS site_count,
+        0 AS child_count
+      FROM sites
+      WHERE COALESCE(TRIM(catelog), '') <> ''
+      GROUP BY catelog
+      ORDER BY catelog ASC
+    `).all();
+
+    return results || [];
+  } catch (sitesOnlyError) {
+    console.warn(`[categories] sites-only list fallback: ${sitesOnlyError?.message || sitesOnlyError}`);
+    return [];
+  }
 }
 
 export async function getCategoryTree(env, { space = '' } = {}) {
@@ -142,19 +192,15 @@ export async function createCategory(env, body) {
 
   const parentId = body?.parent_id ? Number(body.parent_id) : null;
   const sortOrder = normalizeSortOrder(body?.sort_order);
-  const spaceId = body?.space_id === undefined || body?.space_id === null || body?.space_id === ''
-    ? await resolveSpaceId(env, '')
-    : await resolveSpaceId(env, body.space_id);
-
   if (parentId) {
     const parent = await env.NAV_DB.prepare('SELECT id FROM categories WHERE id = ?').bind(parentId).first();
     if (!parent) throw new Error('Parent category not found');
   }
 
   const result = await env.NAV_DB.prepare(`
-    INSERT INTO categories (name, parent_id, space_id, sort_order, icon, color, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(name, parentId, spaceId, sortOrder, cleanText(body?.icon) || null, cleanCategoryColor(body?.color), cleanText(body?.description) || null).run();
+    INSERT INTO categories (name, parent_id, sort_order, icon, color, description)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(name, parentId, sortOrder, cleanText(body?.icon) || null, cleanCategoryColor(body?.color), cleanText(body?.description) || null).run();
 
   await env.NAV_DB.prepare(`
     INSERT INTO category_orders (catelog, sort_order)
@@ -175,10 +221,6 @@ export async function updateCategory(env, idOrName, body) {
   const icon = body?.icon === undefined ? category.icon : (cleanText(body.icon) || null);
   const color = body?.color === undefined ? category.color : cleanCategoryColor(body.color);
   const description = body?.description === undefined ? category.description : (cleanText(body.description) || null);
-  const spaceId = body?.space_id === undefined
-    ? (category.space_id || null)
-    : (body.space_id === null || body.space_id === '' ? await resolveSpaceId(env, '') : await resolveSpaceId(env, body.space_id));
-
   if (parentId && Number(parentId) === Number(category.id)) {
     throw new Error('Category cannot be its own parent');
   }
@@ -194,9 +236,9 @@ export async function updateCategory(env, idOrName, body) {
   await env.NAV_DB.batch([
     env.NAV_DB.prepare(`
       UPDATE categories
-      SET name = ?, parent_id = ?, space_id = ?, sort_order = ?, icon = ?, color = ?, description = ?, update_time = CURRENT_TIMESTAMP
+      SET name = ?, parent_id = ?, sort_order = ?, icon = ?, color = ?, description = ?, update_time = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).bind(newName, parentId || null, spaceId || null, sortOrder, icon, color, description, category.id),
+    `).bind(newName, parentId || null, sortOrder, icon, color, description, category.id),
     env.NAV_DB.prepare('UPDATE sites SET catelog = ?, update_time = CURRENT_TIMESTAMP WHERE category_id IS NULL AND catelog = ?').bind(newName, category.name),
     env.NAV_DB.prepare('UPDATE pending_sites SET catelog = ? WHERE catelog = ?').bind(newName, category.name),
     env.NAV_DB.prepare('DELETE FROM category_orders WHERE catelog = ?').bind(category.name),
@@ -227,16 +269,16 @@ export async function deleteCategory(env, idOrName) {
   ]);
 }
 
-export async function upsertCategoryByName(env, name, sortOrder = 9999, spaceId = null) {
+export async function upsertCategoryByName(env, name, sortOrder = 9999) {
   const normalizedName = cleanText(name);
   if (!normalizedName) return null;
 
   await env.NAV_DB.batch([
     env.NAV_DB.prepare(`
-      INSERT INTO categories (name, sort_order, space_id)
-      VALUES (?, ?, ?)
+      INSERT INTO categories (name, sort_order)
+      VALUES (?, ?)
       ON CONFLICT(name) DO NOTHING
-    `).bind(normalizedName, normalizeSortOrder(sortOrder), spaceId),
+    `).bind(normalizedName, normalizeSortOrder(sortOrder)),
     env.NAV_DB.prepare(`
       INSERT INTO category_orders (catelog, sort_order)
       VALUES (?, ?)

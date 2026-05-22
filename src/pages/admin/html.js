@@ -348,10 +348,10 @@ export const adminHtml = `<!DOCTYPE html>
           <table id="categoryTable">
             <thead>
               <tr>
-                <th>ID</th><th>分类名称</th><th>父分类</th><th style="display:none;">所属空间</th><th>图标</th><th>颜色</th><th>描述</th><th>书签数量</th><th>子类数量</th><th>排序值</th><th>操作</th>
+                <th>ID</th><th>分类名称</th><th>父分类</th><th>图标</th><th>颜色</th><th>描述</th><th>书签数量</th><th>子类数量</th><th>排序值</th><th>操作</th>
               </tr>
             </thead>
-            <tbody id="categoryTableBody"><tr><td colspan="11">加载中...</td></tr></tbody>
+            <tbody id="categoryTableBody"><tr><td colspan="10">加载中...</td></tr></tbody>
           </table>
         </div>
       </div>

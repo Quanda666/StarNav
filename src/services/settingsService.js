@@ -4,11 +4,16 @@ export async function getSetting(env, key, defaultValue = '') {
   const normalizedKey = cleanText(key);
   if (!normalizedKey) return defaultValue;
 
-  const setting = await env.NAV_DB.prepare('SELECT value FROM settings WHERE key = ?')
-    .bind(normalizedKey)
-    .first();
+  try {
+    const setting = await env.NAV_DB.prepare('SELECT value FROM settings WHERE key = ?')
+      .bind(normalizedKey)
+      .first();
 
-  return setting?.value === undefined || setting?.value === null ? defaultValue : setting.value;
+    return setting?.value === undefined || setting?.value === null ? defaultValue : setting.value;
+  } catch (error) {
+    console.warn(`[settings] get fallback for ${normalizedKey}: ${error?.message || error}`);
+    return defaultValue;
+  }
 }
 
 export async function getSettingRecord(env, key, defaultValue = '', fallbackSource = 'fallback') {
@@ -17,12 +22,16 @@ export async function getSettingRecord(env, key, defaultValue = '', fallbackSour
     return { value: defaultValue, source: fallbackSource, exists: false };
   }
 
-  const setting = await env.NAV_DB.prepare('SELECT value FROM settings WHERE key = ?')
-    .bind(normalizedKey)
-    .first();
+  try {
+    const setting = await env.NAV_DB.prepare('SELECT value FROM settings WHERE key = ?')
+      .bind(normalizedKey)
+      .first();
 
-  if (setting?.value !== undefined && setting?.value !== null) {
-    return { value: setting.value, source: 'settings', exists: true };
+    if (setting?.value !== undefined && setting?.value !== null) {
+      return { value: setting.value, source: 'settings', exists: true };
+    }
+  } catch (error) {
+    console.warn(`[settings] get record fallback for ${normalizedKey}: ${error?.message || error}`);
   }
 
   return { value: defaultValue, source: fallbackSource, exists: false };
