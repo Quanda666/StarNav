@@ -196,8 +196,23 @@ self.addEventListener('fetch',event=>{
   if(request.method!=='GET')return;
   const url=new URL(request.url);
   if(url.pathname.startsWith('/api')||url.pathname.startsWith('/go/')||url.pathname.startsWith('/admin'))return;
-  const isShell=SHELL_URLS.includes(url.pathname)||SHELL_URLS.includes(request.url);
   const isSameOrigin=url.origin===location.origin;
+  const isNavigation=request.mode==='navigate'||request.destination==='document'||(request.headers.get('accept')||'').includes('text/html');
+  if(isSameOrigin&&url.searchParams.has('__refresh')){
+    event.respondWith(fetch(request,{cache:'no-store'}).catch(()=>caches.match('/')));
+    return;
+  }
+  if(isSameOrigin&&isNavigation){
+    event.respondWith(fetch(request).then(response=>{
+      if(response&&response.ok){
+        const copy=response.clone();
+        caches.open(CACHE_NAME).then(cache=>cache.put(request,copy)).catch(()=>undefined);
+      }
+      return response;
+    }).catch(()=>caches.match(request).then(cached=>cached||caches.match('/'))));
+    return;
+  }
+  const isShell=SHELL_URLS.includes(url.pathname)||SHELL_URLS.includes(request.url);
   if(isShell||isSameOrigin){
     event.respondWith(caches.match(request).then(cached=>{
       const fetchPromise=fetch(request).then(response=>{
@@ -206,7 +221,7 @@ self.addEventListener('fetch',event=>{
           caches.open(CACHE_NAME).then(cache=>cache.put(request,copy)).catch(()=>undefined);
         }
         return response;
-      }).catch(()=>cached||(isSameOrigin?caches.match('/'):undefined));
+      }).catch(()=>cached);
       return cached||fetchPromise;
     }));
     return;

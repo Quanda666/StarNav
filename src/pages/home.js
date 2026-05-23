@@ -637,7 +637,13 @@ window.addEventListener('appinstalled',function(){var m=document.getElementById(
 window.addEventListener('storage',function(e){
   if(e.key==='nav:front-refresh'&&e.newValue){
     console.log('[sync] front refresh requested',e.newValue);
-    window.location.reload();
+    try{
+      var u=new URL(window.location.href);
+      u.searchParams.set('__refresh',Date.now().toString());
+      window.location.replace(u.toString());
+    }catch(err){
+      window.location.href=window.location.pathname+'?__refresh='+Date.now();
+    }
   }
 });
 
