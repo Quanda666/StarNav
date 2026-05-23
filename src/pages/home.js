@@ -150,13 +150,12 @@ export async function renderHomePage(request, env, ctx) {
   const gridContent = privateCatalogLocked
     ? renderPrivateBookmarkUnlockBox(catalog, i18n)
     : currentSites.map((site) => renderSiteCard(site, canDragSort, adminAuthed, i18n)).join('');
-  const inactiveLayoutPlaceholder = '<div class="layout-section text-center text-sm text-gray-500">切换布局后可显示该视图。为提升首屏速度，非默认布局不再预渲染完整内容。</div>';
   const groupedContent = privateCatalogLocked
     ? ''
-    : (defaultLayout === 'grouped' ? renderGroupedSites(currentSites, adminAuthed, i18n) : inactiveLayoutPlaceholder);
+    : renderGroupedSites(currentSites, adminAuthed, i18n);
   const dashboardContent = privateCatalogLocked
     ? ''
-    : (defaultLayout === 'dashboard' ? renderDashboardSites(currentSites, adminAuthed, i18n) : inactiveLayoutPlaceholder);
+    : renderDashboardSites(currentSites, adminAuthed, i18n);
 
   return htmlResponse(`<!DOCTYPE html>
 <html lang="${escapeHTML(lang)}" dir="${escapeHTML(dir)}">
