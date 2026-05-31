@@ -1,8 +1,11 @@
+import { isPrivateOrReservedHost } from './ssrf.js';
+
 export async function getFavicon(url) {
   if (!url) return '';
 
   try {
     const domain = new URL(url.startsWith('http') ? url : `https://${url}`).hostname;
+    if (isPrivateOrReservedHost(domain)) return ''; // 拒绝内网/保留地址，防 SSRF
     const faviconUrls = [
       `https://www.faviconextractor.com/favicon/${domain}?larger=true`,
       `https://favicon.im/${domain}?larger=true`,

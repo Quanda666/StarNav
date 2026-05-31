@@ -2,10 +2,12 @@ const SESSION_COOKIE_NAME = 'nav_admin_session';
 const SESSION_PREFIX = 'session:';
 const API_TOKEN_PREFIX = 'api_token:';
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
+const SESSION_ABSOLUTE_TTL_SECONDS = 60 * 60 * 24 * 7; // 会话绝对存活上限：7 天（即使持续活跃也会过期）
 const PASSWORD_HASH_PREFIX = 'pbkdf2$';
 const PASSWORD_HASH_ITERATIONS = 100000;
 const PASSWORD_HASH_KEYLEN = 32;
 const API_TOKEN_SECRET_BYTES = 32;
+const API_TOKEN_USAGE_WRITE_INTERVAL_MS = 60 * 1000; // Token 使用信息写 KV 的最小间隔，避免高频调用写放大
 
 /**
  * @typedef {'read' | 'write' | 'admin' | string} ApiTokenScope
@@ -127,6 +129,18 @@ export async function validateAdminSession(request, env) {
   const sessionKey = `${SESSION_PREFIX}${token}`;
   const payload = await env.NAV_AUTH.get(sessionKey);
   if (!payload) return { authenticated: false };
+
+  // 绝对过期：即使持续活跃，会话最长存活 SESSION_ABSOLUTE_TTL_SECONDS，限制被盗会话的滥用窗口
+  let createdAt = 0;
+  try {
+    createdAt = Number(JSON.parse(payload).createdAt) || 0;
+  } catch {
+    createdAt = 0;
+  }
+  if (createdAt && Date.now() - createdAt > SESSION_ABSOLUTE_TTL_SECONDS * 1000) {
+    await destroyAdminSession(env, token);
+    return { authenticated: false };
+  }
 
   await refreshAdminSession(env, token, payload);
   return { authenticated: true, token };
@@ -329,14 +343,20 @@ export async function validateApiToken(request, env, requiredScope = 'write') {
     // Token 鉴权成功后可靠写入最近使用时间、IP 和使用次数。
     // 这里不能使用未托管的后台 Promise，否则在 Cloudflare Workers 请求结束时可能被中止，
     // 导致管理页一直显示“从未使用”。
+    // 为避免高频调用（尤其只读接口）每次都写 KV 造成写放大，
+    // 仅在首次使用或距上次记录超过 API_TOKEN_USAGE_WRITE_INTERVAL_MS 时才持久化（useCount 因此为近似值）。
     const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Real-IP') || null;
+    const now = Date.now();
+    const lastUsedMs = record.lastUsedAt ? Date.parse(record.lastUsedAt) : 0;
     const updatePayload = {
       ...record,
-      lastUsedAt: new Date().toISOString(),
+      lastUsedAt: new Date(now).toISOString(),
       lastUsedIp: ip,
-      useCount: (record.useCount || 0) + 1
+      useCount: (record.useCount || 0) + 1,
     };
-    await env.NAV_AUTH.put(key.name, JSON.stringify(updatePayload));
+    if (!lastUsedMs || now - lastUsedMs > API_TOKEN_USAGE_WRITE_INTERVAL_MS) {
+      await env.NAV_AUTH.put(key.name, JSON.stringify(updatePayload));
+    }
 
     return { authenticated: true, token: sanitizeApiTokenRecord(updatePayload) };
   }
@@ -421,4 +441,62 @@ export async function verifyAdminCredentials(env, name, password) {
   const [salt, storedHash] = parts;
   const computedHash = await hashPassword(trimmedPassword, salt);
   return constantTimeCompare(computedHash, storedHash);
+}
+
+// ── 登录失败限速（缓解后台登录在线爆破，#1）────────────────────────────
+const LOGIN_FAIL_PREFIX = 'login_fail:';
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_SECONDS = 15 * 60;
+
+function getClientIp(request) {
+  return request.headers.get('CF-Connecting-IP') || request.headers.get('X-Real-IP') || 'unknown';
+}
+
+/**
+ * 读取当前客户端 IP 的登录失败状态。
+ *
+ * @param {object} env Cloudflare Workers 环境绑定，需包含 `NAV_AUTH`。
+ * @param {Request} request 当前请求。
+ * @returns {Promise<{ip: string, key: string, count: number, locked: boolean}>}
+ */
+export async function getLoginThrottle(env, request) {
+  const ip = getClientIp(request);
+  const key = `${LOGIN_FAIL_PREFIX}${ip}`;
+  const raw = await env.NAV_AUTH.get(key);
+  let count = 0;
+  if (raw) {
+    try {
+      count = Number(JSON.parse(raw).count) || 0;
+    } catch {
+      count = 0;
+    }
+  }
+  return { ip, key, count, locked: count >= LOGIN_MAX_ATTEMPTS };
+}
+
+/**
+ * 记录一次登录失败，并刷新锁定窗口 TTL（持续失败则持续锁定）。
+ *
+ * @param {object} env Cloudflare Workers 环境绑定。
+ * @param {string} key getLoginThrottle 返回的 KV key。
+ * @param {number} [currentCount=0] 当前已知失败次数。
+ * @returns {Promise<void>}
+ */
+export async function registerLoginFailure(env, key, currentCount = 0) {
+  const count = (Number(currentCount) || 0) + 1;
+  await env.NAV_AUTH.put(key, JSON.stringify({ count, updatedAt: Date.now() }), {
+    expirationTtl: LOGIN_LOCKOUT_SECONDS,
+  });
+}
+
+/**
+ * 登录成功后清除失败计数。
+ *
+ * @param {object} env Cloudflare Workers 环境绑定。
+ * @param {string} key getLoginThrottle 返回的 KV key。
+ * @returns {Promise<void>}
+ */
+export async function clearLoginFailures(env, key) {
+  if (!key) return;
+  await env.NAV_AUTH.delete(key);
 }

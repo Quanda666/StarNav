@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS sites (
   last_checked_at TIMESTAMP,
   last_status_code INTEGER,
   last_error TEXT,
+  url_key TEXT,
   create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE SET NULL,
@@ -79,6 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order, name);
 CREATE INDEX IF NOT EXISTS idx_sites_catelog ON sites(catelog);
 CREATE INDEX IF NOT EXISTS idx_sites_space ON sites(space_id);
 CREATE INDEX IF NOT EXISTS idx_sites_sort ON sites(catelog, sort_order, create_time);
+CREATE INDEX IF NOT EXISTS idx_sites_url_key ON sites(url_key);
 
 -- 标签表
 CREATE TABLE IF NOT EXISTS tags (

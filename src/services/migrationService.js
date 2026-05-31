@@ -1,3 +1,5 @@
+import { normalizeDuplicateUrlKey } from './siteService.js';
+
 // 模块级缓存：在单个 Worker isolate 生命周期内只运行一次迁移。
 // 注意：此缓存与第一次调用时传入的 env 绑定，适用于单一 D1 绑定的场景。
 let migrationPromise = null;
@@ -186,6 +188,9 @@ async function runMigration(env) {
   await env.NAV_DB.prepare('CREATE INDEX IF NOT EXISTS idx_sites_sort ON sites(catelog, sort_order, create_time)').run();
   await env.NAV_DB.prepare('CREATE INDEX IF NOT EXISTS idx_sites_category ON sites(category_id)').run();
   await env.NAV_DB.prepare('CREATE INDEX IF NOT EXISTS idx_sites_space ON sites(space_id)').run();
+  await ensureColumn(env, 'sites', 'url_key', 'TEXT');
+  await env.NAV_DB.prepare('CREATE INDEX IF NOT EXISTS idx_sites_url_key ON sites(url_key)').run();
+  await backfillSiteUrlKeys(env);
   await ensureColumn(env, 'pending_sites', 'tags', 'TEXT');
   await ensureColumn(env, 'pending_sites', 'reason', 'TEXT');
   await ensureColumn(env, 'pending_sites', 'status', "TEXT NOT NULL DEFAULT 'pending'");
@@ -286,4 +291,22 @@ async function ensureColumn(env, tableName, columnName, definition) {
 
   console.log(`[migration] adding missing column ${tableName}.${columnName}`);
   await env.NAV_DB.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`).run();
+}
+
+// 回填 sites.url_key（仅处理空值行，幂等），供去重点查使用。
+// 首次加列后会一次性回填全表，之后写路径自行维护，此处查到 0 行即跳过。
+async function backfillSiteUrlKeys(env) {
+  const { results } = await env.NAV_DB.prepare("SELECT id, url FROM sites WHERE url_key IS NULL OR url_key = ''").all();
+  const rows = (results || [])
+    .map((row) => ({ id: row.id, key: normalizeDuplicateUrlKey(row.url) }))
+    .filter((row) => row.key);
+  if (!rows.length) return;
+
+  console.log(`[migration] backfilling url_key for ${rows.length} site(s)`);
+  for (let i = 0; i < rows.length; i += 50) {
+    const chunk = rows.slice(i, i + 50);
+    await env.NAV_DB.batch(chunk.map((row) =>
+      env.NAV_DB.prepare('UPDATE sites SET url_key = ? WHERE id = ?').bind(row.key, row.id)
+    ));
+  }
 }

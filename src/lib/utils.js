@@ -77,6 +77,17 @@ export function textResponse(text, status = 200) {
   });
 }
 
+// 轻量非加密 hash（djb2 变体），用于静态资源版本号 / 弱 ETag / 缓存键，
+// 不用于任何安全场景。同一字符串始终得到同一结果。
+export function hashString(input) {
+  const str = String(input ?? '');
+  let hash = 5381;
+  for (let i = 0; i < str.length; i += 1) {
+    hash = (((hash << 5) + hash) ^ str.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
 export function escapeHTML(input) {
   if (input === null || input === undefined) return '';
   return String(input)
@@ -174,4 +185,52 @@ export function buildTree(categories) {
   };
 
   return sortDeep(roots);
+}
+
+// 首页 CSS 已改为构建期预编译并通过 /static/home.css 提供，不再需要 Tailwind Play CDN
+// 的运行时编译（new Function），因此移除了 script-src 的 'unsafe-eval' 与 cdn.tailwindcss.com。
+// 仍保留 'unsafe-inline'：首页/后台尚有内联脚本与 style="" 属性。当前以 Report-Only 上线，
+// 后续把剩余内联脚本改用 nonce 后，可进一步去掉 'unsafe-inline' 并切换为强制 CSP。
+const HTML_CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' data: https:",
+  "connect-src 'self'",
+].join('; ');
+
+/**
+ * 为响应统一注入安全响应头（nosniff / 点击劫持防护 / Referrer-Policy / HTML 的 CSP）。
+ *
+ * 不覆盖已显式设置的同名头（如 go.js 已设置的 Referrer-Policy）。
+ * 通过重建 Response 写入，兼容来自外部 fetch 的不可变 Headers。
+ *
+ * @param {Response} response 原始响应。
+ * @returns {Response} 注入安全头后的响应。
+ */
+export function withSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  if (!headers.has('X-Content-Type-Options')) headers.set('X-Content-Type-Options', 'nosniff');
+  if (!headers.has('X-Frame-Options')) headers.set('X-Frame-Options', 'SAMEORIGIN');
+  if (!headers.has('Referrer-Policy')) headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  const contentType = headers.get('Content-Type') || '';
+  if (
+    contentType.includes('text/html') &&
+    !headers.has('Content-Security-Policy') &&
+    !headers.has('Content-Security-Policy-Report-Only')
+  ) {
+    headers.set('Content-Security-Policy-Report-Only', HTML_CSP_REPORT_ONLY);
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }

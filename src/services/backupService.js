@@ -1,6 +1,7 @@
 import { cleanText } from '../lib/utils.js';
 import { getSetting, setSetting } from './settingsService.js';
 import { exportConfig, importSites } from './siteService.js';
+import { decryptSecret, encryptSecret } from '../lib/crypto.js';
 
 const BACKUP_PREFIX = 'backup:';
 const META_PREFIX = 'backup-meta:';
@@ -47,7 +48,7 @@ export async function getWebDavBackupSettings(env, { includePassword = false } =
     enabled: boolString(await getSetting(env, `${WEBDAV_PREFIX}enabled`, 'false')),
     url: limitText(await getSetting(env, `${WEBDAV_PREFIX}url`, ''), 800),
     username: limitText(await getSetting(env, `${WEBDAV_PREFIX}username`, ''), 200),
-    password: includePassword ? await getSetting(env, `${WEBDAV_PREFIX}password`, '') : '',
+    password: includePassword ? await decryptSecret(env, await getSetting(env, `${WEBDAV_PREFIX}password`, '')) : '',
     hasPassword: Boolean(await getSetting(env, `${WEBDAV_PREFIX}password`, '')),
     path: limitText(await getSetting(env, `${WEBDAV_PREFIX}path`, 'StarNav'), 300) || 'StarNav',
   };
@@ -70,7 +71,7 @@ export async function updateWebDavBackupSettings(env, payload = {}) {
   await setSetting(env, `${WEBDAV_PREFIX}enabled`, next.enabled);
   await setSetting(env, `${WEBDAV_PREFIX}url`, next.url);
   await setSetting(env, `${WEBDAV_PREFIX}username`, next.username);
-  await setSetting(env, `${WEBDAV_PREFIX}password`, next.password);
+  await setSetting(env, `${WEBDAV_PREFIX}password`, await encryptSecret(env, next.password));
   await setSetting(env, `${WEBDAV_PREFIX}path`, next.path);
 
   return getWebDavBackupSettings(env);
@@ -85,6 +86,7 @@ async function ensureWebDavDirectory(settings) {
     const dirUrl = joinWebDavUrl(settings.url, currentPath, '');
     await fetch(dirUrl, {
       method: 'MKCOL',
+      signal: AbortSignal.timeout(15000),
       headers: webDavAuthHeader(settings),
     }).catch(() => null);
   }
@@ -100,6 +102,7 @@ export async function uploadBackupToWebDav(env, meta, payload) {
   const targetUrl = joinWebDavUrl(settings.url, settings.path, fileName);
   const response = await fetch(targetUrl, {
     method: 'PUT',
+    signal: AbortSignal.timeout(30000),
     headers: {
       ...webDavAuthHeader(settings),
       'Content-Type': 'application/json; charset=utf-8',
@@ -133,6 +136,7 @@ export async function testWebDavBackupSettings(env, payload = null) {
   const targetUrl = joinWebDavUrl(settings.url, settings.path, fileName);
   const put = await fetch(targetUrl, {
     method: 'PUT',
+    signal: AbortSignal.timeout(15000),
     headers: {
       ...webDavAuthHeader(settings),
       'Content-Type': 'text/plain; charset=utf-8',
@@ -141,7 +145,7 @@ export async function testWebDavBackupSettings(env, payload = null) {
   });
   if (!put.ok) throw new Error(`WebDAV test upload failed: HTTP ${put.status}`);
 
-  await fetch(targetUrl, { method: 'DELETE', headers: webDavAuthHeader(settings) }).catch(() => null);
+  await fetch(targetUrl, { method: 'DELETE', signal: AbortSignal.timeout(10000), headers: webDavAuthHeader(settings) }).catch(() => null);
   return { ok: true, status: put.status, path: settings.path, fileName };
 }
 

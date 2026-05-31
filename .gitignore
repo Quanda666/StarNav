@@ -37,3 +37,6 @@ dist/
 tmp/
 temp/
 *.tmp
+
+# Claude Code local settings
+.claude/

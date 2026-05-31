@@ -1,4 +1,5 @@
 import { cleanText } from '../lib/utils.js';
+import { decryptSecret, encryptSecret } from '../lib/crypto.js';
 import { getSetting, setSetting } from './settingsService.js';
 import { canAccessSite, getSite, searchSites, getSiteAnalytics } from './siteService.js';
 import { listCategories } from './categoryService.js';
@@ -25,7 +26,9 @@ export async function getAiSettings(env, { includeSecret = false } = {}) {
 
   settings.enabled = boolString(settings.enabled);
   settings.configured = Boolean(settings.apiKey);
-  if (!includeSecret) {
+  if (includeSecret) {
+    settings.apiKey = await decryptSecret(env, settings.apiKey);
+  } else {
     settings.apiKey = settings.configured ? '********' : '';
   }
 
@@ -45,7 +48,7 @@ export async function updateAiSettings(env, payload = {}) {
 
   const apiKey = cleanText(payload.apiKey);
   if (apiKey && apiKey !== '********') {
-    await setSetting(env, `${AI_SETTING_PREFIX}apiKey`, apiKey);
+    await setSetting(env, `${AI_SETTING_PREFIX}apiKey`, await encryptSecret(env, apiKey));
   }
 
   return getAiSettings(env);
@@ -396,6 +399,7 @@ function buildLocalAnswer(message, sites) {
 async function callOpenAiCompatible({ settings, message, context }) {
   const response = await fetch(settings.baseUrl, {
     method: 'POST',
+    signal: AbortSignal.timeout(30000),
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${settings.apiKey}`,
@@ -828,6 +832,7 @@ export async function listAiModels(env, payload = {}) {
   const endpoint = getModelsEndpoint(settings.baseUrl);
   const response = await fetch(endpoint, {
     method: 'GET',
+    signal: AbortSignal.timeout(15000),
     headers: {
       Authorization: `Bearer ${settings.apiKey}`,
       'Content-Type': 'application/json',

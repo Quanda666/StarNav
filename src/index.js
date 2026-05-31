@@ -6,34 +6,40 @@ import { renderHomePage } from './pages/home.js';
 import { ensureSchema } from './services/migrationService.js';
 import { runScheduledHealthCheck } from './services/siteService.js';
 import { runScheduledBackup } from './services/backupService.js';
-import { errorResponse } from './lib/utils.js';
+import { errorResponse, withSecurityHeaders } from './lib/utils.js';
+import { withHomeEdgeCache } from './lib/edgeCache.js';
+
+async function routeRequest(request, env, ctx) {
+  await ensureSchema(env);
+
+  const pwaResponse = await handlePwaRequest(request, env);
+  if (pwaResponse) return pwaResponse;
+
+  const url = new URL(request.url);
+
+  if (url.pathname.startsWith('/api')) {
+    return handleApiRequest(request, env, ctx);
+  }
+
+  if (url.pathname.startsWith('/go/')) {
+    return handleGoRequest(request, env, ctx);
+  }
+
+  if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/static')) {
+    return handleAdminRequest(request, env, ctx);
+  }
+
+  return withHomeEdgeCache(request, ctx, () => renderHomePage(request, env, ctx));
+}
 
 export default {
   async fetch(request, env, ctx) {
     try {
-      await ensureSchema(env);
-
-      const pwaResponse = await handlePwaRequest(request, env);
-      if (pwaResponse) return pwaResponse;
-
-      const url = new URL(request.url);
-
-      if (url.pathname.startsWith('/api')) {
-        return handleApiRequest(request, env, ctx);
-      }
-
-      if (url.pathname.startsWith('/go/')) {
-        return handleGoRequest(request, env, ctx);
-      }
-
-      if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/static')) {
-        return handleAdminRequest(request, env, ctx);
-      }
-
-      return renderHomePage(request, env, ctx);
+      const response = await routeRequest(request, env, ctx);
+      return withSecurityHeaders(response);
     } catch (error) {
       console.log(`[worker] unhandled error: ${error?.stack || error?.message || error}`);
-      return errorResponse(`Internal Server Error: ${error?.message || 'Unknown error'}`, 500);
+      return withSecurityHeaders(errorResponse('Internal Server Error', 500));
     }
   },
 
