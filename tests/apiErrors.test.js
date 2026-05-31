@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { createAdminSession, createApiToken, revokeApiToken, validateApiToken } from '../src/lib/auth.js';
 import { errorResponse } from '../src/lib/utils.js';
 import { handleApiRequest } from '../src/handlers/api.js';
+import { handleApiError } from '../src/handlers/api/errors.js';
 import { createWebhook, dispatchWebhooks, listWebhooks } from '../src/services/webhookService.js';
 
 function createMemoryKv() {
@@ -91,6 +92,16 @@ function installFetchMock(handler) {
     globalThis.fetch = originalFetch;
   };
 }
+
+test('handleApiError maps JSON syntax errors to standardized 400', async () => {
+  const response = await handleApiError(new SyntaxError('Unexpected end of JSON input'));
+  const body = await readJson(response);
+
+  assert.equal(response.status, 400);
+  assert.equal(body.code, 400);
+  assert.equal(body.error.code, 'BAD_REQUEST');
+  assert.equal(body.message, 'Invalid JSON in request body');
+});
 
 test('errorResponse keeps legacy fields and adds normalized error object', async () => {
   const response = errorResponse('Missing URL', 400, { field: 'url' });

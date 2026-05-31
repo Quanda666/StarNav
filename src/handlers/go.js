@@ -15,13 +15,9 @@ export async function handleGoRequest(request, env, ctx) {
   const adminAuthed = await isAdminAuthenticated(request, env);
   const privateAccess = adminAuthed || await hasPrivateBookmarkAccess(request, env);
   if (!canAccessSite(site, { adminAuthed, privateUnlocked: privateAccess })) {
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: `/?catalog=${encodeURIComponent(site.catelog)}`,
-        'Cache-Control': 'no-store',
-      },
-    });
+    // 对无权访问的书签返回 404（与"不存在"一致），避免通过 302 跳转 + 分类名泄露受限书签的存在性。
+    // 受限书签本就不会出现在无权用户的页面链接里，因此这对正常访问无影响，仅堵住按 ID 枚举的探测。
+    return errorResponse('Site not found', 404);
   }
 
   const targetUrl = sanitizeUrl(site.url);

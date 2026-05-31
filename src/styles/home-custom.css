@@ -24,6 +24,7 @@
     .floating-ai-panel.ai-fullscreen form>div{max-width:64rem;margin:0 auto}
     .floating-ai-panel.ai-fullscreen form>p{max-width:64rem;margin-left:auto;margin-right:auto}
     @media(max-width:640px){.floating-ai-panel.ai-fullscreen{width:calc(100vw - 1rem)!important;height:calc(100vh - 1rem)!important;border-radius:1rem!important}.floating-ai-panel.ai-fullscreen .ai-message{max-width:94%}.floating-ai-panel.ai-fullscreen .ai-message.user{margin-left:6%!important}.floating-ai-panel.ai-fullscreen .ai-message.assistant{margin-right:6%!important}}
+    .floating-theme-panel.hidden,.floating-ai-panel.hidden{display:none!important}
     @media(min-width:1024px){.mobile-sidebar{transform:none}.sidebar-collapsed .mobile-sidebar{transform:translateX(-100%)!important}.sidebar-collapsed .main-content{margin-left:0!important}.main-content{transition:margin-left .3s ease}}
     #expandSidebar{transition:opacity .3s ease,transform .3s ease;opacity:0;pointer-events:none;transform:translateX(-10px)}.sidebar-collapsed #expandSidebar{opacity:1;pointer-events:auto;transform:translateX(0)}
     .site-card.result-active{outline:2px solid var(--nav-accent);outline-offset:2px;box-shadow:0 0 0 4px color-mix(in srgb,var(--nav-accent) 18%,transparent)}
