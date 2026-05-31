@@ -164,9 +164,9 @@ export async function deleteSpace(env, id) {
 export async function findSpace(env, idOrSlug) {
   try {
     if (/^\d+$/.test(String(idOrSlug))) {
-      return env.NAV_DB.prepare('SELECT * FROM spaces WHERE id = ?').bind(Number(idOrSlug)).first();
+      return await env.NAV_DB.prepare('SELECT * FROM spaces WHERE id = ?').bind(Number(idOrSlug)).first();
     }
-    return env.NAV_DB.prepare('SELECT * FROM spaces WHERE slug = ?').bind(String(idOrSlug)).first();
+    return await env.NAV_DB.prepare('SELECT * FROM spaces WHERE slug = ?').bind(String(idOrSlug)).first();
   } catch (error) {
     console.warn(`[spaces] find fallback: ${error?.message || error}`);
     return null;

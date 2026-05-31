@@ -47,6 +47,11 @@ export async function handleApiError(error) {
     return jsonResponse({ ...payload, ...details }, 409);
   }
 
+  // 请求体 JSON 解析失败（SyntaxError）属客户端错误，统一归 400，避免畸形/空请求体被当成 500。
+  if (error instanceof SyntaxError) {
+    return errorResponse('Invalid JSON in request body', 400);
+  }
+
   const message = error?.message || 'Internal Server Error';
   const explicitStatus = Number(error?.statusCode || error?.status);
   const status = Number.isInteger(explicitStatus) && explicitStatus >= 400 && explicitStatus < 600
