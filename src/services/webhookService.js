@@ -1,4 +1,5 @@
 import { cleanText } from '../lib/utils.js';
+import { decryptSecret, encryptSecret } from '../lib/crypto.js';
 
 const WEBHOOKS_KEY = 'webhooks';
 
@@ -48,14 +49,19 @@ async function loadWebhooks(env) {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map(sanitizeWebhook).filter((item) => item.id && item.url) : [];
+    if (!Array.isArray(parsed)) return [];
+    const sanitized = parsed.map(sanitizeWebhook).filter((item) => item.id && item.url);
+    // 解密 secret（历史明文数据原样返回）
+    return Promise.all(sanitized.map(async (item) => ({ ...item, secret: await decryptSecret(env, item.secret) })));
   } catch {
     return [];
   }
 }
 
 async function saveWebhooks(env, webhooks) {
-  await env.NAV_AUTH.put(WEBHOOKS_KEY, JSON.stringify(webhooks.map(sanitizeWebhook)));
+  const sanitized = webhooks.map(sanitizeWebhook);
+  const encrypted = await Promise.all(sanitized.map(async (item) => ({ ...item, secret: await encryptSecret(env, item.secret) })));
+  await env.NAV_AUTH.put(WEBHOOKS_KEY, JSON.stringify(encrypted));
 }
 
 export async function listWebhooks(env) {
@@ -140,6 +146,7 @@ async function invokeWebhook(webhook, payload) {
   if (signature) headers['X-StarNav-Signature'] = `sha256=${signature}`;
   const response = await fetch(webhook.url, {
     method: 'POST',
+    signal: AbortSignal.timeout(10000),
     headers,
     body: payloadText,
   });

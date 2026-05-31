@@ -48,6 +48,17 @@ export async function handleApiError(error) {
   }
 
   const message = error?.message || 'Internal Server Error';
-  const status = /required|invalid|not found|children|sites|parent|must be|valid https url/i.test(message) ? 400 : 500;
-  return errorResponse(status === 500 ? `Internal Server Error: ${message}` : message, status);
+  const explicitStatus = Number(error?.statusCode || error?.status);
+  const status = Number.isInteger(explicitStatus) && explicitStatus >= 400 && explicitStatus < 600
+    ? explicitStatus
+    : /required|invalid|not found|children|sites|parent|must be|valid https url/i.test(message)
+      ? 400
+      : 500;
+
+  if (status >= 500) {
+    // 5xx 不向客户端回显内部错误细节，仅记录日志便于排查
+    console.log(`[api] internal error: ${error?.stack || message}`);
+    return errorResponse('Internal Server Error', status);
+  }
+  return errorResponse(message, status);
 }

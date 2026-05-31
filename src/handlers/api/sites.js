@@ -48,9 +48,9 @@ export function sitesToCsv(sites = []) {
 function bookmarkHtmlEscape(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"');
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function toBookmarkTimestamp(value) {

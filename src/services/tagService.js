@@ -14,23 +14,27 @@ export function normalizeTags(value) {
 export async function setSiteTags(env, siteId, tags) {
   const normalizedTags = normalizeTags(tags);
 
-  await env.NAV_DB.prepare('DELETE FROM site_tags WHERE site_id = ?').bind(siteId).run();
-
-  for (const tagName of normalizedTags) {
-    await env.NAV_DB.prepare(`
-      INSERT INTO tags (name)
-      VALUES (?)
-      ON CONFLICT(name) DO NOTHING
-    `).bind(tagName).run();
-
-    const tag = await env.NAV_DB.prepare('SELECT id FROM tags WHERE name = ?').bind(tagName).first();
-    if (!tag) continue;
-
-    await env.NAV_DB.prepare(`
-      INSERT OR IGNORE INTO site_tags (site_id, tag_id)
-      VALUES (?, ?)
-    `).bind(siteId, tag.id).run();
+  if (!normalizedTags.length) {
+    await env.NAV_DB.prepare('DELETE FROM site_tags WHERE site_id = ?').bind(siteId).run();
+    return;
   }
+
+  // 用单个 batch 原子完成：删除旧关联 → 确保标签存在 → 按名称重建关联。
+  // 相比原先逐标签 “INSERT tag → SELECT id → INSERT site_tags” 串行 await，
+  // 将 O(标签数) 次往返压缩为一次，并避免 D1 无事务下的中间态。
+  const statements = [
+    env.NAV_DB.prepare('DELETE FROM site_tags WHERE site_id = ?').bind(siteId),
+    ...normalizedTags.map((tagName) =>
+      env.NAV_DB.prepare('INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO NOTHING').bind(tagName)
+    ),
+    ...normalizedTags.map((tagName) =>
+      env.NAV_DB
+        .prepare('INSERT OR IGNORE INTO site_tags (site_id, tag_id) SELECT ?, id FROM tags WHERE name = ?')
+        .bind(siteId, tagName)
+    ),
+  ];
+
+  await env.NAV_DB.batch(statements);
 }
 
 export async function attachTagsToSites(env, sites) {

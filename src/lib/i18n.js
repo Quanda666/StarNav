@@ -1,15 +1,9 @@
 import { escapeHTML } from './utils.js';
 
+// 仅保留已提供完整翻译的语言；新增语言时请同步在 I18N_MESSAGES 补齐对应文案。
 export const SUPPORTED_LANGUAGES = [
   { code: 'zh-CN', label: '简体中文', nativeName: '简体中文' },
   { code: 'en', label: 'English', nativeName: 'English' },
-  { code: 'ja', label: '日本語', nativeName: '日本語' },
-  { code: 'ko', label: '한국어', nativeName: '한국어' },
-  { code: 'fr', label: 'Français', nativeName: 'Français' },
-  { code: 'de', label: 'Deutsch', nativeName: 'Deutsch' },
-  { code: 'es', label: 'Español', nativeName: 'Español' },
-  { code: 'ru', label: 'Русский', nativeName: 'Русский' },
-  { code: 'pt', label: 'Português', nativeName: 'Português' },
 ];
 
 const SUPPORTED_CODES = new Set(SUPPORTED_LANGUAGES.map((item) => item.code));
@@ -189,20 +183,7 @@ export const I18N_MESSAGES = {
     unlockAccess: 'Unlock access',
     backHome: 'Back home',
   },
-  ja: {},
-  ko: {},
-  fr: {},
-  de: {},
-  es: {},
-  ru: {},
-  pt: {},
 };
-
-Object.keys(I18N_MESSAGES).forEach((code) => {
-  if (code !== 'zh-CN' && Object.keys(I18N_MESSAGES[code]).length === 0) {
-    I18N_MESSAGES[code] = { ...I18N_MESSAGES.en };
-  }
-});
 
 function parseCookies(cookieHeader = '') {
   return Object.fromEntries(cookieHeader.split(';').map((item) => {
@@ -240,7 +221,7 @@ export function resolveI18n(request) {
   };
   return {
     lang,
-    dir: lang === 'ar' ? 'rtl' : 'ltr',
+    dir: 'ltr',
     queryLang,
     t,
     th: (key, params = {}) => escapeHTML(t(key, params)),

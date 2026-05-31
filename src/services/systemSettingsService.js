@@ -1,5 +1,5 @@
 import { cleanText, sanitizeImageUrl, sanitizeUrl } from '../lib/utils.js';
-import { getSetting, setSetting } from './settingsService.js';
+import { listSettings, setSetting } from './settingsService.js';
 
 const SYSTEM_SETTING_PREFIX = 'system.';
 
@@ -52,10 +52,21 @@ function limitText(value, key) {
 }
 
 export async function getSystemSettings(env) {
-  const settings = {};
+  // 一次性读取全部 system.* 设置，避免按 key 逐条查询（原先每次渲染需 19 次串行 D1 往返）。
+  const stored = {};
+  try {
+    const rows = await listSettings(env, SYSTEM_SETTING_PREFIX);
+    for (const row of rows) {
+      stored[String(row.key).slice(SYSTEM_SETTING_PREFIX.length)] = row.value;
+    }
+  } catch (error) {
+    console.warn(`[systemSettings] 批量读取失败，回退默认值: ${error?.message || error}`);
+  }
 
+  const settings = {};
   for (const [key, defaultValue] of Object.entries(DEFAULT_SYSTEM_SETTINGS)) {
-    settings[key] = await getSetting(env, `${SYSTEM_SETTING_PREFIX}${key}`, defaultValue);
+    const value = stored[key];
+    settings[key] = value === undefined || value === null ? defaultValue : value;
   }
 
   settings.siteName = limitText(settings.siteName, 'siteName') || DEFAULT_SYSTEM_SETTINGS.siteName;

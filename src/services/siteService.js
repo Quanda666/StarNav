@@ -1,9 +1,10 @@
 import { getFavicon } from '../lib/favicon.js';
+import { readTextWithLimit, safeFetch } from '../lib/ssrf.js';
 import { cleanText, normalizeSortOrder, nullableText } from '../lib/utils.js';
 import { upsertCategoryByName } from './categoryService.js';
 import { PRIVATE_BOOKMARK_CATEGORY } from './privateBookmarkService.js';
 import { resolveSpaceId } from './spaceService.js';
-import { attachTagsToSites, getSiteIdsByTag, normalizeTags, setSiteTags } from './tagService.js';
+import { attachTagsToSites, normalizeTags, setSiteTags } from './tagService.js';
 
 /**
  * @typedef {'public' | 'private' | 'unlisted' | 'admin_only'} SiteVisibility
@@ -456,12 +457,10 @@ export async function getSites(env, { page = 1, pageSize = 10, catalog = '', key
   }
 
   if (tag) {
-    const taggedSiteIds = await getSiteIdsByTag(env, tag);
-    if (!taggedSiteIds.length) {
-      return { data: [], total: 0, page: safePage, pageSize: safePageSize };
-    }
-    where.push(`s.id IN (${taggedSiteIds.map(() => '?').join(',')})`);
-    binds.push(...taggedSiteIds);
+    // 用 EXISTS 子查询替代“先查 id 列表再 IN(...)”，避免热门标签下 IN 参数过多触及 D1 变量上限，
+    // 同时利用 idx_site_tags_tag 索引。标签不存在时该条件恒为假，自然返回空结果。
+    where.push('EXISTS (SELECT 1 FROM site_tags st JOIN tags t ON t.id = st.tag_id WHERE st.site_id = s.id AND t.name = ?)');
+    binds.push(cleanText(tag));
   }
 
   if (catalog) {
@@ -533,6 +532,12 @@ export async function getSites(env, { page = 1, pageSize = 10, catalog = '', key
   if (fallbackLikeKeyword) {
     fallbackWhere.push("(s.name LIKE ? ESCAPE '\\' OR s.url LIKE ? ESCAPE '\\' OR s.catelog LIKE ? ESCAPE '\\')");
     fallbackBinds.push(fallbackLikeKeyword, fallbackLikeKeyword, fallbackLikeKeyword);
+  }
+
+  // 降级分支同样保护私人书签可见性：未解锁访客不应看到私人书签分类（与主查询、搜索降级保持一致）
+  if (!adminAuthed && !privateUnlocked) {
+    fallbackWhere.push('s.catelog <> ?');
+    fallbackBinds.push(PRIVATE_BOOKMARK_CATEGORY);
   }
 
   const fallbackWhereSql = fallbackWhere.length ? `WHERE ${fallbackWhere.join(' AND ')}` : '';
@@ -1053,16 +1058,14 @@ export async function checkSiteHealth(env, id) {
       new URL(targetUrl);
       let response;
       try {
-        response = await fetch(targetUrl, {
+        response = await safeFetch(targetUrl, {
           method: 'HEAD',
-          redirect: 'follow',
           signal: AbortSignal.timeout(8000),
           headers: { 'User-Agent': 'StarNav-LinkChecker/1.0' },
         });
       } catch (headError) {
-        response = await fetch(targetUrl, {
+        response = await safeFetch(targetUrl, {
           method: 'GET',
-          redirect: 'follow',
           signal: AbortSignal.timeout(10000),
           headers: { 'User-Agent': 'StarNav-LinkChecker/1.0' },
         });
@@ -1218,9 +1221,9 @@ export async function createSite(env, config, { force = false } = {}) {
   const category = await upsertCategoryByName(env, site.catelog, site.sort_order);
 
   const result = await env.NAV_DB.prepare(`
-    INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, spaceId, site.visibility, site.sort_order).run();
+    INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order, url_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, spaceId, site.visibility, site.sort_order, normalizeDuplicateUrlKey(site.url)).run();
 
   const siteId = result?.meta?.last_row_id;
   if (siteId) await setSiteTags(env, siteId, site.tags);
@@ -1258,9 +1261,9 @@ export async function updateSite(env, id, config, { force = false } = {}) {
 
   const result = await env.NAV_DB.prepare(`
     UPDATE sites
-    SET name = ?, url = ?, logo = ?, desc = ?, catelog = ?, category_id = ?, space_id = ?, visibility = ?, sort_order = ?, update_time = CURRENT_TIMESTAMP
+    SET name = ?, url = ?, logo = ?, desc = ?, catelog = ?, category_id = ?, space_id = ?, visibility = ?, sort_order = ?, url_key = ?, update_time = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, spaceId, site.visibility, site.sort_order, id).run();
+  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, spaceId, site.visibility, site.sort_order, normalizeDuplicateUrlKey(site.url), id).run();
 
   await setSiteTags(env, id, site.tags);
 
@@ -1668,9 +1671,9 @@ export async function approvePendingSite(env, id, { force = false } = {}) {
 
   const visibility = normalizeVisibility(config.visibility, config.catelog);
   const result = await env.NAV_DB.prepare(`
-    INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(config.name, config.url, config.logo, config.desc, config.catelog, category?.id || null, spaceId, visibility, sortOrder).run();
+    INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order, url_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(config.name, config.url, config.logo, config.desc, config.catelog, category?.id || null, spaceId, visibility, sortOrder, normalizeDuplicateUrlKey(config.url)).run();
 
   const siteId = result?.meta?.last_row_id;
   if (siteId) await setSiteTags(env, siteId, parseStoredTags(config.tags));
@@ -1733,14 +1736,11 @@ async function getExistingUrlKeySet(env) {
 export async function findDuplicateSite(env, url, { excludeId = null } = {}) {
   const key = normalizeDuplicateUrlKey(url);
   if (!key) return null;
-  const { results } = await env.NAV_DB.prepare('SELECT id, name, url, catelog FROM sites').all();
-  for (const row of results || []) {
-    if (excludeId && Number(row.id) === Number(excludeId)) continue;
-    if (normalizeDuplicateUrlKey(row.url) === key) {
-      return { id: row.id, name: row.name, url: row.url, catelog: row.catelog };
-    }
-  }
-  return null;
+  // 通过 url_key 索引点查，避免全表扫描 + 全量 JS 规范化（依赖迁移已回填 url_key）。
+  const row = excludeId
+    ? await env.NAV_DB.prepare('SELECT id, name, url, catelog FROM sites WHERE url_key = ? AND id <> ? LIMIT 1').bind(key, Number(excludeId)).first()
+    : await env.NAV_DB.prepare('SELECT id, name, url, catelog FROM sites WHERE url_key = ? LIMIT 1').bind(key).first();
+  return row ? { id: row.id, name: row.name, url: row.url, catelog: row.catelog } : null;
 }
 
 export async function previewImportSites(env, jsonData, { mode = 'merge' } = {}) {
@@ -1885,9 +1885,9 @@ export async function importSites(env, jsonData, { mode = 'merge' } = {}) {
       const spaceId = null;
       const category = await upsertCategoryByName(env, site.catelog, site.sort_order);
       const result = await env.NAV_DB.prepare(`
-        INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, spaceId, site.visibility, site.sort_order).run();
+        INSERT INTO sites (name, url, logo, desc, catelog, category_id, space_id, visibility, sort_order, url_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(site.name, site.url, site.logo, site.desc, site.catelog, category?.id || null, spaceId, site.visibility, site.sort_order, key).run();
       const siteId = result?.meta?.last_row_id;
       if (siteId) await setSiteTags(env, siteId, site.tags);
       importedSites += 1;
@@ -1920,9 +1920,8 @@ export async function fetchSitePreview(url) {
 
   let response;
   try {
-    response = await fetch(targetUrl, {
+    response = await safeFetch(targetUrl, {
       method: 'GET',
-      redirect: 'follow',
       signal: AbortSignal.timeout(8000),
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; StarNav-Preview/1.0)',
@@ -1942,7 +1941,7 @@ export async function fetchSitePreview(url) {
     return { title: '', description: '', keywords: '', ogImage: '', favicon: '' };
   }
 
-  const html = await response.text();
+  const html = await readTextWithLimit(response, 512 * 1024);
   const head = html.slice(0, 32000);
 
   const title = extractMeta(head, /<title[^>]*>([^<]*)<\/title>/i) || '';
