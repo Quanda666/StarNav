@@ -1,5 +1,6 @@
 export const adminJs = `
 const $ = (id) => document.getElementById(id);
+(function initSidebarToggle(){const SIDEBAR_STATE_KEY='starnav:admin:sidebar-collapsed';function loadSidebarState(){try{return localStorage.getItem(SIDEBAR_STATE_KEY)==='true'}catch{return false}}function saveSidebarState(collapsed){try{localStorage.setItem(SIDEBAR_STATE_KEY,collapsed?'true':'false')}catch{}}const tabWrapper=document.querySelector('.tab-wrapper');const toggleBtn=$('sidebarToggle');if(!tabWrapper||!toggleBtn)return;const collapsed=loadSidebarState();if(collapsed)tabWrapper.classList.add('sidebar-collapsed');toggleBtn.addEventListener('click',()=>{const nowCollapsed=tabWrapper.classList.toggle('sidebar-collapsed');saveSidebarState(nowCollapsed);toggleBtn.title=nowCollapsed?'展开侧边栏':'收起侧边栏'});toggleBtn.title=collapsed?'展开侧边栏':'收起侧边栏'})();
 const configTableBody = $('configTableBody');
 const pendingTableBody = $('pendingTableBody');
 const spaceTableBody = $('spaceTableBody');

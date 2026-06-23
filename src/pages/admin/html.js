@@ -94,22 +94,25 @@ export const adminHtml = `<!DOCTYPE html>
     </section>
 
     <div class="tab-wrapper">
-      <div class="tab-buttons">
-        <button class="tab-button active" data-tab="config">书签列表</button>
-        <button class="tab-button" data-tab="pending">待审列表</button>
-        <button class="tab-button" data-tab="submissionAnalytics">提交分析</button>
-        <button class="tab-button" data-tab="visitAnalytics">访问分析</button>
-        <button class="tab-button" data-tab="spaces" style="display:none;">空间管理</button>
-        <button class="tab-button" data-tab="categories">分类管理</button>
-        <button class="tab-button" data-tab="tags">标签管理</button>
-        <button class="tab-button" data-tab="privateBookmarks">私人书签</button>
-        <button class="tab-button" data-tab="systemSettings">系统设置</button>
-        <button class="tab-button" data-tab="systemHealth">系统健康</button>
-        <button class="tab-button" data-tab="aiAdmin">AI 助手</button>
-        <button class="tab-button" data-tab="aiAssistant">API接入</button>
-        <button class="tab-button" data-tab="apiTokens">Token管理</button>
-        <button class="tab-button" data-tab="operationLogs">操作日志</button>
-        <button class="tab-button" data-tab="backups">备份恢复</button>
+      <div class="tab-buttons" id="sidebarNav">
+        <button class="sidebar-toggle" id="sidebarToggle" type="button" title="收起/展开侧边栏">
+          <span class="toggle-icon">◀</span>
+        </button>
+        <button class="tab-button active" data-tab="config" title="书签列表"><span class="tab-icon">🔖</span><span class="tab-text">书签列表</span></button>
+        <button class="tab-button" data-tab="pending" title="待审列表"><span class="tab-icon">⏳</span><span class="tab-text">待审列表</span></button>
+        <button class="tab-button" data-tab="submissionAnalytics" title="提交分析"><span class="tab-icon">📊</span><span class="tab-text">提交分析</span></button>
+        <button class="tab-button" data-tab="visitAnalytics" title="访问分析"><span class="tab-icon">📈</span><span class="tab-text">访问分析</span></button>
+        <button class="tab-button" data-tab="spaces" style="display:none;" title="空间管理"><span class="tab-icon">🌐</span><span class="tab-text">空间管理</span></button>
+        <button class="tab-button" data-tab="categories" title="分类管理"><span class="tab-icon">🗂️</span><span class="tab-text">分类管理</span></button>
+        <button class="tab-button" data-tab="tags" title="标签管理"><span class="tab-icon">🏷️</span><span class="tab-text">标签管理</span></button>
+        <button class="tab-button" data-tab="privateBookmarks" title="私人书签"><span class="tab-icon">🔒</span><span class="tab-text">私人书签</span></button>
+        <button class="tab-button" data-tab="systemSettings" title="系统设置"><span class="tab-icon">⚙️</span><span class="tab-text">系统设置</span></button>
+        <button class="tab-button" data-tab="systemHealth" title="系统健康"><span class="tab-icon">🩺</span><span class="tab-text">系统健康</span></button>
+        <button class="tab-button" data-tab="aiAdmin" title="AI 助手"><span class="tab-icon">🤖</span><span class="tab-text">AI 助手</span></button>
+        <button class="tab-button" data-tab="aiAssistant" title="API接入"><span class="tab-icon">🔌</span><span class="tab-text">API接入</span></button>
+        <button class="tab-button" data-tab="apiTokens" title="Token管理"><span class="tab-icon">🔑</span><span class="tab-text">Token管理</span></button>
+        <button class="tab-button" data-tab="operationLogs" title="操作日志"><span class="tab-icon">📝</span><span class="tab-text">操作日志</span></button>
+        <button class="tab-button" data-tab="backups" title="备份恢复"><span class="tab-icon">💾</span><span class="tab-text">备份恢复</span></button>
       </div>
 
       <div id="config" class="tab-content active">
