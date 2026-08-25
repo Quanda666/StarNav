@@ -16,34 +16,10 @@ export const adminHtml = `<!DOCTYPE html>
 <body>
   <div class="container">
     <header class="admin-header">
-      <div>
-        <h1>书签管理</h1>
-        <p class="admin-subtitle">管理后台仅限受信任的管理员使用，请妥善保管账号</p>
-      </div>
-      <div class="admin-header-actions">
-        <div class="import-export">
-          <input type="file" id="importFile" accept=".json" style="display:none;">
-          <div class="import-group">
-            <select id="importMode" title="导入恢复模式">
-              <option value="merge">合并导入</option>
-              <option value="overwrite">覆盖恢复</option>
-            </select>
-            <button id="importBtn">导入</button>
-          </div>
-          <details class="action-menu export-menu">
-            <summary>导出</summary>
-            <div class="action-menu-panel">
-              <button id="exportBtn">新版 JSON</button>
-              <button id="exportLegacyBtn">旧版 JSON</button>
-              <button id="exportCsvBtn">CSV</button>
-              <button id="exportHtmlBtn">浏览器 HTML</button>
-            </div>
-          </details>
-        </div>
-        <form id="logoutForm" method="post" action="/admin/logout">
-          <button type="submit" class="logout-btn">退出登录</button>
-        </form>
-      </div>
+      <h1>StarNav 管理台</h1>
+      <form id="logoutForm" method="post" action="/admin/logout">
+        <button type="submit" class="logout-btn">退出登录</button>
+      </form>
     </header>
 
     <div id="message" style="display:none;"></div>
@@ -53,17 +29,12 @@ export const adminHtml = `<!DOCTYPE html>
         <button class="sidebar-toggle" id="sidebarToggle" type="button" title="收起/展开侧边栏">
           <span class="toggle-icon">◀</span>
         </button>
-        <div class="sidebar-stats" aria-label="后台概览">
-          <div class="sidebar-stat"><strong id="statTotalSites">0</strong><small>书签</small></div>
-          <div class="sidebar-stat"><strong id="statPendingSites">0</strong><small>待审</small></div>
-          <div class="sidebar-stat"><strong id="statCategories">0</strong><small>分类</small></div>
-        </div>
         <div class="sidebar-group">
           <div class="sidebar-group-label">内容</div>
-          <button class="tab-button active" data-tab="config" title="书签列表"><span class="tab-icon">🔖</span><span class="tab-text">书签列表</span></button>
-          <button class="tab-button" data-tab="pending" title="待审列表"><span class="tab-icon">⏳</span><span class="tab-text">待审列表</span></button>
-          <button class="tab-button" data-tab="categories" title="分类管理"><span class="tab-icon">🗂️</span><span class="tab-text">分类管理</span></button>
-          <button class="tab-button" data-tab="tags" title="标签管理"><span class="tab-icon">🏷️</span><span class="tab-text">标签管理</span></button>
+          <button class="tab-button active" data-tab="config" title="书签列表"><span class="tab-icon">🔖</span><span class="tab-text">书签</span><span class="nav-badge" id="statTotalSites">0</span></button>
+          <button class="tab-button" data-tab="pending" title="待审列表"><span class="tab-icon">⏳</span><span class="tab-text">待审</span><span class="nav-badge is-zero" id="statPendingSites" data-hide-zero="true" hidden>0</span></button>
+          <button class="tab-button" data-tab="categories" title="分类管理"><span class="tab-icon">🗂️</span><span class="tab-text">分类</span></button>
+          <button class="tab-button" data-tab="tags" title="标签管理"><span class="tab-icon">🏷️</span><span class="tab-text">标签</span></button>
         </div>
         <div class="sidebar-group">
           <div class="sidebar-group-label">洞察</div>
@@ -89,16 +60,27 @@ export const adminHtml = `<!DOCTYPE html>
       <div id="config" class="tab-content active">
         <div class="config-list-toolbar">
           <input type="text" id="searchInput" placeholder="搜索书签（名称、网址、分类）" autocomplete="off">
+          <select id="spaceFilter" title="按空间筛选" style="display:none;"><option value="">全部空间</option></select>
+          <select id="healthFilter" title="健康状态筛选">
+            <option value="">全部状态</option>
+            <option value="bad">只看异常</option>
+            <option value="ok">只看正常</option>
+            <option value="unknown">只看未检测</option>
+          </select>
+          <select id="configDensityMode" title="书签列表显示密度">
+            <option value="comfortable">舒适密度</option>
+            <option value="compact">紧凑密度</option>
+          </select>
           <button type="button" id="openAddSiteBtn">+ 添加书签</button>
         </div>
-        <div class="bulk-toolbar">
+        <div class="bulk-toolbar" id="bulkToolbar" hidden>
           <div class="bulk-group bulk-select-group">
             <label class="bulk-select-all"><input type="checkbox" id="selectAllConfigs"> 全选本页</label>
             <span id="selectedCount">已选择 0 项</span>
           </div>
           <div class="bulk-group bulk-edit-group">
-            <input type="text" id="bulkCatelog" placeholder="批量修改分类">
-            <input type="text" id="bulkTags" placeholder="批量设置/追加标签">
+            <input type="text" id="bulkCatelog" placeholder="改分类">
+            <input type="text" id="bulkTags" placeholder="改标签">
             <select id="bulkSpace" title="批量移动空间" style="display:none;">
               <option value="">移动到空间...</option>
             </select>
@@ -115,25 +97,12 @@ export const adminHtml = `<!DOCTYPE html>
             </select>
             <button id="bulkUpdateBtn" type="button">应用修改</button>
           </div>
-          <div class="bulk-group bulk-filter-group">
-            <select id="spaceFilter" title="按空间筛选" style="display:none;"><option value="">全部空间</option></select>
-            <select id="healthFilter" title="健康状态筛选">
-              <option value="">全部健康状态</option>
-              <option value="bad">只看异常</option>
-              <option value="ok">只看正常</option>
-              <option value="unknown">只看未检测</option>
-            </select>
-            <select id="configDensityMode" title="书签列表显示密度">
-              <option value="comfortable">舒适密度</option>
-              <option value="compact">紧凑密度</option>
-            </select>
-          </div>
           <div class="bulk-group bulk-action-group">
-            <button id="bulkCheckBtn" type="button" class="check-btn">检测选中</button>
+            <button id="bulkCheckBtn" type="button" class="check-btn">检测</button>
             <button id="recheckBadBtn" type="button" class="check-btn">重测异常</button>
             <button id="bulkFaviconBtn" type="button">刷新图标</button>
             <button id="hideBadBtn" type="button">隐藏异常</button>
-            <button id="bulkDeleteBtn" type="button" class="del-btn">删除选中</button>
+            <button id="bulkDeleteBtn" type="button" class="del-btn">删除</button>
           </div>
         </div>
         <div id="bulkResultPanel" class="bulk-result-panel" style="display:none;"></div>
@@ -141,7 +110,7 @@ export const adminHtml = `<!DOCTYPE html>
           <table id="configTable">
             <thead>
               <tr>
-                <th><input type="checkbox" id="selectAllConfigsHead" title="全选本页"></th><th>ID</th><th>名称</th><th>网址</th><th>图标</th><th>描述</th><th>分类</th><th style="display:none;">空间</th><th>可见性</th><th>标签</th><th>排序</th><th>健康</th><th>操作</th>
+                <th><input type="checkbox" id="selectAllConfigsHead" title="全选本页"></th><th>书签</th><th>分类</th><th>标签</th><th>状态</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="configTableBody"></tbody>
@@ -674,12 +643,37 @@ export const adminHtml = `<!DOCTYPE html>
 
       <div id="backups" class="tab-content">
         <div class="category-toolbar">
-          <p class="category-hint">手动或定时备份书签数据到 KV 存储，最多保留 30 份。启用 WebDAV 后，每次创建备份会额外上传一份 JSON 文件到远程存储。定时备份需在 wrangler.toml 配置 Cron Trigger。</p>
+          <p class="category-hint">手动或定时备份书签数据到 KV 存储，最多保留 30 份。导入导出也放在这里，避免顶栏常驻一排按钮。</p>
           <div class="backup-controls">
             <button id="createBackupBtn" type="button">立即备份</button>
             <button id="refreshBackups" type="button" class="secondary-btn">刷新列表</button>
           </div>
         </div>
+        <section class="settings-card backup-io-card">
+          <div class="settings-card-head">
+            <h3>导入 / 导出</h3>
+            <small>JSON 导入会先预览再写入；导出可选新版、旧版、CSV 或浏览器 HTML</small>
+          </div>
+          <div class="import-export">
+            <input type="file" id="importFile" accept=".json" style="display:none;">
+            <div class="import-group">
+              <select id="importMode" title="导入恢复模式">
+                <option value="merge">合并导入</option>
+                <option value="overwrite">覆盖恢复</option>
+              </select>
+              <button id="importBtn">导入</button>
+            </div>
+            <details class="action-menu export-menu">
+              <summary>导出</summary>
+              <div class="action-menu-panel">
+                <button id="exportBtn">新版 JSON</button>
+                <button id="exportLegacyBtn">旧版 JSON</button>
+                <button id="exportCsvBtn">CSV</button>
+                <button id="exportHtmlBtn">浏览器 HTML</button>
+              </div>
+            </details>
+          </div>
+        </section>
         <section class="webdav-card">
           <div class="webdav-card-head">
             <div>
