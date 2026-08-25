@@ -280,6 +280,14 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .token-note{margin-top:4px;color:var(--admin-muted);font-size:.75rem}
 .token-revoked{color:var(--admin-muted);font-size:.82rem}
 .admin-overview{display:none!important}
+body{padding:0!important}
+.container{max-width:none!important;margin:0!important;min-height:100vh;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;background:transparent!important;padding:14px 20px 28px!important}
+.tab-buttons{border:0!important;box-shadow:none!important;background:transparent!important}
+.tab-content{border:0!important;box-shadow:none!important;background:transparent!important;padding:0 2px 8px!important}
+.table-wrapper{border:0!important;box-shadow:none!important;background:transparent!important;overflow:visible!important;max-height:none!important;padding:0!important}
+.analytics-panel{border:0!important;box-shadow:none!important;background:transparent!important;padding:4px 0 12px!important}
+.analytics-panel-title{margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--admin-line)}
+.tab-wrapper{gap:12px}
 @media(max-width:1100px){
   .settings-stack,.token-form-grid{grid-template-columns:1fr}
 }
