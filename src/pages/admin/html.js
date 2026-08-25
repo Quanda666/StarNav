@@ -25,11 +25,11 @@ export const adminHtml = `<!DOCTYPE html>
     <div id="message" style="display:none;"></div>
 
     <div class="tab-wrapper">
+      <button class="sidebar-clip" id="sidebarToggle" type="button" title="把侧栏别成书签">
+        <span class="sidebar-clip-notch"></span>
+        <span class="sidebar-clip-text">别住</span>
+      </button>
       <aside class="tab-buttons" id="sidebarNav">
-        <button class="sidebar-clip" id="sidebarToggle" type="button" title="把侧栏别成书签">
-          <span class="sidebar-clip-notch"></span>
-          <span class="sidebar-clip-text">别住</span>
-        </button>
         <div class="sidebar-group">
           <div class="sidebar-group-label">内容</div>
           <button class="tab-button active" data-tab="config" title="书签列表"><span class="tab-icon">🔖</span><span class="tab-text">书签</span><span class="nav-badge" id="statTotalSites">0</span></button>
