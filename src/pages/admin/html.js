@@ -46,32 +46,6 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
     </header>
 
-    <div class="add-new">
-      <input type="text" id="addName" placeholder="Name" required>
-      <input type="text" id="addUrl" placeholder="URL" required>
-      <div class="logo-field">
-        <input type="text" id="addLogo" placeholder="Logo(optional)">
-        <button type="button" id="fetchAdminFaviconBtn" title="自动获取图标" aria-label="自动获取图标">✨</button>
-      </div>
-      <input type="text" id="addDesc" placeholder="Description(optional)">
-      <div class="add-action-field">
-        <input type="text" id="addCatelog" placeholder="Catelog" required>
-        <button type="button" id="suggestAddCategoryBtn" title="推荐分类" aria-label="推荐分类">🗂️</button>
-      </div>
-      <div class="add-action-field">
-        <select id="addSpace" title="所属空间" style="display:none;"><option value="">默认空间</option></select>
-        <select id="addVisibility" title="可见性"><option value="public">公开</option><option value="private">私密</option><option value="unlisted">不列出</option><option value="admin_only">仅管理员</option></select>
-      </div>
-      <div class="add-action-field">
-        <input type="text" id="addTags" placeholder="Tags(逗号/空格分隔，可选)">
-        <button type="button" id="suggestAddTagsBtn" title="推荐标签" aria-label="推荐标签">🏷️</button>
-      </div>
-      <div class="add-submit-row">
-        <input type="number" id="addSortOrder" placeholder="排序 (数字小靠前)">
-        <button id="addBtn">添加</button>
-      </div>
-    </div>
-    <div id="adminFaviconStatus" style="display:none;"></div>
     <div id="message" style="display:none;"></div>
 
     <section class="admin-overview" aria-label="后台概览">
@@ -116,6 +90,10 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="config" class="tab-content active">
+        <div class="config-list-toolbar">
+          <input type="text" id="searchInput" placeholder="搜索书签（名称、网址、分类）" autocomplete="off">
+          <button type="button" id="openAddSiteBtn">+ 添加书签</button>
+        </div>
         <div class="bulk-toolbar">
           <div class="bulk-group bulk-select-group">
             <label class="bulk-select-all"><input type="checkbox" id="selectAllConfigs"> 全选本页</label>
@@ -166,7 +144,7 @@ export const adminHtml = `<!DOCTYPE html>
           <table id="configTable">
             <thead>
               <tr>
-                <th><input type="checkbox" id="selectAllConfigsHead" title="全选本页"></th><th>ID</th><th>Name</th><th>URL</th><th>Logo</th><th>Description</th><th>Catelog</th><th style="display:none;">空间</th><th>可见性</th><th>Tags</th><th>排序</th><th>健康</th><th>Actions</th>
+                <th><input type="checkbox" id="selectAllConfigsHead" title="全选本页"></th><th>ID</th><th>名称</th><th>网址</th><th>图标</th><th>描述</th><th>分类</th><th style="display:none;">空间</th><th>可见性</th><th>标签</th><th>排序</th><th>健康</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="configTableBody"></tbody>
@@ -235,7 +213,7 @@ export const adminHtml = `<!DOCTYPE html>
           <table id="pendingTable">
             <thead>
               <tr>
-                <th>ID</th><th>Name</th><th>URL</th><th>Logo</th><th>Description</th><th>Catelog</th><th>Tags</th><th>Actions</th>
+                <th>ID</th><th>名称</th><th>网址</th><th>图标</th><th>描述</th><th>分类</th><th>标签</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="pendingTableBody"></tbody>
@@ -333,7 +311,7 @@ export const adminHtml = `<!DOCTYPE html>
 
       <div id="categories" class="tab-content">
         <div class="category-toolbar">
-          <p class="category-hint">支持分类改名、父子分类，以及图标、颜色和描述。可直接拖拽表格行调整顺序，再点击右上角“保存排序”写入。改名会同步更新现有书签的 Catelog。</p>
+          <p class="category-hint">支持分类改名、父子分类，以及图标、颜色和描述。可直接拖拽表格行调整顺序，再点击右上角“保存排序”写入。改名会同步更新现有书签的分类。</p>
           <button id="saveCategoryOrder" type="button" disabled>保存排序</button>
           <button id="refreshCategories" type="button">刷新</button>
         </div>
@@ -425,7 +403,7 @@ export const adminHtml = `<!DOCTYPE html>
             <button type="button" id="togglePrivatePassword">显示</button>
             <button type="button" id="savePrivatePassword">保存密码</button>
           </div>
-          <p class="category-hint">未设置时默认密码为 123456；也可通过环境变量 PRIVATE_BOOKMARKS_PASSWORD 覆盖默认值。请将私人站点的 Catelog 设置为“私人书签”。</p>
+          <p class="category-hint">未设置时默认密码为 123456；也可通过环境变量 PRIVATE_BOOKMARKS_PASSWORD 覆盖默认值。请将私人站点的分类设置为“私人书签”。</p>
         </div>
       </div>
 
@@ -773,6 +751,59 @@ export const adminHtml = `<!DOCTYPE html>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="addSiteModal" class="modal add-site-modal" role="dialog" aria-modal="true" aria-labelledby="addSiteModalTitle">
+    <div class="modal-content add-site-modal-content">
+      <button type="button" class="modal-close" id="closeAddSiteModal" aria-label="关闭">×</button>
+      <h2 id="addSiteModalTitle">添加书签</h2>
+      <p class="add-site-hint">先填网址，失焦后会自动抓取名称、描述和图标，再补分类即可保存。</p>
+      <form id="addSiteForm" class="add-site-form">
+        <label for="addUrl">网址</label>
+        <input type="text" id="addUrl" placeholder="https://example.com" required autocomplete="off">
+        <div id="adminFaviconStatus" class="add-site-status" style="display:none;"></div>
+        <label for="addName">名称</label>
+        <input type="text" id="addName" placeholder="书签名称" required>
+        <label for="addLogo">图标</label>
+        <div class="logo-field">
+          <input type="text" id="addLogo" placeholder="图标地址，可选">
+          <button type="button" id="fetchAdminFaviconBtn" title="自动获取图标" aria-label="自动获取图标">✨</button>
+        </div>
+        <label for="addDesc">描述</label>
+        <textarea id="addDesc" rows="2" placeholder="简短描述，可选"></textarea>
+        <label for="addCatelog">分类</label>
+        <div class="add-action-field">
+          <input type="text" id="addCatelog" list="addCatalogList" placeholder="分类名称" required>
+          <button type="button" id="suggestAddCategoryBtn" title="推荐分类" aria-label="推荐分类">🗂️</button>
+        </div>
+        <datalist id="addCatalogList"></datalist>
+        <div class="add-site-row">
+          <div>
+            <label for="addVisibility">可见性</label>
+            <select id="addSpace" title="所属空间" style="display:none;"><option value="">默认空间</option></select>
+            <select id="addVisibility" title="可见性">
+              <option value="public">公开</option>
+              <option value="private">私密</option>
+              <option value="unlisted">不列出</option>
+              <option value="admin_only">仅管理员</option>
+            </select>
+          </div>
+          <div>
+            <label for="addSortOrder">排序</label>
+            <input type="number" id="addSortOrder" placeholder="数字小靠前，可留空">
+          </div>
+        </div>
+        <label for="addTags">标签</label>
+        <div class="add-action-field">
+          <input type="text" id="addTags" placeholder="逗号或空格分隔，可选">
+          <button type="button" id="suggestAddTagsBtn" title="推荐标签" aria-label="推荐标签">🏷️</button>
+        </div>
+        <div class="confirm-actions">
+          <button type="button" id="cancelAddSiteBtn" class="secondary-btn">取消</button>
+          <button type="submit" id="addBtn">添加</button>
+        </div>
+      </form>
     </div>
   </div>
   <script src="/static/admin.js"></script>

@@ -186,4 +186,23 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 #spaceTable .space-visibility-select{min-width:130px}
 #spaceTable .space-sort-input{min-width:130px}
 @media(max-width:900px){#spaces .category-add-panel{display:grid!important;grid-template-columns:1fr!important;overflow:visible!important}#spaces .category-add-panel input,#spaces .category-add-panel select,#spaces .category-add-panel button{width:100%!important;min-width:0!important;flex-basis:auto!important}}
+
+.config-list-toolbar{display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap}
+.config-list-toolbar #searchInput{flex:1 1 240px;min-width:200px;margin:0!important}
+.config-list-toolbar #openAddSiteBtn{flex:0 0 auto;white-space:nowrap;margin:0;padding:10px 16px}
+.add-site-modal .add-site-modal-content{max-width:520px;margin:4% auto;max-height:calc(100vh - 48px);overflow:auto}
+.add-site-hint{margin:-4px 0 16px;color:var(--admin-muted);font-size:.88rem;line-height:1.5}
+.add-site-form label{display:block;margin:0 0 6px;font-weight:600;color:var(--admin-text)}
+.add-site-form input,.add-site-form select,.add-site-form textarea{width:100%;box-sizing:border-box;margin-bottom:12px}
+.add-site-form textarea{min-height:72px;resize:vertical;padding:10px;border:1px solid var(--admin-line);border-radius:12px;background:#fffdf8;color:var(--admin-text);font:inherit}
+.add-site-form .logo-field,.add-site-form .add-action-field{display:block;flex:none;width:100%;min-width:0;margin:0 0 12px}
+.add-site-form .logo-field input,.add-site-form .add-action-field input{margin-bottom:0!important}
+.add-site-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.add-site-row>div{min-width:0}
+.add-site-status{margin:-4px 0 12px;padding:8px 10px;border-radius:10px;font-size:.82rem}
+.add-site-status.status-loading{background:#f3eadf;color:var(--admin-muted)}
+.add-site-status.status-success{background:#dfeee5;color:#2f6f5e}
+.add-site-status.status-error{background:#f2d9d3;color:#963d3d}
+.add-site-form .confirm-actions{margin-top:8px}
+@media(max-width:640px){.add-site-row{grid-template-columns:1fr}.config-list-toolbar{display:grid;grid-template-columns:1fr}.config-list-toolbar #openAddSiteBtn{width:100%}}
 `;
