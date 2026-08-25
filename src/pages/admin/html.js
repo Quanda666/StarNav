@@ -48,46 +48,43 @@ export const adminHtml = `<!DOCTYPE html>
 
     <div id="message" style="display:none;"></div>
 
-    <section class="admin-overview" aria-label="后台概览">
-      <div class="stat-card">
-        <span class="stat-icon">🔖</span>
-        <div><strong id="statTotalSites">--</strong><small>书签总数</small></div>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">⏳</span>
-        <div><strong id="statPendingSites">--</strong><small>待审核</small></div>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">🗂️</span>
-        <div><strong id="statCategories">--</strong><small>分类数量</small></div>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">🛠️</span>
-        <div><strong id="statAdminState">在线</strong><small>管理状态</small></div>
-      </div>
-    </section>
-
     <div class="tab-wrapper">
-      <div class="tab-buttons" id="sidebarNav">
+      <aside class="tab-buttons" id="sidebarNav">
         <button class="sidebar-toggle" id="sidebarToggle" type="button" title="收起/展开侧边栏">
           <span class="toggle-icon">◀</span>
         </button>
-        <button class="tab-button active" data-tab="config" title="书签列表"><span class="tab-icon">🔖</span><span class="tab-text">书签列表</span></button>
-        <button class="tab-button" data-tab="pending" title="待审列表"><span class="tab-icon">⏳</span><span class="tab-text">待审列表</span></button>
-        <button class="tab-button" data-tab="submissionAnalytics" title="提交分析"><span class="tab-icon">📊</span><span class="tab-text">提交分析</span></button>
-        <button class="tab-button" data-tab="visitAnalytics" title="访问分析"><span class="tab-icon">📈</span><span class="tab-text">访问分析</span></button>
+        <div class="sidebar-stats" aria-label="后台概览">
+          <div class="sidebar-stat"><strong id="statTotalSites">0</strong><small>书签</small></div>
+          <div class="sidebar-stat"><strong id="statPendingSites">0</strong><small>待审</small></div>
+          <div class="sidebar-stat"><strong id="statCategories">0</strong><small>分类</small></div>
+        </div>
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">内容</div>
+          <button class="tab-button active" data-tab="config" title="书签列表"><span class="tab-icon">🔖</span><span class="tab-text">书签列表</span></button>
+          <button class="tab-button" data-tab="pending" title="待审列表"><span class="tab-icon">⏳</span><span class="tab-text">待审列表</span></button>
+          <button class="tab-button" data-tab="categories" title="分类管理"><span class="tab-icon">🗂️</span><span class="tab-text">分类管理</span></button>
+          <button class="tab-button" data-tab="tags" title="标签管理"><span class="tab-icon">🏷️</span><span class="tab-text">标签管理</span></button>
+        </div>
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">洞察</div>
+          <button class="tab-button" data-tab="submissionAnalytics" title="提交分析"><span class="tab-icon">📊</span><span class="tab-text">提交分析</span></button>
+          <button class="tab-button" data-tab="visitAnalytics" title="访问分析"><span class="tab-icon">📈</span><span class="tab-text">访问分析</span></button>
+          <button class="tab-button" data-tab="systemHealth" title="系统健康"><span class="tab-icon">🩺</span><span class="tab-text">系统健康</span></button>
+        </div>
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">系统</div>
+          <button class="tab-button" data-tab="systemSettings" title="系统设置"><span class="tab-icon">⚙️</span><span class="tab-text">系统设置</span></button>
+          <button class="tab-button" data-tab="aiAdmin" title="AI 助手"><span class="tab-icon">🤖</span><span class="tab-text">AI 助手</span></button>
+          <button class="tab-button" data-tab="backups" title="备份恢复"><span class="tab-icon">💾</span><span class="tab-text">备份恢复</span></button>
+        </div>
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">接入</div>
+          <button class="tab-button" data-tab="aiAssistant" title="API接入"><span class="tab-icon">🔌</span><span class="tab-text">API接入</span></button>
+          <button class="tab-button" data-tab="apiTokens" title="Token管理"><span class="tab-icon">🔑</span><span class="tab-text">Token管理</span></button>
+          <button class="tab-button" data-tab="operationLogs" title="操作日志"><span class="tab-icon">📝</span><span class="tab-text">操作日志</span></button>
+        </div>
         <button class="tab-button" data-tab="spaces" style="display:none;" title="空间管理"><span class="tab-icon">🌐</span><span class="tab-text">空间管理</span></button>
-        <button class="tab-button" data-tab="categories" title="分类管理"><span class="tab-icon">🗂️</span><span class="tab-text">分类管理</span></button>
-        <button class="tab-button" data-tab="tags" title="标签管理"><span class="tab-icon">🏷️</span><span class="tab-text">标签管理</span></button>
-        <button class="tab-button" data-tab="privateBookmarks" title="私人书签"><span class="tab-icon">🔒</span><span class="tab-text">私人书签</span></button>
-        <button class="tab-button" data-tab="systemSettings" title="系统设置"><span class="tab-icon">⚙️</span><span class="tab-text">系统设置</span></button>
-        <button class="tab-button" data-tab="systemHealth" title="系统健康"><span class="tab-icon">🩺</span><span class="tab-text">系统健康</span></button>
-        <button class="tab-button" data-tab="aiAdmin" title="AI 助手"><span class="tab-icon">🤖</span><span class="tab-text">AI 助手</span></button>
-        <button class="tab-button" data-tab="aiAssistant" title="API接入"><span class="tab-icon">🔌</span><span class="tab-text">API接入</span></button>
-        <button class="tab-button" data-tab="apiTokens" title="Token管理"><span class="tab-icon">🔑</span><span class="tab-text">Token管理</span></button>
-        <button class="tab-button" data-tab="operationLogs" title="操作日志"><span class="tab-icon">📝</span><span class="tab-text">操作日志</span></button>
-        <button class="tab-button" data-tab="backups" title="备份恢复"><span class="tab-icon">💾</span><span class="tab-text">备份恢复</span></button>
-      </div>
+      </aside>
 
       <div id="config" class="tab-content active">
         <div class="config-list-toolbar">
@@ -392,102 +389,132 @@ export const adminHtml = `<!DOCTYPE html>
         </div>
       </div>
 
-      <div id="privateBookmarks" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">前台分类列表底部固定显示“私人书签”。访客访问该分类需要输入这里配置的访问密码；管理员登录后无需密码。</p>
-        </div>
-        <div class="private-settings-card">
-          <label for="privateBookmarkPassword">私人书签访问密码</label>
-          <div class="private-password-row">
-            <input type="password" id="privateBookmarkPassword" placeholder="请输入新的访问密码">
-            <button type="button" id="togglePrivatePassword">显示</button>
-            <button type="button" id="savePrivatePassword">保存密码</button>
-          </div>
-          <p class="category-hint">未设置时默认密码为 123456；也可通过环境变量 PRIVATE_BOOKMARKS_PASSWORD 覆盖默认值。请将私人站点的分类设置为“私人书签”。</p>
-        </div>
-      </div>
-
       <div id="systemSettings" class="tab-content">
         <div class="category-toolbar">
-          <p class="category-hint">配置站点品牌、首页文案和系统公告。公告支持 Markdown 语法，会以前台弹窗形式展示。</p>
+          <p class="category-hint">站点品牌、首页展示、私人书签和公告都在这里改。保存后前台会自动刷新。</p>
           <button id="refreshSystemSettings" type="button">刷新配置</button>
         </div>
-        <div class="private-settings-card ai-settings-card system-settings-card">
-          <label for="systemSiteName">网站名称</label>
-          <input type="text" id="systemSiteName" placeholder="星漫旅站">
-          <label for="systemSiteSubtitle">首页副标题</label>
-          <input type="text" id="systemSiteSubtitle" placeholder="收藏、整理与发现你的常用网站">
-          <label for="systemSiteIcon">网站图标 URL</label>
-          <div class="private-password-row">
-            <input type="text" id="systemSiteIcon" placeholder="/pwa-icon.svg 或 https://...">
-            <button type="button" id="previewSystemIcon">预览图标</button>
+        <div class="settings-stack">
+          <section class="settings-card">
+            <div class="settings-card-head">
+              <h3>站点品牌</h3>
+              <small>名称、图标和页脚文案</small>
+            </div>
+            <div class="system-settings-grid">
+              <div>
+                <label for="systemSiteName">网站名称</label>
+                <input type="text" id="systemSiteName" placeholder="星漫旅站">
+              </div>
+              <div>
+                <label for="systemSiteSubtitle">首页副标题</label>
+                <input type="text" id="systemSiteSubtitle" placeholder="收藏、整理与发现你的常用网站">
+              </div>
+            </div>
+            <label for="systemSiteIcon">网站图标 URL</label>
+            <div class="private-password-row">
+              <input type="text" id="systemSiteIcon" placeholder="/pwa-icon.svg 或 https://...">
+              <button type="button" id="previewSystemIcon">预览图标</button>
+            </div>
+            <label for="systemFooterText">页脚补充文字</label>
+            <input type="text" id="systemFooterText" placeholder="可选，例如备案号、联系方式或版权说明">
+          </section>
+
+          <section class="settings-card">
+            <div class="settings-card-head">
+              <h3>首页展示</h3>
+              <small>默认布局、主题色和入口开关</small>
+            </div>
+            <div class="system-settings-grid">
+              <div>
+                <label for="systemDefaultLayout">默认首页布局</label>
+                <select id="systemDefaultLayout">
+                  <option value="">默认卡片</option>
+                  <option value="grid">卡片</option>
+                  <option value="list">列表</option>
+                  <option value="grouped">分组</option>
+                  <option value="masonry">瀑布</option>
+                  <option value="dashboard">概览</option>
+                </select>
+              </div>
+              <div>
+                <label for="systemDefaultAccent">默认主题色</label>
+                <select id="systemDefaultAccent">
+                  <option value="">默认星空蓝</option>
+                  <option value="blue">星空蓝</option>
+                  <option value="green">森林绿</option>
+                  <option value="purple">暮光紫</option>
+                  <option value="rose">蔷薇红</option>
+                  <option value="amber">琥珀金</option>
+                </select>
+              </div>
+            </div>
+            <label for="systemBackgroundImage">首页背景图片 URL</label>
+            <input type="text" id="systemBackgroundImage" placeholder="可选，填写后作为访客默认背景图片">
+            <div class="settings-toggles">
+              <label><input type="checkbox" id="systemHeroVisible"> 显示首页顶部横幅</label>
+              <label><input type="checkbox" id="systemPublicSubmissionEnabled"> 显示前台公开提交入口</label>
+              <label><input type="checkbox" id="systemBlogVisible"> 显示前台博客入口</label>
+            </div>
+            <div class="system-settings-grid">
+              <div>
+                <label for="systemBlogUrl">博客入口 URL</label>
+                <input type="text" id="systemBlogUrl" placeholder="https://blog.example.com/">
+              </div>
+              <div>
+                <label for="systemBlogLabel">博客入口文字</label>
+                <input type="text" id="systemBlogLabel" placeholder="访问博客">
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-card">
+            <div class="settings-card-head">
+              <h3>私人书签</h3>
+              <small>访客访问“私人书签”分类时需要密码；管理员登录后无需密码</small>
+            </div>
+            <label><input type="checkbox" id="systemPrivateBookmarksVisible"> 显示前台私人书签入口</label>
+            <label for="privateBookmarkPassword">访问密码</label>
+            <div class="private-password-row">
+              <input type="password" id="privateBookmarkPassword" placeholder="请输入新的访问密码">
+              <button type="button" id="togglePrivatePassword">显示</button>
+              <button type="button" id="savePrivatePassword">保存密码</button>
+            </div>
+            <p class="category-hint">未设置时默认密码为 123456；也可通过环境变量 PRIVATE_BOOKMARKS_PASSWORD 覆盖。请将私人站点的分类设置为“私人书签”。</p>
+          </section>
+
+          <section class="settings-card">
+            <div class="settings-card-head">
+              <h3>系统公告</h3>
+              <small>支持 Markdown，以前台弹窗展示</small>
+            </div>
+            <label><input type="checkbox" id="announcementEnabled"> 启用前台弹窗公告</label>
+            <label for="announcementTitle">公告标题</label>
+            <input type="text" id="announcementTitle" placeholder="系统公告">
+            <label for="announcementMarkdown">公告内容（Markdown）</label>
+            <textarea id="announcementMarkdown" rows="6" placeholder="支持标题、列表、链接、加粗、代码块等 Markdown 语法"></textarea>
+            <div class="system-settings-grid">
+              <div>
+                <label for="announcementVersion">公告版本</label>
+                <input type="text" id="announcementVersion" placeholder="修改版本号可让用户重新看到公告">
+              </div>
+              <div>
+                <label for="announcementButtonText">按钮文字</label>
+                <input type="text" id="announcementButtonText" placeholder="我知道了">
+              </div>
+            </div>
+            <label><input type="checkbox" id="announcementShowOnce"> 同一版本每位访客只显示一次</label>
+            <p class="category-hint">建议更新公告后递增版本；开启“只显示一次”时，访客关闭后同版本不会重复弹出。</p>
+          </section>
+
+          <div class="settings-footer">
+            <div class="ai-actions">
+              <button type="button" id="saveSystemSettings">保存系统设置</button>
+              <button type="button" id="previewAnnouncement" class="check-btn">预览公告</button>
+              <button type="button" id="bumpAnnouncementVersion" class="secondary-btn">递增公告版本</button>
+            </div>
+            <div id="systemSettingsStatus" class="ai-status" style="display:none;"></div>
+            <div id="announcementPreview" class="announcement-preview" style="display:none;"></div>
           </div>
-          <label for="systemFooterText">页脚补充文字</label>
-          <input type="text" id="systemFooterText" placeholder="可选，例如备案号、联系方式或版权说明">
-          <label><input type="checkbox" id="systemBlogVisible"> 显示前台博客入口</label>
-          <div class="system-settings-grid">
-            <div>
-              <label for="systemBlogUrl">博客入口 URL</label>
-              <input type="text" id="systemBlogUrl" placeholder="https://blog.example.com/">
-            </div>
-            <div>
-              <label for="systemBlogLabel">博客入口文字</label>
-              <input type="text" id="systemBlogLabel" placeholder="访问博客">
-            </div>
-          </div>
-          <label for="systemBackgroundImage">首页背景图片 URL</label>
-          <input type="text" id="systemBackgroundImage" placeholder="可选，填写后作为访客默认背景图片">
-          <div class="system-settings-grid">
-            <div>
-              <label for="systemDefaultLayout">默认首页布局</label>
-              <select id="systemDefaultLayout">
-                <option value="">默认卡片</option>
-                <option value="grid">卡片</option>
-                <option value="list">列表</option>
-                <option value="grouped">分组</option>
-                <option value="masonry">瀑布</option>
-                <option value="dashboard">概览</option>
-              </select>
-            </div>
-            <div>
-              <label for="systemDefaultAccent">默认主题色</label>
-              <select id="systemDefaultAccent">
-                <option value="">默认星空蓝</option>
-                <option value="blue">星空蓝</option>
-                <option value="green">森林绿</option>
-                <option value="purple">暮光紫</option>
-                <option value="rose">蔷薇红</option>
-                <option value="amber">琥珀金</option>
-              </select>
-            </div>
-          </div>
-          <label><input type="checkbox" id="systemHeroVisible"> 显示首页顶部横幅</label>
-          <label><input type="checkbox" id="systemPublicSubmissionEnabled"> 显示前台公开提交入口</label>
-          <label><input type="checkbox" id="systemPrivateBookmarksVisible"> 显示前台私人书签入口</label>
-          <label><input type="checkbox" id="announcementEnabled"> 启用前台弹窗公告</label>
-          <label for="announcementTitle">公告标题</label>
-          <input type="text" id="announcementTitle" placeholder="系统公告">
-          <label for="announcementMarkdown">公告内容（Markdown）</label>
-          <textarea id="announcementMarkdown" rows="8" placeholder="支持标题、列表、链接、加粗、代码块等 Markdown 语法"></textarea>
-          <div class="system-settings-grid">
-            <div>
-              <label for="announcementVersion">公告版本</label>
-              <input type="text" id="announcementVersion" placeholder="修改版本号可让用户重新看到公告">
-            </div>
-            <div>
-              <label for="announcementButtonText">按钮文字</label>
-              <input type="text" id="announcementButtonText" placeholder="我知道了">
-            </div>
-          </div>
-          <label><input type="checkbox" id="announcementShowOnce"> 同一版本每位访客只显示一次</label>
-          <div class="ai-actions">
-            <button type="button" id="saveSystemSettings">保存系统设置</button>
-            <button type="button" id="previewAnnouncement" class="check-btn">预览公告</button>
-            <button type="button" id="bumpAnnouncementVersion" class="secondary-btn">递增公告版本</button>
-          </div>
-          <div id="systemSettingsStatus" class="ai-status" style="display:none;"></div>
-          <div id="announcementPreview" class="announcement-preview" style="display:none;"></div>
-          <p class="category-hint">建议在更新公告内容后递增公告版本；开启“只显示一次”时，访客关闭后同版本不会重复弹出。</p>
         </div>
       </div>
 
@@ -758,27 +785,37 @@ export const adminHtml = `<!DOCTYPE html>
     <div class="modal-content add-site-modal-content">
       <button type="button" class="modal-close" id="closeAddSiteModal" aria-label="关闭">×</button>
       <h2 id="addSiteModalTitle">添加书签</h2>
-      <p class="add-site-hint">先填网址，失焦后会自动抓取名称、描述和图标，再补分类即可保存。</p>
+      <p class="add-site-hint">先填网址，失焦后自动抓取名称、描述和图标。</p>
       <form id="addSiteForm" class="add-site-form">
-        <label for="addUrl">网址</label>
-        <input type="text" id="addUrl" placeholder="https://example.com" required autocomplete="off">
-        <div id="adminFaviconStatus" class="add-site-status" style="display:none;"></div>
-        <label for="addName">名称</label>
-        <input type="text" id="addName" placeholder="书签名称" required>
-        <label for="addLogo">图标</label>
-        <div class="logo-field">
-          <input type="text" id="addLogo" placeholder="图标地址，可选">
-          <button type="button" id="fetchAdminFaviconBtn" title="自动获取图标" aria-label="自动获取图标">✨</button>
-        </div>
-        <label for="addDesc">描述</label>
-        <textarea id="addDesc" rows="2" placeholder="简短描述，可选"></textarea>
-        <label for="addCatelog">分类</label>
-        <div class="add-action-field">
-          <input type="text" id="addCatelog" list="addCatalogList" placeholder="分类名称" required>
-          <button type="button" id="suggestAddCategoryBtn" title="推荐分类" aria-label="推荐分类">🗂️</button>
-        </div>
-        <datalist id="addCatalogList"></datalist>
-        <div class="add-site-row">
+        <div class="add-site-grid">
+          <div class="add-site-span-2">
+            <label for="addUrl">网址</label>
+            <input type="text" id="addUrl" placeholder="https://example.com" required autocomplete="off">
+            <div id="adminFaviconStatus" class="add-site-status" style="display:none;"></div>
+          </div>
+          <div>
+            <label for="addName">名称</label>
+            <input type="text" id="addName" placeholder="书签名称" required>
+          </div>
+          <div>
+            <label for="addCatelog">分类</label>
+            <div class="add-action-field">
+              <input type="text" id="addCatelog" list="addCatalogList" placeholder="分类名称" required>
+              <button type="button" id="suggestAddCategoryBtn" title="推荐分类" aria-label="推荐分类">🗂️</button>
+            </div>
+            <datalist id="addCatalogList"></datalist>
+          </div>
+          <div class="add-site-span-2">
+            <label for="addLogo">图标</label>
+            <div class="logo-field">
+              <input type="text" id="addLogo" placeholder="图标地址，可选">
+              <button type="button" id="fetchAdminFaviconBtn" title="自动获取图标" aria-label="自动获取图标">✨</button>
+            </div>
+          </div>
+          <div class="add-site-span-2">
+            <label for="addDesc">描述</label>
+            <input type="text" id="addDesc" placeholder="简短描述，可选">
+          </div>
           <div>
             <label for="addVisibility">可见性</label>
             <select id="addSpace" title="所属空间" style="display:none;"><option value="">默认空间</option></select>
@@ -793,11 +830,13 @@ export const adminHtml = `<!DOCTYPE html>
             <label for="addSortOrder">排序</label>
             <input type="number" id="addSortOrder" placeholder="数字小靠前，可留空">
           </div>
-        </div>
-        <label for="addTags">标签</label>
-        <div class="add-action-field">
-          <input type="text" id="addTags" placeholder="逗号或空格分隔，可选">
-          <button type="button" id="suggestAddTagsBtn" title="推荐标签" aria-label="推荐标签">🏷️</button>
+          <div class="add-site-span-2">
+            <label for="addTags">标签</label>
+            <div class="add-action-field">
+              <input type="text" id="addTags" placeholder="逗号或空格分隔，可选">
+              <button type="button" id="suggestAddTagsBtn" title="推荐标签" aria-label="推荐标签">🏷️</button>
+            </div>
+          </div>
         </div>
         <div class="confirm-actions">
           <button type="button" id="cancelAddSiteBtn" class="secondary-btn">取消</button>
