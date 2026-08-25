@@ -45,13 +45,13 @@ export const adminHtml = `<!DOCTYPE html>
         <div class="sidebar-group">
           <div class="sidebar-group-label">系统</div>
           <button class="tab-button" data-tab="systemSettings" title="系统设置"><span class="tab-icon">⚙️</span><span class="tab-text">系统设置</span></button>
-          <button class="tab-button" data-tab="aiAdmin" title="AI 助手"><span class="tab-icon">🤖</span><span class="tab-text">AI 助手</span></button>
+          <button class="tab-button" data-tab="aiAdmin" title="AI 分析"><span class="tab-icon">🤖</span><span class="tab-text">AI 分析</span></button>
+          <button class="tab-button" data-tab="aiAssistant" title="AI 接口"><span class="tab-icon">🔌</span><span class="tab-text">AI 接口</span></button>
           <button class="tab-button" data-tab="backups" title="备份恢复"><span class="tab-icon">💾</span><span class="tab-text">备份恢复</span></button>
         </div>
         <div class="sidebar-group">
           <div class="sidebar-group-label">接入</div>
-          <button class="tab-button" data-tab="aiAssistant" title="API接入"><span class="tab-icon">🔌</span><span class="tab-text">API接入</span></button>
-          <button class="tab-button" data-tab="apiTokens" title="Token管理"><span class="tab-icon">🔑</span><span class="tab-text">Token管理</span></button>
+          <button class="tab-button" data-tab="apiTokens" title="Token"><span class="tab-icon">🔑</span><span class="tab-text">Token</span></button>
           <button class="tab-button" data-tab="operationLogs" title="操作日志"><span class="tab-icon">📝</span><span class="tab-text">操作日志</span></button>
         </div>
         <button class="tab-button" data-tab="spaces" style="display:none;" title="空间管理"><span class="tab-icon">🌐</span><span class="tab-text">空间管理</span></button>
@@ -513,7 +513,7 @@ export const adminHtml = `<!DOCTYPE html>
 
       <div id="aiAdmin" class="tab-content">
         <div class="category-toolbar">
-          <p class="category-hint">AI 管理助手：利用 AI 分析书签库质量，发现无标签、疑似重复、分类错误和搜索缺口等问题。需要先在"API接入"中配置大模型 API。</p>
+          <p class="category-hint">分析书签库质量：无标签、疑似重复、搜索缺口和分类问题。大模型接口请到左侧「AI 接口」配置。</p>
         </div>
         <div class="analytics-summary">
           <div class="analytics-card ai-admin-card" data-type="no-tags"><span>🏷️</span><div><strong>无标签书签</strong><small>扫描缺失标签的书签并推荐补齐</small></div></div>
@@ -643,37 +643,42 @@ export const adminHtml = `<!DOCTYPE html>
 
       <div id="backups" class="tab-content">
         <div class="category-toolbar">
-          <p class="category-hint">手动或定时备份书签数据到 KV 存储，最多保留 30 份。导入导出也放在这里，避免顶栏常驻一排按钮。</p>
+          <p class="category-hint">备份最多保留 30 份。导入会先预览再写入；导出可选 JSON、CSV 或浏览器 HTML。</p>
           <div class="backup-controls">
             <button id="createBackupBtn" type="button">立即备份</button>
             <button id="refreshBackups" type="button" class="secondary-btn">刷新列表</button>
           </div>
         </div>
-        <section class="settings-card backup-io-card">
-          <div class="settings-card-head">
-            <h3>导入 / 导出</h3>
-            <small>JSON 导入会先预览再写入；导出可选新版、旧版、CSV 或浏览器 HTML</small>
-          </div>
-          <div class="import-export">
+        <div class="backup-io-grid">
+          <section class="settings-card backup-io-card">
+            <div class="settings-card-head">
+              <h3>导入</h3>
+              <small>JSON 会先预览，确认后再写入</small>
+            </div>
             <input type="file" id="importFile" accept=".json" style="display:none;">
-            <div class="import-group">
+            <label for="importMode">恢复模式</label>
+            <div class="private-password-row">
               <select id="importMode" title="导入恢复模式">
                 <option value="merge">合并导入</option>
                 <option value="overwrite">覆盖恢复</option>
               </select>
-              <button id="importBtn">导入</button>
+              <button id="importBtn" type="button">选择文件并导入</button>
             </div>
-            <details class="action-menu export-menu">
-              <summary>导出</summary>
-              <div class="action-menu-panel">
-                <button id="exportBtn">新版 JSON</button>
-                <button id="exportLegacyBtn">旧版 JSON</button>
-                <button id="exportCsvBtn">CSV</button>
-                <button id="exportHtmlBtn">浏览器 HTML</button>
-              </div>
-            </details>
-          </div>
-        </section>
+            <p class="category-hint">覆盖恢复会先清空现有书签、分类和标签，请谨慎使用。</p>
+          </section>
+          <section class="settings-card backup-io-card">
+            <div class="settings-card-head">
+              <h3>导出</h3>
+              <small>按需要的格式下载当前书签库</small>
+            </div>
+            <div class="backup-export-actions">
+              <button id="exportBtn" type="button">新版 JSON</button>
+              <button id="exportLegacyBtn" type="button" class="secondary-btn">旧版 JSON</button>
+              <button id="exportCsvBtn" type="button" class="secondary-btn">CSV</button>
+              <button id="exportHtmlBtn" type="button" class="secondary-btn">浏览器 HTML</button>
+            </div>
+          </section>
+        </div>
         <section class="webdav-card">
           <div class="webdav-card-head">
             <div>
@@ -714,16 +719,22 @@ export const adminHtml = `<!DOCTYPE html>
           </div>
         </section>
         <div id="backupStatus" class="ai-status" style="display:none;"></div>
-        <div class="table-wrapper">
-          <table id="backupTable">
-            <thead>
-              <tr>
-                <th>备份ID</th><th>来源</th><th>书签数</th><th>分类数</th><th>大小</th><th>创建时间</th><th>备注</th><th>操作</th>
-              </tr>
-            </thead>
-            <tbody id="backupTableBody"><tr><td colspan="8">点击"刷新列表"加载备份</td></tr></tbody>
-          </table>
-        </div>
+        <section class="settings-card backup-list-card">
+          <div class="settings-card-head">
+            <h3>备份列表</h3>
+            <small>本机 KV 备份，可用于一键恢复</small>
+          </div>
+          <div class="table-wrapper backup-table-wrap">
+            <table id="backupTable">
+              <thead>
+                <tr>
+                  <th>时间</th><th>来源</th><th>规模</th><th>大小</th><th>备注</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="backupTableBody"><tr><td colspan="6">点击“刷新列表”加载备份</td></tr></tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       <div id="operationLogs" class="tab-content">
@@ -777,8 +788,10 @@ export const adminHtml = `<!DOCTYPE html>
 
   <div id="addSiteModal" class="modal add-site-modal" role="dialog" aria-modal="true" aria-labelledby="addSiteModalTitle">
     <div class="modal-content add-site-modal-content">
-      <button type="button" class="modal-close" id="closeAddSiteModal" aria-label="关闭">×</button>
-      <h2 id="addSiteModalTitle">添加书签</h2>
+      <div class="add-site-modal-head">
+        <h2 id="addSiteModalTitle">添加书签</h2>
+        <button type="button" class="modal-close" id="closeAddSiteModal" aria-label="关闭">关闭</button>
+      </div>
       <p class="add-site-hint">先填网址，失焦后自动抓取名称、描述和图标。</p>
       <form id="addSiteForm" class="add-site-form">
         <div class="add-site-grid">
