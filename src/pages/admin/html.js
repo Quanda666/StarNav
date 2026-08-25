@@ -26,8 +26,9 @@ export const adminHtml = `<!DOCTYPE html>
 
     <div class="tab-wrapper">
       <aside class="tab-buttons" id="sidebarNav">
-        <button class="sidebar-toggle" id="sidebarToggle" type="button" title="收起/展开侧边栏">
-          <span class="toggle-icon">◀</span>
+        <button class="sidebar-clip" id="sidebarToggle" type="button" title="把侧栏别成书签">
+          <span class="sidebar-clip-notch"></span>
+          <span class="sidebar-clip-text">别住</span>
         </button>
         <div class="sidebar-group">
           <div class="sidebar-group-label">内容</div>
@@ -164,8 +165,11 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="pending" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">审核中心：管理前台访客提交的书签。批准后自动入库，拒绝时可附带理由。</p>
+        <div class="page-head">
+          <div>
+            <h2>待审</h2>
+            <p class="category-hint">前台提交的书签。批准后入库，拒绝时可附带理由。</p>
+          </div>
           <div class="operation-log-controls">
             <select id="pendingStatusFilter" title="按审核状态筛选">
               <option value="pending">待审核</option>
@@ -193,9 +197,10 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="submissionAnalytics" class="tab-content">
-        <div class="category-toolbar">
+        <div class="page-head">
           <div>
-            <p class="category-hint">提交热力分析同时统计前台待审核提交和后台管理员新增书签，帮助判断更常添加的日期、时段和分类偏好。</p>
+            <h2>提交分析</h2>
+            <p class="category-hint">同时统计前台待审和后台新增，看日期、时段和分类偏好。</p>
           </div>
           <div class="analytics-controls">
             <select id="analyticsDays" title="统计范围">
@@ -276,10 +281,15 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="categories" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">支持分类改名、父子分类，以及图标、颜色和描述。可直接拖拽表格行调整顺序，再点击右上角“保存排序”写入。改名会同步更新现有书签的分类。</p>
-          <button id="saveCategoryOrder" type="button" disabled>保存排序</button>
-          <button id="refreshCategories" type="button">刷新</button>
+        <div class="page-head">
+          <div>
+            <h2>分类</h2>
+            <p class="category-hint">改名、父子分类、图标和颜色。拖拽行排序后点“保存排序”。</p>
+          </div>
+          <div class="backup-controls">
+            <button id="saveCategoryOrder" type="button" disabled>保存排序</button>
+            <button id="refreshCategories" type="button">刷新</button>
+          </div>
         </div>
         <div class="add-new category-add category-add-panel">
           <input type="text" id="newCategoryName" placeholder="新分类名称">
@@ -306,8 +316,11 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="tags" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">集中管理标签。当前先支持查看标签使用次数与合并碎片标签，后续会继续加入 AI 自动生成标签、批量补齐标签和标签别名。</p>
+        <div class="page-head">
+          <div>
+            <h2>标签</h2>
+            <p class="category-hint">查看使用次数、合并碎片标签，并给缺标签的书签补齐。</p>
+          </div>
           <div class="tag-toolbar-actions">
             <span class="tag-total-badge">当前标签 <strong id="tagTotalCount">--</strong> 个</span>
             <button id="refreshTags" type="button">刷新标签</button>
@@ -359,8 +372,11 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="systemSettings" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">站点品牌、首页展示、私人书签和公告都在这里改。保存后前台会自动刷新。</p>
+        <div class="page-head">
+          <div>
+            <h2>系统设置</h2>
+            <p class="category-hint">站点品牌、首页展示、私人书签和公告都在这里改。保存后前台会自动刷新。</p>
+          </div>
           <button id="refreshSystemSettings" type="button">刷新配置</button>
         </div>
         <div class="settings-stack">
@@ -488,8 +504,11 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="systemHealth" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">集中巡检 D1 / KV 绑定、核心数据表、异常链接、待审核、Token、WebHook、备份、AI 与站点设置状态。</p>
+        <div class="page-head">
+          <div>
+            <h2>系统健康</h2>
+            <p class="category-hint">巡检 D1 / KV、异常链接、待审、Token、备份和站点设置。</p>
+          </div>
           <button id="refreshSystemHealth" type="button">刷新健康状态</button>
         </div>
         <div id="systemHealthStatus" class="ai-status" style="display:none;"></div>
@@ -512,8 +531,11 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="aiAdmin" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">分析书签库质量：无标签、疑似重复、搜索缺口和分类问题。大模型接口请到左侧「AI 接口」配置。</p>
+        <div class="page-head">
+          <div>
+            <h2>AI 分析</h2>
+            <p class="category-hint">扫描无标签、疑似重复、搜索缺口和分类问题。大模型请到「AI 接口」配置。</p>
+          </div>
         </div>
         <div class="analytics-summary">
           <div class="analytics-card ai-admin-card" data-type="no-tags"><span>🏷️</span><div><strong>无标签书签</strong><small>扫描缺失标签的书签并推荐补齐</small></div></div>
@@ -526,84 +548,116 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="aiAssistant" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">配置 OpenAI 兼容大模型 API。当前用于前台 AI 助理、分类推荐、标签推荐、标签合并建议等功能；未配置 API Key 时相关能力会使用本地规则兜底。</p>
+        <div class="page-head">
+          <div>
+            <h2>AI 接口</h2>
+            <p class="category-hint">配置 OpenAI 兼容接口。未填写 Key 时，分类/标签推荐会走本地规则。</p>
+          </div>
           <button id="refreshAiSettings" type="button">刷新配置</button>
         </div>
-        <div class="private-settings-card ai-settings-card">
-          <label><input type="checkbox" id="aiEnabled"> 启用大语言模型回复</label>
-          <label for="aiBaseUrl">接口地址（OpenAI Chat Completions 兼容）</label>
-          <input type="text" id="aiBaseUrl" placeholder="https://api.openai.com/v1/chat/completions">
-          <label for="aiModel">模型名称</label>
-          <div class="private-password-row">
-            <input type="text" id="aiModel" list="aiModelList" placeholder="gpt-4o-mini">
-            <datalist id="aiModelList"></datalist>
-            <button type="button" id="fetchAiModels">获取可用模型</button>
+        <div class="settings-card ai-settings-card">
+          <div class="token-form-grid">
+            <label class="settings-check"><input type="checkbox" id="aiEnabled"> 启用大语言模型回复</label>
+            <div>
+              <label for="aiBaseUrl">接口地址</label>
+              <input type="text" id="aiBaseUrl" placeholder="https://api.openai.com/v1/chat/completions">
+            </div>
+            <div>
+              <label for="aiModel">模型名称</label>
+              <div class="private-password-row">
+                <input type="text" id="aiModel" list="aiModelList" placeholder="gpt-4o-mini">
+                <datalist id="aiModelList"></datalist>
+                <button type="button" id="fetchAiModels">获取模型</button>
+              </div>
+            </div>
+            <div class="token-span-2">
+              <label for="aiApiKey">API Key</label>
+              <div class="private-password-row">
+                <input type="password" id="aiApiKey" autocomplete="off" placeholder="留空表示不修改现有 Key">
+                <button type="button" id="toggleAiApiKey">显示</button>
+              </div>
+            </div>
+            <div class="token-span-2">
+              <label for="aiSystemPrompt">系统提示词</label>
+              <textarea id="aiSystemPrompt" rows="5" placeholder="定义大模型回复风格和规则"></textarea>
+            </div>
           </div>
-          <label for="aiApiKey">API Key</label>
-          <div class="private-password-row">
-            <input type="password" id="aiApiKey" autocomplete="off" placeholder="留空表示不修改现有 Key">
-            <button type="button" id="toggleAiApiKey">显示</button>
-          </div>
-          <label for="aiSystemPrompt">系统提示词</label>
-          <textarea id="aiSystemPrompt" rows="5" placeholder="定义大模型回复风格和规则"></textarea>
           <div class="ai-actions">
             <button type="button" id="saveAiSettings">保存 API 设置</button>
             <button type="button" id="testAiSettings" class="check-btn">测试连接</button>
           </div>
           <div id="aiSettingsStatus" class="ai-status" style="display:none;"></div>
-          <p class="category-hint">建议使用支持 OpenAI Chat Completions 格式的服务。可先获取模型列表或测试连接，确认可用后再保存。</p>
         </div>
       </div>
 
       <div id="apiTokens" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">为浏览器插件、脚本或第三方客户端创建 Bearer Token。Token 只在创建时完整显示一次，请立即复制保存。</p>
-          <button id="refreshApiTokens" type="button">刷新 Token</button>
+        <div class="page-head">
+          <div>
+            <h2>Token</h2>
+            <p class="category-hint">给浏览器插件或脚本签发 Token。完整密钥只在创建时显示一次。</p>
+          </div>
+          <button id="refreshApiTokens" type="button">刷新列表</button>
         </div>
-        <div class="private-settings-card ai-settings-card">
-          <label for="newTokenName">Token 名称</label>
-          <input type="text" id="newTokenName" placeholder="例如：浏览器插件">
-          <label for="newTokenScopes">权限范围</label>
-          <select id="newTokenScopes">
-            <option value="write" selected>write：浏览器插件/脚本写入书签</option>
-            <option value="read,write">read + write：读写书签</option>
-            <option value="write:sites">write:sites：仅允许写入书签</option>
-            <option value="read:sites">read:sites：仅允许读取书签</option>
-            <option value="admin">admin：高权限 Token（谨慎）</option>
-          </select>
-          <label for="newTokenExpires">有效期</label>
-          <select id="newTokenExpires">
-            <option value="" selected>永不过期</option>
-            <option value="7">7 天</option>
-            <option value="30">30 天</option>
-            <option value="90">90 天</option>
-            <option value="365">365 天</option>
-          </select>
-          <label for="newTokenNote">备注 (可选)</label>
-          <input type="text" id="newTokenNote" placeholder="例如：用于我的个人博客同步脚本">
+        <div class="settings-card">
+          <div class="settings-card-head">
+            <h3>签发新 Token</h3>
+            <small>常用场景直接点绿色按钮</small>
+          </div>
+          <div class="token-form-grid">
+            <div>
+              <label for="newTokenName">名称</label>
+              <input type="text" id="newTokenName" placeholder="例如：浏览器插件">
+            </div>
+            <div>
+              <label for="newTokenScopes">权限</label>
+              <select id="newTokenScopes">
+                <option value="write" selected>write：写入书签</option>
+                <option value="read,write">read + write：读写书签</option>
+                <option value="write:sites">write:sites：仅写书签</option>
+                <option value="read:sites">read:sites：仅读书签</option>
+                <option value="admin">admin：高权限（谨慎）</option>
+              </select>
+            </div>
+            <div>
+              <label for="newTokenExpires">有效期</label>
+              <select id="newTokenExpires">
+                <option value="" selected>永不过期</option>
+                <option value="7">7 天</option>
+                <option value="30">30 天</option>
+                <option value="90">90 天</option>
+                <option value="365">365 天</option>
+              </select>
+            </div>
+            <div>
+              <label for="newTokenNote">备注</label>
+              <input type="text" id="newTokenNote" placeholder="可选，例如博客同步脚本">
+            </div>
+          </div>
           <div class="ai-actions">
-            <button type="button" id="createBrowserToken" class="check-btn">一键生成浏览器插件 Token</button>
+            <button type="button" id="createBrowserToken" class="check-btn">生成浏览器插件 Token</button>
             <button type="button" id="createApiToken">创建自定义 Token</button>
           </div>
           <div id="newTokenBox" class="ai-status" style="display:none;"></div>
-          <p class="category-hint">安全提示：不要把 Token 发给他人。设备丢失或 Token 泄露时，请立即在下方列表撤销。</p>
+          <p class="category-hint">不要把 Token 发给他人。泄露后立刻在下方列表撤销。</p>
         </div>
-        <div class="table-wrapper" style="margin-top:14px">
+        <div class="table-wrapper token-table-wrap">
           <table id="apiTokenTable">
             <thead>
               <tr>
                 <th>名称</th><th>权限</th><th>创建时间</th><th>最后使用</th><th>状态</th><th>操作</th>
               </tr>
             </thead>
-            <tbody id="apiTokenTableBody"><tr><td colspan="6">点击“刷新 Token”加载列表</td></tr></tbody>
+            <tbody id="apiTokenTableBody"><tr><td colspan="6">点击“刷新列表”加载 Token</td></tr></tbody>
           </table>
         </div>
       </div>
 
       <div id="visitAnalytics" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">访问分析综合呈现书签点击排行、分类热度、搜索词统计与无结果关键词。前台访客通过 /go/:id 访问书签时自动累计 hits 与 last_visit_time。</p>
+        <div class="page-head">
+          <div>
+            <h2>访问分析</h2>
+            <p class="category-hint">点击排行、分类热度、搜索词和无结果关键词。</p>
+          </div>
           <button id="refreshVisitAnalytics" type="button">刷新分析</button>
         </div>
         <div class="analytics-summary">
@@ -642,8 +696,11 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="backups" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">备份最多保留 30 份。导入会先预览再写入；导出可选 JSON、CSV 或浏览器 HTML。</p>
+        <div class="page-head">
+          <div>
+            <h2>备份恢复</h2>
+            <p class="category-hint">备份最多保留 30 份。导入会先预览再写入；导出可选 JSON、CSV 或浏览器 HTML。</p>
+          </div>
           <div class="backup-controls">
             <button id="createBackupBtn" type="button">立即备份</button>
             <button id="refreshBackups" type="button" class="secondary-btn">刷新列表</button>
@@ -738,8 +795,11 @@ export const adminHtml = `<!DOCTYPE html>
       </div>
 
       <div id="operationLogs" class="tab-content">
-        <div class="category-toolbar">
-          <p class="category-hint">记录后台关键写操作（新增 / 修改 / 删除 / 批量 / 导入 / 审核 / 标签合并 / 排序等），方便追踪和审计。</p>
+        <div class="page-head">
+          <div>
+            <h2>操作日志</h2>
+            <p class="category-hint">后台关键写操作：新增、修改、删除、批量、导入、审核和排序。</p>
+          </div>
           <div class="operation-log-controls">
             <select id="operationLogActionFilter" title="按操作类型筛选">
               <option value="">全部操作</option>
