@@ -33,9 +33,9 @@ export const adminHtml = `<!DOCTYPE html>
         <div class="sidebar-group">
           <div class="sidebar-group-label">内容</div>
           <button class="tab-button active" data-tab="config" title="书签列表"><span class="tab-icon">🔖</span><span class="tab-text">书签</span><span class="nav-badge" id="statTotalSites">0</span></button>
-          <button class="tab-button" data-tab="pending" title="待审列表"><span class="tab-icon">⏳</span><span class="tab-text">待审</span><span class="nav-badge is-zero" id="statPendingSites" data-hide-zero="true" hidden>0</span></button>
-          <button class="tab-button" data-tab="categories" title="分类管理"><span class="tab-icon">🗂️</span><span class="tab-text">分类</span></button>
-          <button class="tab-button" data-tab="tags" title="标签管理"><span class="tab-icon">🏷️</span><span class="tab-text">标签</span></button>
+          <button class="tab-button" data-tab="pending" title="待审列表"><span class="tab-icon">⏳</span><span class="tab-text">待审</span><span class="nav-badge" id="statPendingSites">0</span></button>
+          <button class="tab-button" data-tab="categories" title="分类管理"><span class="tab-icon">🗂️</span><span class="tab-text">分类</span><span class="nav-badge" id="statCategories">0</span></button>
+          <button class="tab-button" data-tab="tags" title="标签管理"><span class="tab-icon">🏷️</span><span class="tab-text">标签</span><span class="nav-badge" id="statTags">0</span></button>
         </div>
         <div class="sidebar-group">
           <div class="sidebar-group-label">洞察</div>

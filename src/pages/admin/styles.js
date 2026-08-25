@@ -228,6 +228,7 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .tab-wrapper.sidebar-collapsed.sidebar-peeking .tab-buttons{transform:translateX(0);pointer-events:auto;box-shadow:18px 12px 40px rgba(71,52,35,.22);background:#fffaf3!important;border:1px solid var(--admin-line)!important}
 .tab-wrapper.sidebar-collapsed.sidebar-peeking .sidebar-clip{left:176px}
 .tab-wrapper.sidebar-collapsed.sidebar-peeking .tab-text{opacity:1!important;transform:none!important;position:static!important;pointer-events:auto!important}
+.tab-wrapper.sidebar-collapsed.sidebar-peeking .nav-badge{display:inline-block!important}
 .tab-wrapper.sidebar-collapsed.sidebar-peeking .tab-button{justify-content:flex-start!important;padding-left:10px!important;padding-right:10px!important}
 .sidebar-group{display:flex;flex-direction:column;gap:4px;padding-top:4px}
 .sidebar-group + .sidebar-group{border-top:1px solid var(--admin-line);margin-top:6px;padding-top:8px}
