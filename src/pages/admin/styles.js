@@ -219,8 +219,9 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .sidebar-clip-text{position:absolute;bottom:5px;font-size:.58rem;font-weight:800;letter-spacing:.04em}
 .sidebar-clip:hover{filter:brightness(1.06)}
 .sidebar-clip.is-pinned{background:linear-gradient(180deg,#2f6f5e,#24584a)}
-.tab-wrapper.sidebar-collapsed{grid-template-columns:minmax(0,1fr)!important;padding-left:44px}
-.tab-wrapper.sidebar-collapsed > .tab-content{grid-column:1/-1!important;width:100%;min-width:0}
+.tab-wrapper.sidebar-collapsed{grid-template-columns:minmax(0,1fr)!important;padding-left:44px;box-sizing:border-box;overflow-x:hidden}
+.tab-wrapper.sidebar-collapsed.sidebar-peeking{overflow:visible}
+.tab-wrapper.sidebar-collapsed > .tab-content{grid-column:1/-1!important;width:100%;max-width:100%;min-width:0;box-sizing:border-box}
 .tab-wrapper.sidebar-collapsed .tab-buttons{position:absolute!important;left:0;top:0;width:220px;z-index:21;padding-top:18px;background:#fffaf3!important;transform:translateX(-110%);transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow:none;overflow:visible;pointer-events:none}
 .tab-wrapper.sidebar-collapsed .sidebar-clip{left:5px;top:10px;z-index:22}
 .tab-wrapper.sidebar-collapsed.sidebar-peeking::after{content:'';position:absolute;inset:0;background:rgba(36,33,29,.22);z-index:20;pointer-events:none;border-radius:18px}
@@ -281,8 +282,10 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .token-note{margin-top:4px;color:var(--admin-muted);font-size:.75rem}
 .token-revoked{color:var(--admin-muted);font-size:.82rem}
 .admin-overview{display:none!important}
+html,body{overflow-x:hidden}
 body{padding:0!important}
-.container{max-width:none!important;margin:0!important;min-height:100vh;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;background:transparent!important;padding:14px 20px 28px!important}
+.container{max-width:none!important;margin:0!important;min-height:100vh;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;background:transparent!important;padding:14px 20px 28px!important;overflow-x:hidden;box-sizing:border-box}
+.settings-stack,.settings-card,.ai-settings-card,.private-settings-card,.token-form-grid{min-width:0;box-sizing:border-box}
 .tab-buttons{border:1px solid var(--admin-line)!important;box-shadow:none!important;background:#fffaf3!important;border-radius:18px}
 .tab-content{border:1px solid var(--admin-line)!important;box-shadow:none!important;background:rgba(255,253,248,.86)!important;padding:16px 18px!important;border-radius:18px}
 .table-wrapper{border:0!important;box-shadow:none!important;background:transparent!important;overflow:visible!important;max-height:none!important;padding:0!important}
