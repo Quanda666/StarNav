@@ -213,20 +213,19 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .admin-header h1{font-size:1.15rem;margin:0}
 .admin-header .logout-btn{margin:0}
 .tab-wrapper{position:relative;grid-template-columns:220px minmax(0,1fr)!important;margin-top:0;overflow:visible}
-.tab-wrapper.sidebar-collapsed{grid-template-columns:28px minmax(0,1fr)!important}
+.tab-wrapper.sidebar-collapsed{grid-template-columns:36px minmax(0,1fr)!important}
 .tab-buttons{position:relative;padding:18px 8px 12px;gap:2px}
 .sidebar-clip{position:absolute;top:-2px;right:10px;z-index:3;display:flex;align-items:center;justify-content:center;width:34px;height:42px;padding:0;border:0;border-radius:0 0 10px 10px;background:linear-gradient(180deg,#c97856,#a85d3f);color:#fffdf8;box-shadow:0 8px 16px rgba(168,93,63,.28);cursor:pointer}
 .sidebar-clip-notch{position:absolute;top:8px;width:10px;height:10px;border-radius:50%;background:rgba(255,250,243,.35);box-shadow:inset 0 0 0 2px rgba(255,253,248,.55)}
 .sidebar-clip-text{position:absolute;bottom:5px;font-size:.58rem;font-weight:800;letter-spacing:.04em}
-.sidebar-clip:hover{transform:translateY(2px)}
-.sidebar-clip.is-pinned{background:linear-gradient(180deg,#2f6f5e,#24584a);right:auto;left:50%;transform:translateX(-50%)}
-.sidebar-clip.is-pinned .sidebar-clip-text{letter-spacing:0}
-.tab-wrapper.sidebar-collapsed .tab-buttons{position:absolute;left:0;top:0;bottom:auto;width:220px;z-index:8;padding-top:46px;transform:translateX(calc(-100% + 28px));transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow:18px 12px 40px rgba(71,52,35,.16)}
-.tab-wrapper.sidebar-collapsed .tab-buttons:hover,.tab-wrapper.sidebar-collapsed .tab-buttons:focus-within{transform:translateX(0)}
-.tab-wrapper.sidebar-collapsed .sidebar-group-label,.tab-wrapper.sidebar-collapsed .nav-badge{display:none}
-.tab-wrapper.sidebar-collapsed .tab-buttons:hover .sidebar-group-label,.tab-wrapper.sidebar-collapsed .tab-buttons:focus-within .sidebar-group-label,.tab-wrapper.sidebar-collapsed .tab-buttons:hover .nav-badge,.tab-wrapper.sidebar-collapsed .tab-buttons:focus-within .nav-badge{display:block}
-.tab-wrapper.sidebar-collapsed .tab-buttons:hover .tab-text,.tab-wrapper.sidebar-collapsed .tab-buttons:focus-within .tab-text{opacity:1;transform:none;position:static;pointer-events:auto}
-.tab-wrapper.sidebar-collapsed .tab-buttons:hover .tab-button,.tab-wrapper.sidebar-collapsed .tab-buttons:focus-within .tab-button{justify-content:flex-start;padding-left:10px;padding-right:10px}
+.sidebar-clip:hover{filter:brightness(1.06)}
+.sidebar-clip.is-pinned{background:linear-gradient(180deg,#2f6f5e,#24584a);right:1px;left:auto}
+.tab-wrapper.sidebar-collapsed .tab-buttons{position:absolute;left:0;top:0;width:220px;z-index:8;padding-top:46px;background:#fffaf3;transform:translateX(calc(-100% + 36px));transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow:none;overflow:hidden}
+.tab-wrapper.sidebar-collapsed .sidebar-group{visibility:hidden;pointer-events:none}
+.tab-wrapper.sidebar-collapsed:not(.sidebar-peek-locked) .tab-buttons:hover,.tab-wrapper.sidebar-collapsed:not(.sidebar-peek-locked) .tab-buttons:focus-within{transform:translateX(0);box-shadow:18px 12px 40px rgba(71,52,35,.16);overflow:visible}
+.tab-wrapper.sidebar-collapsed:not(.sidebar-peek-locked) .tab-buttons:hover .sidebar-group,.tab-wrapper.sidebar-collapsed:not(.sidebar-peek-locked) .tab-buttons:focus-within .sidebar-group{visibility:visible;pointer-events:auto}
+.tab-wrapper.sidebar-collapsed:not(.sidebar-peek-locked) .tab-buttons:hover .tab-text,.tab-wrapper.sidebar-collapsed:not(.sidebar-peek-locked) .tab-buttons:focus-within .tab-text{opacity:1;transform:none;position:static;pointer-events:auto}
+.tab-wrapper.sidebar-collapsed:not(.sidebar-peek-locked) .tab-buttons:hover .tab-button,.tab-wrapper.sidebar-collapsed:not(.sidebar-peek-locked) .tab-buttons:focus-within .tab-button{justify-content:flex-start;padding-left:10px;padding-right:10px}
 .sidebar-group{display:flex;flex-direction:column;gap:4px;padding-top:4px}
 .sidebar-group + .sidebar-group{border-top:1px solid var(--admin-line);margin-top:6px;padding-top:8px}
 .sidebar-group-label{padding:2px 10px 4px;color:var(--admin-muted);font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
