@@ -654,8 +654,12 @@ document.addEventListener('DOMContentLoaded',function(){
   aiChatBody?.addEventListener('click',function(e){const btn=e.target.closest('.ai-card-copy');if(!btn)return;e.preventDefault();const url=btn.dataset.url;if(!url)return;const old=btn.textContent;navigator.clipboard.writeText(url).then(()=>{btn.textContent='已复制';setTimeout(()=>btn.textContent=old,1200)}).catch(()=>{btn.textContent='复制失败';setTimeout(()=>btn.textContent=old,1200)})});
   aiChatForm?.addEventListener('submit',function(e){e.preventDefault();const text=aiChatInput?.value.trim();if(!text)return;appendAiMessage('user',text);aiChatInput.value='';aiSendBtn.disabled=true;aiSendBtn.textContent='思考中';fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,previousSites:lastAiSites})}).then(r=>r.json()).then(d=>{const data=d.data||{};appendAiMessage('assistant',data.answer||d.message||'暂时没有得到回复。',data.sites||[])}).catch(()=>appendAiMessage('assistant','AI 小助理暂时无法连接，请稍后重试。')).finally(()=>{aiSendBtn.disabled=false;aiSendBtn.textContent='发送';aiChatInput?.focus()})});
   function updateBackToTopVisibility(){if(!backToTopBtn)return;backToTopBtn.classList.toggle('hidden',window.scrollY<360)}
-  window.addEventListener('scroll',updateBackToTopVisibility,{passive:true});
+  let lastTopbarScrollY=window.scrollY;
+  function updateTopbarOnScroll(){const bar=document.querySelector('.nav-topbar');if(!bar)return;if(window.innerWidth>=1024){bar.classList.remove('nav-topbar-hidden');lastTopbarScrollY=window.scrollY;return}const y=window.scrollY,dy=y-lastTopbarScrollY;if(y<72||dy<-2){bar.classList.remove('nav-topbar-hidden')}else if(dy>2&&y>72){bar.classList.add('nav-topbar-hidden')}lastTopbarScrollY=y}
+  window.addEventListener('scroll',function(){updateBackToTopVisibility();updateTopbarOnScroll()},{passive:true});
   updateBackToTopVisibility();
+  updateTopbarOnScroll();
+  window.addEventListener('resize',function(){updateTopbarOnScroll()},{passive:true});
   backToTopBtn?.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});closeFloatingThemePanel()});
   function openSidebar(){sidebar.classList.add('open');overlay.classList.add('open')}
   function closeSidebar(){sidebar.classList.remove('open');overlay.classList.remove('open')}

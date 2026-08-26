@@ -344,7 +344,9 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
       .nav-all-row .nav-close-sidebar{margin-left:auto;width:1.6em;height:1.6em;font-size:inherit;color:var(--nav-muted)}
       .nav-search kbd{display:none}
       .layout-mode-bar{display:none}
-      .nav-backtop{display:none!important}
+      .nav-backtop{right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:42px;height:42px;border-radius:999px;z-index:56}
+      .nav-topbar{transition:transform .28s ease}
+      .nav-topbar.nav-topbar-hidden{transform:translateY(calc(-100% - env(safe-area-inset-top,0px)))}
       .nav-sidebar{width:min(64vw,200px);transform:translateX(-110%);top:0;height:100%;padding:18px 12px calc(14px + env(safe-area-inset-bottom,0px));z-index:70;border-radius:0 20px 20px 0;box-shadow:18px 0 40px rgba(71,52,35,.16);transition:transform .28s ease;-webkit-overflow-scrolling:touch}
       .mobile-overlay{z-index:65}
       .nav-sidebar.open,.mobile-sidebar.open{transform:translateX(0)!important}
@@ -428,6 +430,18 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     html[data-skin="starry"] .site-card-logo{background:rgba(147,197,253,.18)!important}
     html[data-skin="starry"] .nav-search input,html[data-skin="starry"] .nav-icon-btn,html[data-skin="starry"] .layout-mode-bar,html[data-skin="starry"] .theme-chip,html[data-skin="starry"] .theme-bg-url input{background:rgba(12,27,51,.72)!important;border-color:rgba(147,197,253,.22)!important;color:#e8eef8!important}
     html[data-skin="starry"] .usage-card,html[data-skin="starry"] .layout-section,html[data-skin="starry"] .nav-search-history,html[data-skin="starry"] .theme-studio,html[data-skin="starry"] .theme-studio-head,html[data-skin="starry"] .nav-more-menu{background:rgba(10,22,40,.78)!important;border-color:rgba(147,197,253,.16)!important;color:#e8eef8!important}
+    html[data-skin="starry"] .nav-search kbd{background:rgba(12,27,51,.72)!important;border-color:rgba(147,197,253,.25)!important;color:#9fb0c8!important}
+    html[data-skin="starry"] .nav-cat-list .category-link:hover,html[data-skin="starry"] .nav-cat-list .category-active,html[data-skin="starry"] .nav-more-item:hover{background:rgba(96,165,250,.16)!important;color:#e8eef8!important}
+    html[data-skin="starry"] .usage-chip{background:rgba(96,165,250,.18)!important;color:#bfdbfe!important}
+    html[data-skin="starry"] .usage-chip:hover{background:rgba(96,165,250,.3)!important}
+    html[data-skin="starry"] .usage-empty,html[data-skin="starry"] .usage-card-head button{color:#8fa3bd!important}
+    html[data-skin="starry"] .nav-toolbar-actions a.bg-white{background:rgba(12,27,51,.72)!important;border-color:rgba(147,197,253,.24)!important;color:#bfdbfe!important}
+    html[data-skin="starry"] .nav-toolbar-actions a.bg-white:hover{background:rgba(20,40,74,.85)!important;color:#e8eef8!important}
+    html[data-skin="starry"] .site-card .copy-btn,html[data-skin="starry"] .site-card .search-copy-btn{background:rgba(12,27,51,.72)!important;border-color:rgba(147,197,253,.22)!important;color:#e8eef8!important}
+    html[data-skin="starry"] .front-edit-btn{background:rgba(12,27,51,.72)!important;color:#e8eef8!important;box-shadow:inset 0 0 0 1px rgba(147,197,253,.22)!important}
+    html[data-skin="starry"] .front-delete-btn{background:rgba(184,74,74,.26)!important;color:#f2bdbd!important;box-shadow:inset 0 0 0 1px rgba(184,74,74,.4)!important}
+    html[data-skin="starry"] .site-card-tags a{background:rgba(96,165,250,.16)!important;color:#bfdbfe!important;box-shadow:none!important}
+    html[data-skin="starry"] .nav-backtop{background:rgba(12,27,51,.88)!important;border-color:rgba(147,197,253,.22)!important;color:#e8eef8!important}
     html[data-skin="minimal"]{--nav-ink:#111827;--nav-muted:#6b7280;--nav-line:#e5e7eb;--nav-page-bg:#fff;--nav-card-radius:8px}
     html[data-skin="minimal"] body.nav-shell{background:#fff!important}
     html[data-skin="minimal"] .nav-topbar,html[data-skin="minimal"] .nav-sidebar,html[data-skin="minimal"] .usage-card,html[data-skin="minimal"] .site-card{background:#fff!important;border-color:#eceff3!important;box-shadow:none!important;border-radius:8px}
