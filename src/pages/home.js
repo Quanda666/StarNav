@@ -370,7 +370,7 @@ export async function renderHomePage(request, env, ctx) {
     <div id="floatingAiPanel" class="floating-ai-panel hidden w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-primary-100/60 bg-white/95 shadow-2xl">
       <div class="flex items-center justify-between border-b border-primary-100/60 px-4 py-3">
         <div>
-          <h3 class="text-sm font-semibold text-gray-900">AI 书签助理</h3>
+          <h3 class="text-sm font-semibold text-gray-900">AI 助理</h3>
           <p class="text-xs text-gray-500">优先检索本站书签，再生成回复</p>
         </div>
         <div class="flex items-center gap-1">
@@ -379,7 +379,7 @@ export async function renderHomePage(request, env, ctx) {
         </div>
       </div>
       <div id="aiChatBody" class="ai-chat-body space-y-3 p-4">
-        <div class="ai-message assistant">你好，我是本站 AI 书签助理。你可以问我：“有没有图片压缩工具？”、“某个网站放在哪个分类？”、“帮我找设计相关书签”。</div>
+        <div class="ai-message assistant">你好，我是本站 AI 助理。你可以问我：“有没有图片压缩工具？”、“某个网站放在哪个分类？”、“帮我找设计相关书签”。</div>
       </div>
       <form id="aiChatForm" class="border-t border-primary-100/60 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
         <div class="flex gap-2">

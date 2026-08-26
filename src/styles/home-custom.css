@@ -387,6 +387,14 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     html.dark .nav-more-item:hover{background:#2a241e!important}
     html.dark .site-card-desc,html.dark .nav-side-note,html.dark .nav-footer,html.dark .site-card-url,html.dark .nav-footer-links a{color:#cbbba8!important}
     html.dark .layout-toggle.active{background:#f4ece3!important;color:#1d1915!important}
+    html.dark .site-card .copy-btn,html.dark .site-card .search-copy-btn{background:#241f1a!important;border-color:rgba(230,217,200,.22)!important;color:#f4ece3!important}
+    html.dark .site-card-tags a{background:color-mix(in srgb,var(--nav-accent) 18%,transparent)!important;color:color-mix(in srgb,var(--nav-accent) 45%,#f4ece3)!important;box-shadow:none!important}
+    html.dark .site-card-tags a:hover{background:color-mix(in srgb,var(--nav-accent) 30%,transparent)!important}
+    html.dark .front-edit-btn{background:#241f1a!important;color:#f4ece3!important;box-shadow:inset 0 0 0 1px rgba(230,217,200,.22)!important}
+    html.dark .front-delete-btn{background:rgba(184,74,74,.24)!important;color:#f2bdbd!important;box-shadow:inset 0 0 0 1px rgba(184,74,74,.42)!important}
+    html.dark .nav-toolbar-actions a.bg-white{background:#241f1a!important;color:#cbbba8!important;border-color:rgba(230,217,200,.22)!important}
+    html.dark .nav-toolbar-actions a.bg-white:hover{background:#2a241e!important;color:#f4ece3!important}
+    html.dark .site-card .bg-red-50{background:rgba(127,29,29,.32)!important;color:#fecaca!important}
 
     html[data-skin="paper"] body.nav-shell{background:
       radial-gradient(circle at 12% 0,rgba(216,162,74,.16),transparent 28rem),
