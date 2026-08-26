@@ -104,7 +104,7 @@ export function renderCategoryLinks(nodes, options, level = 0) {
 
     return `<div class="category-tree-node" data-level="${level}">
       <div class="flex items-center gap-1">
-        <a href="?${link.toString()}" class="category-link" data-category-name="${safeName}" data-has-icon="${iconText ? 'true' : 'false'}" style="padding-left:${10 + level * 12}px" title="${title}">
+        <a href="?${link.toString()}" class="category-link" data-category-name="${safeName}" data-has-icon="${iconText ? 'true' : 'false'}" style="padding-left:${8 + level * 10}px" title="${title}">
           ${iconMarkup}
           <span class="truncate">${safeName}</span>
           ${isPrivate && !privateUnlocked ? '<span class="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">锁</span>' : ''}
