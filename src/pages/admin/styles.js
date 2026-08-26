@@ -209,12 +209,20 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .add-site-status.status-success{background:#dfeee5;color:#2f6f5e}
 .add-site-status.status-error{background:#f2d9d3;color:#963d3d}
 .add-site-form .confirm-actions{margin-top:14px}
-.admin-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px}
-.admin-header h1{font-size:1.15rem;margin:0;text-align:center}
+.admin-header{display:grid;grid-template-columns:220px minmax(0,1fr) auto;align-items:center;gap:16px;margin-bottom:16px;padding-bottom:12px}
+.admin-header h1{font-size:1.15rem;margin:0;text-align:left}
 .admin-header .logout-btn{margin:0}
-.sidebar-dock{margin:0;padding:7px 14px;border-radius:999px;background:#fff;color:var(--admin-text);border:1px solid var(--admin-line);font-size:.82rem;font-weight:700;box-shadow:none;min-width:64px}
+.sidebar-dock{position:relative;margin:0;width:36px;height:36px;padding:0;border-radius:12px;background:#fff;color:var(--admin-text);border:1px solid var(--admin-line);box-shadow:none;display:inline-flex;align-items:center;justify-content:center}
+.sidebar-dock-mark,.sidebar-dock-mark::before,.sidebar-dock-mark::after{display:block;width:12px;height:2px;border-radius:2px;background:currentColor;content:''}
+.sidebar-dock-mark{position:relative;height:2px}
+.sidebar-dock-mark::before{position:absolute;left:0;top:-5px;width:8px}
+.sidebar-dock-mark::after{position:absolute;left:0;top:5px;width:16px}
 .sidebar-dock:hover{background:#f3eadf;color:var(--admin-text)}
+.sidebar-dock:hover::after{content:attr(title);position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);padding:4px 8px;border-radius:8px;background:#24211d;color:#fffdf8;font-size:.72rem;font-weight:700;white-space:nowrap;z-index:30}
 .sidebar-dock.is-pinned{background:linear-gradient(180deg,#2f6f5e,#24584a);color:#fffdf8;border-color:transparent}
+.sidebar-dock.is-pinned .sidebar-dock-mark::before{width:16px}
+.sidebar-dock.is-pinned .sidebar-dock-mark::after{width:8px}
+.container.sidebar-collapsed .admin-header{grid-template-columns:36px minmax(0,1fr) auto}
 .tab-wrapper{position:relative;grid-template-columns:220px minmax(0,1fr)!important;margin-top:0;overflow:visible}
 .tab-buttons{position:relative;padding:18px 8px 12px;gap:2px;transition:transform .28s cubic-bezier(.2,.8,.2,1)}
 .tab-wrapper.sidebar-collapsed{grid-template-columns:minmax(0,1fr)!important;padding-left:0;box-sizing:border-box;overflow-x:hidden}
@@ -281,7 +289,7 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .admin-overview{display:none!important}
 html,body{overflow-x:hidden}
 body{padding:0!important}
-.container{max-width:none!important;margin:0!important;min-height:100vh;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;background:transparent!important;padding:14px 20px 28px!important;overflow-x:hidden;box-sizing:border-box}
+.container{max-width:none!important;margin:0!important;min-height:100vh;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;background:transparent!important;padding:10px 16px 24px!important;overflow-x:hidden;box-sizing:border-box}
 .settings-stack,.settings-card,.ai-settings-card,.private-settings-card,.token-form-grid{min-width:0;box-sizing:border-box}
 .tab-buttons{border:1px solid var(--admin-line)!important;box-shadow:none!important;background:#fffaf3!important;border-radius:18px}
 .tab-content{border:1px solid var(--admin-line)!important;box-shadow:none!important;background:rgba(255,253,248,.86)!important;padding:16px 18px!important;border-radius:18px}
@@ -295,7 +303,7 @@ body{padding:0!important}
 }
 @media(max-width:980px){
   .container{padding:10px 12px 88px!important}
-  .admin-header{display:grid!important;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px}
+  .admin-header,.container.sidebar-collapsed .admin-header{display:grid!important;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px}
   .admin-header h1{font-size:1rem;text-align:center}
   .admin-header .logout-btn{padding:7px 10px;font-size:.82rem}
   .sidebar-dock{display:none!important}

@@ -16,7 +16,7 @@ export const adminHtml = `<!DOCTYPE html>
 <body>
   <div class="container">
     <header class="admin-header">
-      <button type="button" class="sidebar-dock" id="sidebarToggle" title="收起侧栏">收起</button>
+      <button type="button" class="sidebar-dock" id="sidebarToggle" title="收起侧栏" aria-label="收起侧栏"><span class="sidebar-dock-mark" aria-hidden="true"></span></button>
       <button type="button" class="mobile-nav-toggle" id="mobileNavToggle" aria-label="打开菜单" aria-expanded="false">菜单</button>
       <h1>StarNav 管理台</h1>
       <form id="logoutForm" method="post" action="/admin/logout">
