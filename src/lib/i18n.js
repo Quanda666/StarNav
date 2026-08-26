@@ -30,7 +30,7 @@ export const I18N_MESSAGES = {
     unlock: '解锁',
     addBookmark: '添加新书签',
     submissionClosed: '访客书签提交功能已关闭',
-    exitPrivate: '退出私人书签访问',
+    exitPrivate: '退出私人\n书签访问',
     adminSortMode: '管理员模式：可拖拽当前列表排序',
     visitBlog: '访问博客',
     adminPanel: '后台管理',

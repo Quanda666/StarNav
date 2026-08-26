@@ -185,7 +185,7 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     .nav-top-actions .nav-add-btn{width:36px;min-width:36px;height:36px;padding:0;border-radius:12px;font-size:1.25rem;line-height:1;font-weight:600}
     .nav-more{position:relative}
     .nav-more-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:80;min-width:148px;padding:6px;border:1px solid var(--nav-line);border-radius:14px;background:#fffaf3;box-shadow:0 16px 36px rgba(71,52,35,.14)}
-    .nav-more-item,.nav-more-form .nav-more-item{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;border-radius:10px;background:transparent;color:var(--nav-ink);text-align:left;text-decoration:none;font-size:.84rem}
+    .nav-more-item,.nav-more-form .nav-more-item{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;border-radius:10px;background:transparent;color:var(--nav-ink);text-align:left;text-decoration:none;font-size:.84rem;white-space:pre-line}
     .nav-more-ico{width:1.1rem;height:1.1rem;flex:0 0 1.1rem;color:var(--nav-muted);display:inline-flex;align-items:center;justify-content:center}
     .nav-more-ico svg{width:1rem;height:1rem;display:block}
     .nav-more-item:hover{background:#f3eadf}
