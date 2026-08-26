@@ -87,22 +87,14 @@ export function renderCategoryLinks(nodes, options, level = 0) {
   const { catalog, catalogExists, space, expandedNames, privateUnlocked, privateBookmarksVisible } = options;
   return nodes.filter((cat) => privateBookmarksVisible || privateUnlocked || !isPrivateBookmarkCategory(cat.name)).map((cat) => {
     const safeName = escapeHTML(cat.name);
-    const active = false; // This will be handled by JS
     const hasChildren = Array.isArray(cat.children) && cat.children.length > 0;
     const expanded = expandedNames.has(cat.name);
     const isPrivate = isPrivateBookmarkCategory(cat.name);
     const iconText = renderCategoryIcon(cat.icon);
     const safeDescription = escapeHTML(cat.description || '');
-    const colorInfo = getCategoryCssColor(cat.color);
-    const cssColor = colorInfo.color;
-    const iconMarkup = iconText ? `<span class="category-icon mr-2 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/80 text-sm leading-none shadow-sm ${active ? 'text-primary-600' : 'text-gray-400'}" data-has-color="${cssColor ? 'true' : 'false'}">${iconText}</span>` : '';
-    const textColor = colorInfo.isGradient ? 'var(--nav-primary)' : cssColor;
-    const mixColor = colorInfo.isGradient ? 'var(--nav-accent)' : cssColor;
-    const colorVars = cssColor ? `--cat-color:${textColor};--cat-color-dark:${colorInfo.isGradient ? '#f8fafc' : `color-mix(in srgb,${mixColor} 34%,white)`};--cat-bg:${colorInfo.isGradient ? cssColor : `color-mix(in srgb,${mixColor} 13%,white)`};--cat-bg-dark:color-mix(in srgb,${mixColor} 18%,#0f172a);--cat-bg-dark-hover:color-mix(in srgb,${mixColor} 25%,#0f172a);--cat-border-dark:color-mix(in srgb,${mixColor} 38%,transparent);--cat-line:${mixColor};` : '';
-    const itemStyle = colorVars;
+    const iconMarkup = iconText ? `<span class="category-icon">${iconText}</span>` : '';
     const titleParts = [cat.name];
     if (cat.description) titleParts.push(cat.description);
-    if (cat.color) titleParts.push(`颜色：${cat.color}`);
     const title = escapeHTML(titleParts.join(' · '));
     const childId = `category-children-${String(cat.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
     const childMarkup = hasChildren
@@ -113,7 +105,7 @@ export function renderCategoryLinks(nodes, options, level = 0) {
 
     return `<div class="category-tree-node" data-level="${level}">
       <div class="flex items-center gap-1">
-        <a href="?${link.toString()}" class="category-link flex min-w-0 flex-1 items-center px-3 py-2 rounded-lg hover:bg-gray-100" data-category-name="${safeName}" data-has-color="${cssColor ? 'true' : 'false'}" data-has-icon="${iconText ? 'true' : 'false'}" style="padding-left:${12 + level * 14}px;${itemStyle}" title="${title}">
+        <a href="?${link.toString()}" class="category-link" data-category-name="${safeName}" data-has-icon="${iconText ? 'true' : 'false'}" style="padding-left:${12 + level * 14}px" title="${title}">
           ${iconMarkup}
           <span class="truncate">${safeName}</span>
           ${safeDescription ? `<span class="ml-2 hidden truncate text-xs text-gray-400 sm:inline" title="${safeDescription}">${safeDescription}</span>` : ''}

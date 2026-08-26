@@ -104,7 +104,7 @@ export async function renderHomePage(request, env, ctx) {
   const blogVisible = systemSettings.blogVisible !== 'false';
   const blogUrl = sanitizeUrl(systemSettings.blogUrl) || 'https://blog.110995.xyz/';
   const blogLabel = systemSettings.blogLabel || th('visitBlog');
-  const blogLink = blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer" class="nav-side-link">${escapeHTML(blogLabel)}</a>` : '';
+
   const announcement = {
     enabled: systemSettings.announcementEnabled === 'true' && Boolean(systemSettings.announcementMarkdown),
     title: systemSettings.announcementTitle || '系统公告',
@@ -173,7 +173,7 @@ export async function renderHomePage(request, env, ctx) {
   <link rel="alternate icon" href="https://img.12388888.xyz/file/logo/ktVNDfcM.png" type="image/png"/>
   <link rel="stylesheet" href="/static/home.css?v=${homeCssVersion}"/>
   <script>
-    (function(){try{const root=document.documentElement;const saved=localStorage.getItem('nav:theme');const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;if(saved==='dark'||(!saved&&prefersDark)){root.classList.add('dark')}var defaultAccent='${escapeHTML(defaultAccent)}',defaultLayout='${escapeHTML(defaultLayout)}',defaultBg='${pageBackgroundImage ? 'image' : 'soft'}';root.dataset.accent=localStorage.getItem('nav:accent')||defaultAccent;root.dataset.density=localStorage.getItem('nav:density')||'comfortable';root.dataset.bg=localStorage.getItem('nav:bg')||defaultBg;root.dataset.view=localStorage.getItem('nav:view')||'detail';root.dataset.layout=localStorage.getItem('nav:layout')||defaultLayout;var bgImage=localStorage.getItem('nav:bgImage')||'${escapeHTML(pageBackgroundImage)}';if(bgImage)document.documentElement.style.setProperty('--nav-bg-image','url('+bgImage+')');var now=new Date(),m=now.getMonth()+1,d=now.getDate();var festival='';if(m===1&&d<=3)festival='newyear';else if(m===2&&d===14)festival='valentine';else if(m===12&&(d>=24&&d<=25))festival='christmas';else if(m===10&&d===31)festival='halloween';else if(m===5&&d>=1&&d<=3)festival='labor';root.dataset.festival=festival}catch(e){}})();
+    (function(){try{const root=document.documentElement;const saved=localStorage.getItem('nav:theme');const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;if(saved==='dark'||(!saved&&prefersDark)){root.classList.add('dark')}var defaultAccent='${escapeHTML(defaultAccent)}',defaultLayout='${escapeHTML(defaultLayout)}',defaultBg='${pageBackgroundImage ? 'image' : 'soft'}';root.dataset.accent=localStorage.getItem('nav:accent')||defaultAccent;root.dataset.density=localStorage.getItem('nav:density')||'comfortable';root.dataset.bg=localStorage.getItem('nav:bg')||defaultBg;root.dataset.view=localStorage.getItem('nav:view')||'detail';root.dataset.layout=localStorage.getItem('nav:layout')||defaultLayout;root.dataset.skin=localStorage.getItem('nav:skin')||'paper';var bgImage=localStorage.getItem('nav:bgImage')||'${escapeHTML(pageBackgroundImage)}';if(bgImage)document.documentElement.style.setProperty('--nav-bg-image','url('+bgImage+')');var now=new Date(),m=now.getMonth()+1,d=now.getDate();var festival='';if(m===1&&d<=3)festival='newyear';else if(m===2&&d===14)festival='valentine';else if(m===12&&(d>=24&&d<=25))festival='christmas';else if(m===10&&d===31)festival='halloween';else if(m===5&&d>=1&&d<=3)festival='labor';root.dataset.festival=festival}catch(e){}})();
   </script>
 </head>
 <body class="nav-shell">
@@ -182,7 +182,7 @@ export async function renderHomePage(request, env, ctx) {
     <button type="button" id="expandSidebar" class="nav-icon-btn nav-expand-sidebar" title="展开分类">☰</button>
     <a href="/" class="nav-brand">${escapeHTML(siteName)}</a>
     <div class="nav-search">
-      <input id="searchInput" type="search" placeholder="搜索书签、分类、标签…" autocomplete="off" enterkeyhint="search">
+      <input id="searchInput" type="search" placeholder="搜索书签…" autocomplete="off" enterkeyhint="search">
       <kbd>⌘K</kbd>
       <div id="searchHistoryBox" class="nav-search-history hidden">
         <div class="nav-search-history-head">
@@ -193,6 +193,7 @@ export async function renderHomePage(request, env, ctx) {
       </div>
     </div>
     <div class="nav-top-actions">
+      ${submissionEnabled ? `<button type="button" id="addSiteBtnSidebar" class="nav-add-btn">${th('addBookmark')}</button>` : ''}
       <button type="button" id="themeToggle" class="nav-icon-btn" title="切换深色/浅色" aria-label="切换深色/浅色模式">🌙</button>
       <button type="button" id="floatingAiToggle" class="nav-icon-btn" title="${th('aiAssistant')}" aria-expanded="false" aria-controls="floatingAiPanel">AI</button>
       <button type="button" id="floatingThemeToggle" class="nav-icon-btn" title="${th('themeSettings')}" aria-expanded="false" aria-controls="floatingThemePanel">外观</button>
@@ -216,15 +217,7 @@ export async function renderHomePage(request, env, ctx) {
       <a href="${escapeHTML(allLinkHref)}" class="category-all-button category-link">${th('all')}</a>
       ${categoryLinks}
     </div>
-    <div class="nav-sidebar-foot">
-      ${submissionEnabled ? `<button id="addSiteBtnSidebar" class="nav-add-btn">${th('addBookmark')}</button>` : `<div class="nav-side-note">${th('submissionClosed')}</div>`}
-      ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-side-link">${th('exitPrivate')}</button></form>` : ''}
-      ${blogLink}
-      <a href="/admin" target="_blank" class="nav-side-link">
-        <span>${th('adminPanel')}</span>
-        ${adminAuthed ? `<span class="nav-admin-dot" title="管理员已认证"></span>` : ''}
-      </a>
-    </div>
+    ${visitorPrivateAccess && !adminAuthed ? `<div class="nav-sidebar-foot"><form method="post" action="/"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-side-link">${th('exitPrivate')}</button></form></div>` : ''}
   </aside>
 
   <main class="nav-main main-content">
@@ -235,7 +228,7 @@ export async function renderHomePage(request, env, ctx) {
             <h3>收藏</h3>
             <button type="button" data-usage-clear="favorites">清空</button>
           </div>
-          <div data-usage-list="favorites" class="flex gap-2 text-xs overflow-x-auto pb-1 scrollbar-hide snap-x"></div>
+          <div data-usage-list="favorites" class="usage-chip-row"></div>
           <p class="usage-empty">悬停书签点星号即可收藏</p>
         </div>
         <div class="usage-card" data-usage="recent">
@@ -243,7 +236,7 @@ export async function renderHomePage(request, env, ctx) {
             <h3>最近</h3>
             <button type="button" data-usage-clear="recent">清空</button>
           </div>
-          <div data-usage-list="recent" class="flex gap-2 text-xs overflow-x-auto pb-1 scrollbar-hide snap-x"></div>
+          <div data-usage-list="recent" class="usage-chip-row"></div>
           <p class="usage-empty">访问后会出现在这里</p>
         </div>
       </div>
@@ -274,7 +267,13 @@ export async function renderHomePage(request, env, ctx) {
         </div>
       </div>
     </section>
-    <footer class="nav-footer">© ${new Date().getFullYear()} ${escapeHTML(siteName)} · ${escapeHTML(footerText)}</footer>
+    <footer class="nav-footer">
+      <span>© ${new Date().getFullYear()} ${escapeHTML(siteName)} · ${escapeHTML(footerText)}</span>
+      <span class="nav-footer-links">
+        ${blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(blogLabel)}</a>` : ''}
+        <a href="/admin" target="_blank">${th('adminPanel')}${adminAuthed ? ' · 已登录' : ''}</a>
+      </span>
+    </footer>
   </main>
 
   <div class="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-3 floating-actions">
@@ -290,12 +289,13 @@ export async function renderHomePage(request, env, ctx) {
         <div>
           <div class="mb-1.5 font-medium">预设主题</div>
           <div class="grid grid-cols-3 gap-1.5" id="themePresetGroup">
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="starry" title="星空主题：深蓝主色 + 柔和背景 + 卡片布局">🌌 星空</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="minimal" title="极简白：浅色纯净 + 紧凑密度 + 列表布局">⬜ 极简</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="dark" title="暗黑模式：深色主题 + 渐变背景">🌙 暗黑</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="glass" title="毛玻璃：紫色主题 + 渐变背景 + 宽松密度">🪟 玻璃</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="dock" title="Mac Dock：绿色主题 + 图标宫格 + 紧凑密度">💻 Dock</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="notion" title="Notion 风格：琥珀主题 + 纸纹背景 + 列表布局">📝 Notion</button>
+            <button type="button" class="theme-preset-btn theme-segment" data-preset="paper" title="纸感：暖底、分组磁贴">纸感</button>
+            <button type="button" class="theme-preset-btn theme-segment" data-preset="starry" title="星空：夜空底、玻璃卡">星空</button>
+            <button type="button" class="theme-preset-btn theme-segment" data-preset="minimal" title="极简：白底细线、列表">极简</button>
+            <button type="button" class="theme-preset-btn theme-segment" data-preset="dark" title="暗黑：炭黑、高对比">暗黑</button>
+            <button type="button" class="theme-preset-btn theme-segment" data-preset="glass" title="玻璃：雾面、宽松">玻璃</button>
+            <button type="button" class="theme-preset-btn theme-segment" data-preset="dock" title="Dock：大图标宫格">Dock</button>
+            <button type="button" class="theme-preset-btn theme-segment" data-preset="notion" title="Notion：纸纹、左边线">Notion</button>
           </div>
         </div>
         <div>
@@ -569,9 +569,11 @@ document.addEventListener('DOMContentLoaded',function(){
   themeToggle?.addEventListener('click',function(){const nextDark=!document.documentElement.classList.contains('dark');document.documentElement.classList.toggle('dark',nextDark);localStorage.setItem('nav:theme',nextDark?'dark':'light');updateThemeToggle()});
   document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.addEventListener('click',function(){setThemePref(this.dataset.themeKey,this.dataset.themeValue)})});
   document.querySelectorAll('.layout-toggle').forEach(function(btn){btn.addEventListener('click',function(){setThemePref('layout',this.dataset.layout)})});
-  document.getElementById('resetThemePrefs')?.addEventListener('click',function(){Object.keys(themeDefaults).forEach(function(key){localStorage.removeItem('nav:'+key);document.documentElement.dataset[key]=themeDefaults[key]});localStorage.removeItem('nav:theme');document.documentElement.classList.remove('dark');if(themeMeta)themeMeta.setAttribute('content',themeColors.blue);updateThemeToggle();updateThemeControls()});
-  const themePresets={starry:{dark:false,accent:'blue',density:'comfortable',bg:'soft',view:'detail',layout:'grouped'},minimal:{dark:false,accent:'blue',density:'compact',bg:'plain',view:'minimal',layout:'list'},dark:{dark:true,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grouped'},glass:{dark:false,accent:'purple',density:'spacious',bg:'gradient',view:'detail',layout:'grid'},dock:{dark:false,accent:'green',density:'compact',bg:'plain',view:'minimal',layout:'grouped'},notion:{dark:false,accent:'amber',density:'comfortable',bg:'paper',view:'detail',layout:'grouped'}};
-  document.querySelectorAll('.theme-preset-btn').forEach(function(btn){btn.addEventListener('click',function(){const preset=themePresets[this.dataset.preset];if(!preset)return;const isDark=preset.dark;document.documentElement.classList.toggle('dark',isDark);localStorage.setItem('nav:theme',isDark?'dark':'light');updateThemeToggle();Object.keys(themeDefaults).forEach(function(key){if(preset[key]!==undefined){setThemePref(key,preset[key])}});updateThemeControls()})});
+  document.getElementById('resetThemePrefs')?.addEventListener('click',function(){Object.keys(themeDefaults).forEach(function(key){localStorage.removeItem('nav:'+key);document.documentElement.dataset[key]=themeDefaults[key]});localStorage.removeItem('nav:theme');localStorage.removeItem('nav:skin');document.documentElement.classList.remove('dark');applyPresetSkin('paper');if(themeMeta)themeMeta.setAttribute('content',themeColors.blue);updateThemeToggle();updateThemeControls()});
+  const themePresets={paper:{dark:false,accent:'amber',density:'comfortable',bg:'soft',view:'detail',layout:'grouped'},starry:{dark:true,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grouped'},minimal:{dark:false,accent:'blue',density:'compact',bg:'plain',view:'minimal',layout:'list'},dark:{dark:true,accent:'blue',density:'comfortable',bg:'plain',view:'detail',layout:'grouped'},glass:{dark:false,accent:'purple',density:'spacious',bg:'gradient',view:'detail',layout:'grid'},dock:{dark:false,accent:'green',density:'compact',bg:'plain',view:'minimal',layout:'grid'},notion:{dark:false,accent:'amber',density:'comfortable',bg:'paper',view:'detail',layout:'list'}};
+  function applyPresetSkin(name){document.documentElement.dataset.skin=name||'paper';localStorage.setItem('nav:skin',name||'paper')}
+  applyPresetSkin(localStorage.getItem('nav:skin')||'paper');
+  document.querySelectorAll('.theme-preset-btn').forEach(function(btn){btn.addEventListener('click',function(){const preset=themePresets[this.dataset.preset];if(!preset)return;const isDark=preset.dark;document.documentElement.classList.toggle('dark',isDark);localStorage.setItem('nav:theme',isDark?'dark':'light');applyPresetSkin(this.dataset.preset);updateThemeToggle();Object.keys(themeDefaults).forEach(function(key){if(preset[key]!==undefined){setThemePref(key,preset[key])}});updateThemeControls()})});
   const bgImageUrlBox=document.getElementById('bgImageUrlBox');
   const bgImageUrlInput=document.getElementById('bgImageUrlInput');
   function updateBgImageUI(){const isBgImage=document.documentElement.dataset.bg==='image';bgImageUrlBox?.classList.toggle('hidden',!isBgImage);if(isBgImage){const saved=localStorage.getItem('nav:bgImage')||'';if(bgImageUrlInput)bgImageUrlInput.value=saved;if(saved)document.body.style.setProperty('--nav-bg-image','url('+saved+')')}}

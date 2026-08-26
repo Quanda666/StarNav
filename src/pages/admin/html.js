@@ -283,7 +283,7 @@ export const adminHtml = `<!DOCTYPE html>
         <div class="page-head">
           <div>
             <h2>分类</h2>
-            <p class="category-hint">改名、父子分类、图标和颜色。拖拽行排序后点“保存排序”。</p>
+            <p class="category-hint">改名、父子分类和图标。拖拽行排序后点“保存排序”。</p>
           </div>
           <div class="backup-controls">
             <button id="saveCategoryOrder" type="button" disabled>保存排序</button>
@@ -295,9 +295,6 @@ export const adminHtml = `<!DOCTYPE html>
           <select id="newCategoryParent"><option value="">无父类</option></select>
           <select id="newCategorySpace" title="所属空间" style="display:none;"><option value="">默认空间</option></select>
           <input type="text" id="newCategoryIcon" placeholder="图标，可留空；支持 emoji / SVG">
-          <div class="category-color-editor category-color-editor-new" title="分类主题色">
-            <input type="color" id="newCategoryColor" class="category-color-input category-native-color" value="#b86b4b" title="分类主题色">
-          </div>
           <input type="text" id="newCategoryDescription" placeholder="描述（可选）">
           <input type="number" id="newCategorySort" placeholder="排序">
           <button id="createCategoryBtn">新增分类</button>
@@ -306,10 +303,10 @@ export const adminHtml = `<!DOCTYPE html>
           <table id="categoryTable">
             <thead>
               <tr>
-                <th>ID</th><th>分类名称</th><th>父分类</th><th>图标</th><th>颜色</th><th>描述</th><th>书签数量</th><th>子类数量</th><th>排序值</th><th>操作</th>
+                <th>ID</th><th>分类名称</th><th>父分类</th><th>图标</th><th>描述</th><th>书签数量</th><th>子类数量</th><th>排序值</th><th>操作</th>
               </tr>
             </thead>
-            <tbody id="categoryTableBody"><tr><td colspan="10">加载中...</td></tr></tbody>
+            <tbody id="categoryTableBody"><tr><td colspan="9">加载中...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -412,11 +409,10 @@ export const adminHtml = `<!DOCTYPE html>
               <div>
                 <label for="systemDefaultLayout">默认首页布局</label>
                 <select id="systemDefaultLayout">
-                  <option value="">默认卡片</option>
+                  <option value="">默认分组</option>
+                  <option value="grouped">分组</option>
                   <option value="grid">卡片</option>
                   <option value="list">列表</option>
-                  <option value="grouped">分组</option>
-                  <option value="masonry">瀑布</option>
                   <option value="dashboard">概览</option>
                 </select>
               </div>

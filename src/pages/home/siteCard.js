@@ -120,7 +120,7 @@ export function renderSiteCard(site, draggable, isAdmin = false, i18n = null) {
     <div class="site-card-meta">
       ${tagLinks}
       <div class="site-card-foot">
-        <span class="site-card-url">${escapeHTML(normalizedUrl || site.url || (i18n?.t?.('noLink') || '未提供链接'))}</span>
+        <span class="site-card-url" title="${escapeHTML(normalizedUrl || site.url || '')}">${escapeHTML(normalizedUrl || site.url || (i18n?.t?.('noLink') || '未提供链接'))}</span>
         <span class="site-card-hits" title="${escapeHTML(i18n?.t?.('visitCount') || '访问次数')}">${escapeHTML(i18n?.t?.('hits', { count: hits }) || `${hits} 次`)}</span>
         <button type="button" class="copy-btn" data-url="${escapeHTML(normalizedUrl)}">${escapeHTML(i18n?.t?.('copy') || '复制')}</button>
       </div>
