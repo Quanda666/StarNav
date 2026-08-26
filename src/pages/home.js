@@ -98,7 +98,7 @@ export async function renderHomePage(request, env, ctx) {
   const siteIcon = sanitizeImageUrl(systemSettings.siteIcon) || sanitizeUrl(systemSettings.siteIcon) || '/pwa-icon.svg';
   const footerText = systemSettings.footerText || th('footer');
   const pageBackgroundImage = sanitizeImageUrl(systemSettings.backgroundImage) || '';
-  const defaultLayout = ['grid', 'list', 'grouped', 'masonry', 'dashboard'].includes(systemSettings.defaultLayout) ? systemSettings.defaultLayout : 'grouped';
+  const defaultLayout = ['grid', 'list', 'grouped', 'masonry', 'dashboard'].includes(systemSettings.defaultLayout) ? systemSettings.defaultLayout : 'grid';
   const defaultAccent = ['blue', 'green', 'purple', 'rose', 'amber'].includes(systemSettings.defaultAccent) ? systemSettings.defaultAccent : 'blue';
   const blogVisible = systemSettings.blogVisible !== 'false';
   const blogUrl = sanitizeUrl(systemSettings.blogUrl) || 'https://blog.110995.xyz/';
@@ -130,9 +130,7 @@ export async function renderHomePage(request, env, ctx) {
   const tagLabel = tagFilter ? `#${tagFilter}` : '';
   const heading = privateCatalogLocked
     ? `${PRIVATE_BOOKMARK_CATEGORY} · ${t('locked')}`
-    : (catalogExists
-      ? `${catalog}${tagLabel ? ` · ${tagLabel}` : ''}${sortLabel ? ` · ${sortLabel}` : ''} · ${t('sitesCount', { count: currentSites.length })}`
-      : `${tagLabel || sortLabel || '全部收藏'}${tagLabel && sortLabel ? ` · ${sortLabel}` : ''} · ${t('sitesCount', { count: currentSites.length })}`);
+    : [tagLabel, sortLabel].filter(Boolean).join(' · ');
   const sortLinks = renderSortLinks({ catalog, tag: tagFilter, sortMode, space: currentSpaceSlug, disabled: privateCatalogLocked, i18n });
   const siteIndex = visibleSites.map((site) => ({
     id: site.id,
@@ -147,7 +145,7 @@ export async function renderHomePage(request, env, ctx) {
     : currentSites.map((site) => renderSiteCard(site, canDragSort, adminAuthed, i18n)).join('');
   const groupedContent = privateCatalogLocked
     ? ''
-    : renderGroupedSites(currentSites, adminAuthed, i18n, canDragSort);
+    : renderGroupedSites(currentSites, adminAuthed, i18n, canDragSort, { hideHead: Boolean(catalog), flat: !catalog });
   const dashboardContent = privateCatalogLocked
     ? ''
     : renderDashboardSites(currentSites, adminAuthed, i18n);
@@ -195,27 +193,98 @@ export async function renderHomePage(request, env, ctx) {
       ${submissionEnabled ? `<button type="button" id="addSiteBtnSidebar" class="nav-add-btn" title="${th('addBookmark')}" aria-label="${th('addBookmark')}">+</button>` : ''}
       <button type="button" id="themeToggle" class="nav-icon-btn" title="切换深色/浅色" aria-label="切换深色/浅色模式">🌙</button>
       <button type="button" id="floatingAiToggle" class="nav-icon-btn" title="${th('aiAssistant')}" aria-expanded="false" aria-controls="floatingAiPanel">AI</button>
-      <button type="button" id="floatingThemeToggle" class="nav-icon-btn" title="${th('themeSettings')}" aria-expanded="false" aria-controls="floatingThemePanel">外观</button>
+      <div class="nav-more">
+        <button type="button" id="navMoreToggle" class="nav-icon-btn" title="更多" aria-expanded="false" aria-controls="navMoreMenu">⋯</button>
+        <div id="navMoreMenu" class="nav-more-menu hidden">
+          <button type="button" id="floatingThemeToggle" class="nav-more-item" title="${th('themeSettings')}" aria-expanded="false" aria-controls="floatingThemePanel">外观</button>
+          ${blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer" class="nav-more-item">${escapeHTML(blogLabel)}</a>` : ''}
+          <a href="/admin" target="_blank" class="nav-more-item">${th('adminPanel')}${adminAuthed ? '<span class="nav-admin-dot" title="管理员已认证"></span>' : ''}</a>
+          ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/" class="nav-more-form"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-more-item">${th('exitPrivate')}</button></form>` : ''}
+        </div>
+        <div id="floatingThemePanel" class="theme-panel floating-theme-panel hidden w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-primary-100/60 bg-white/95 p-4 shadow-2xl">
+          <div class="mb-3 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900">${th('themeSettings')}</h3>
+              <p class="text-xs text-gray-500">${th('themeDesc')}</p>
+            </div>
+            <button type="button" id="resetThemePrefs" class="text-xs text-primary-600 hover:underline">${th('reset')}</button>
+          </div>
+          <div class="space-y-3 text-xs text-gray-600">
+            <div>
+              <div class="mb-1.5 font-medium">预设主题</div>
+              <div class="grid grid-cols-3 gap-1.5" id="themePresetGroup">
+                <button type="button" class="theme-preset-btn theme-segment" data-preset="paper" title="纸感：暖底、分组磁贴">纸感</button>
+                <button type="button" class="theme-preset-btn theme-segment" data-preset="starry" title="星空：夜空底、玻璃卡">星空</button>
+                <button type="button" class="theme-preset-btn theme-segment" data-preset="minimal" title="极简：白底细线、列表">极简</button>
+                <button type="button" class="theme-preset-btn theme-segment" data-preset="dark" title="暗黑：炭黑、高对比">暗黑</button>
+                <button type="button" class="theme-preset-btn theme-segment" data-preset="glass" title="玻璃：雾面、宽松">玻璃</button>
+                <button type="button" class="theme-preset-btn theme-segment" data-preset="dock" title="Dock：大图标宫格">Dock</button>
+                <button type="button" class="theme-preset-btn theme-segment" data-preset="notion" title="Notion：纸纹、左边线">Notion</button>
+              </div>
+            </div>
+            <div>
+              <div class="mb-1.5 font-medium">${th('themeColor')}</div>
+              <div class="grid grid-cols-5 gap-1.5" data-theme-group="accent">
+                <button type="button" class="theme-choice h-7 rounded-full bg-[#254267] ring-offset-2" data-theme-key="accent" data-theme-value="blue" title="星空蓝"></button>
+                <button type="button" class="theme-choice h-7 rounded-full bg-[#3c976d] ring-offset-2" data-theme-key="accent" data-theme-value="green" title="森林绿"></button>
+                <button type="button" class="theme-choice h-7 rounded-full bg-[#8b5cf6] ring-offset-2" data-theme-key="accent" data-theme-value="purple" title="暮光紫"></button>
+                <button type="button" class="theme-choice h-7 rounded-full bg-[#e0527d] ring-offset-2" data-theme-key="accent" data-theme-value="rose" title="蔷薇红"></button>
+                <button type="button" class="theme-choice h-7 rounded-full bg-[#d97706] ring-offset-2" data-theme-key="accent" data-theme-value="amber" title="琥珀金"></button>
+              </div>
+            </div>
+            <div>
+              <div class="mb-1.5 font-medium">${th('density')}</div>
+              <div class="grid grid-cols-3 gap-1.5" data-theme-group="density">
+                <button type="button" class="theme-segment" data-theme-key="density" data-theme-value="compact">${th('compact')}</button>
+                <button type="button" class="theme-segment" data-theme-key="density" data-theme-value="comfortable">${th('comfortable')}</button>
+                <button type="button" class="theme-segment" data-theme-key="density" data-theme-value="spacious">${th('spacious')}</button>
+              </div>
+            </div>
+            <div>
+              <div class="mb-1.5 font-medium">${th('bgStyle')}</div>
+              <div class="grid grid-cols-4 gap-1.5" data-theme-group="bg">
+                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="plain">${th('plain')}</button>
+                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="soft">${th('soft')}</button>
+                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="gradient">${th('gradient')}</button>
+                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="paper">${th('paper')}</button>
+                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="image">图片</button>
+              </div>
+              <div id="bgImageUrlBox" class="mt-1.5 hidden">
+                <input id="bgImageUrlInput" type="url" placeholder="背景图片 URL" class="w-full rounded-lg border border-primary-100/60 bg-white px-2.5 py-1.5 text-[11px] outline-none focus:border-primary-300">
+              </div>
+            </div>
+            <div>
+              <div class="mb-1.5 font-medium">${th('viewMode')}</div>
+              <div class="grid grid-cols-2 gap-1.5" data-theme-group="view">
+                <button type="button" class="theme-segment" data-theme-key="view" data-theme-value="detail">${th('detail')}</button>
+                <button type="button" class="theme-segment" data-theme-key="view" data-theme-value="minimal">${th('minimal')}</button>
+              </div>
+            </div>
+            <div>
+              <div class="mb-1.5 font-medium">${th('homeLayout')}</div>
+              <div class="grid grid-cols-3 gap-1.5" data-theme-group="layout">
+                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="grid">卡片</button>
+                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="list">列表</button>
+                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="grouped">分组</button>
+                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="masonry">瀑布</button>
+                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="dashboard">概览</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
   <div id="mobileOverlay" class="mobile-overlay"></div>
   <aside id="sidebar" class="nav-sidebar mobile-sidebar">
-    <div class="nav-sidebar-head">
-      <button id="collapseSidebar" class="nav-icon-btn nav-collapse-sidebar" title="收起分类">‹</button>
-      <button id="closeSidebar" class="nav-icon-btn nav-close-sidebar" aria-label="关闭分类">×</button>
-    </div>
     ${spaceSwitcher}
     <div class="nav-cat-list" id="categoryList">
-      <a href="${escapeHTML(allLinkHref)}" class="category-all-button category-link">${th('all')}</a>
+      <div class="nav-all-row">
+        <a href="${escapeHTML(allLinkHref)}" class="category-all-button category-link">${th('all')}</a>
+        <button id="collapseSidebar" class="nav-icon-btn nav-collapse-sidebar" title="收起分类">‹</button>
+        <button id="closeSidebar" class="nav-icon-btn nav-close-sidebar" aria-label="关闭分类">×</button>
+      </div>
       ${categoryLinks}
-    </div>
-    <div class="nav-sidebar-foot">
-      ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-side-link">${th('exitPrivate')}</button></form>` : ''}
-      ${blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer" class="nav-side-link">${escapeHTML(blogLabel)}</a>` : ''}
-      <a href="/admin" target="_blank" class="nav-side-link">
-        <span>${th('adminPanel')}</span>
-        ${adminAuthed ? `<span class="nav-admin-dot" title="管理员已认证"></span>` : ''}
-      </a>
     </div>
   </aside>
 
@@ -240,11 +309,11 @@ export async function renderHomePage(request, env, ctx) {
         </div>
       </div>
       <div class="nav-toolbar">
-        <h2 id="listHeading">${escapeHTML(heading)}</h2>
+        <h2 id="listHeading"${heading ? '' : ' class="hidden"'}>${escapeHTML(heading)}</h2>
         <div class="nav-toolbar-actions">
           <div class="layout-mode-bar" aria-label="${th('layoutMode')}">
-            <button type="button" class="layout-toggle" data-layout="grouped" title="${th('groupedTitle')}">${th('grouped')}</button>
             <button type="button" class="layout-toggle" data-layout="grid" title="${th('gridTitle')}">${th('grid')}</button>
+            <button type="button" class="layout-toggle" data-layout="grouped" title="${th('groupedTitle')}">${th('grouped')}</button>
             <button type="button" class="layout-toggle" data-layout="list" title="${th('listTitle')}">${th('list')}</button>
             <button type="button" class="layout-toggle" data-layout="dashboard" title="${th('dashboardTitle')}">${th('dashboard')}</button>
           </div>
@@ -253,12 +322,12 @@ export async function renderHomePage(request, env, ctx) {
         </div>
       </div>
       <div id="sitesPanel" class="nav-sites">
-        <div id="layoutGridPanel" class="layout-panel">
+        <div id="layoutGridPanel" class="layout-panel active">
           <div id="sitesGrid" class="site-tile-grid">
             ${gridContent}
           </div>
         </div>
-        <div id="layoutGroupedPanel" class="layout-panel active">
+        <div id="layoutGroupedPanel" class="layout-panel">
           ${privateCatalogLocked ? renderPrivateBookmarkUnlockBox(catalog, i18n) : groupedContent}
         </div>
         <div id="layoutDashboardPanel" class="layout-panel">
@@ -270,77 +339,6 @@ export async function renderHomePage(request, env, ctx) {
   </main>
 
   <div class="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-3 floating-actions">
-    <div id="floatingThemePanel" class="theme-panel floating-theme-panel hidden w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-primary-100/60 bg-white/95 p-4 shadow-2xl">
-      <div class="mb-3 flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-semibold text-gray-900">${th('themeSettings')}</h3>
-          <p class="text-xs text-gray-500">${th('themeDesc')}</p>
-        </div>
-        <button type="button" id="resetThemePrefs" class="text-xs text-primary-600 hover:underline">${th('reset')}</button>
-      </div>
-      <div class="space-y-3 text-xs text-gray-600">
-        <div>
-          <div class="mb-1.5 font-medium">预设主题</div>
-          <div class="grid grid-cols-3 gap-1.5" id="themePresetGroup">
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="paper" title="纸感：暖底、分组磁贴">纸感</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="starry" title="星空：夜空底、玻璃卡">星空</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="minimal" title="极简：白底细线、列表">极简</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="dark" title="暗黑：炭黑、高对比">暗黑</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="glass" title="玻璃：雾面、宽松">玻璃</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="dock" title="Dock：大图标宫格">Dock</button>
-            <button type="button" class="theme-preset-btn theme-segment" data-preset="notion" title="Notion：纸纹、左边线">Notion</button>
-          </div>
-        </div>
-        <div>
-          <div class="mb-1.5 font-medium">${th('themeColor')}</div>
-          <div class="grid grid-cols-5 gap-1.5" data-theme-group="accent">
-            <button type="button" class="theme-choice h-7 rounded-full bg-[#254267] ring-offset-2" data-theme-key="accent" data-theme-value="blue" title="星空蓝"></button>
-            <button type="button" class="theme-choice h-7 rounded-full bg-[#3c976d] ring-offset-2" data-theme-key="accent" data-theme-value="green" title="森林绿"></button>
-            <button type="button" class="theme-choice h-7 rounded-full bg-[#8b5cf6] ring-offset-2" data-theme-key="accent" data-theme-value="purple" title="暮光紫"></button>
-            <button type="button" class="theme-choice h-7 rounded-full bg-[#e0527d] ring-offset-2" data-theme-key="accent" data-theme-value="rose" title="蔷薇红"></button>
-            <button type="button" class="theme-choice h-7 rounded-full bg-[#d97706] ring-offset-2" data-theme-key="accent" data-theme-value="amber" title="琥珀金"></button>
-          </div>
-        </div>
-        <div>
-          <div class="mb-1.5 font-medium">${th('density')}</div>
-          <div class="grid grid-cols-3 gap-1.5" data-theme-group="density">
-            <button type="button" class="theme-segment" data-theme-key="density" data-theme-value="compact">${th('compact')}</button>
-            <button type="button" class="theme-segment" data-theme-key="density" data-theme-value="comfortable">${th('comfortable')}</button>
-            <button type="button" class="theme-segment" data-theme-key="density" data-theme-value="spacious">${th('spacious')}</button>
-          </div>
-        </div>
-        <div>
-          <div class="mb-1.5 font-medium">${th('bgStyle')}</div>
-          <div class="grid grid-cols-4 gap-1.5" data-theme-group="bg">
-            <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="plain">${th('plain')}</button>
-            <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="soft">${th('soft')}</button>
-            <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="gradient">${th('gradient')}</button>
-            <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="paper">${th('paper')}</button>
-            <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="image">图片</button>
-          </div>
-          <div id="bgImageUrlBox" class="mt-1.5 hidden">
-            <input id="bgImageUrlInput" type="url" placeholder="背景图片 URL" class="w-full rounded-lg border border-primary-100/60 bg-white px-2.5 py-1.5 text-[11px] outline-none focus:border-primary-300">
-          </div>
-        </div>
-        <div>
-          <div class="mb-1.5 font-medium">${th('viewMode')}</div>
-          <div class="grid grid-cols-2 gap-1.5" data-theme-group="view">
-            <button type="button" class="theme-segment" data-theme-key="view" data-theme-value="detail">${th('detail')}</button>
-            <button type="button" class="theme-segment" data-theme-key="view" data-theme-value="minimal">${th('minimal')}</button>
-          </div>
-        </div>
-        <div>
-          <div class="mb-1.5 font-medium">${th('homeLayout')}</div>
-          <div class="grid grid-cols-3 gap-1.5" data-theme-group="layout">
-            <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="grid">卡片</button>
-            <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="list">列表</button>
-            <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="grouped">分组</button>
-            <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="masonry">瀑布</button>
-            <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="dashboard">概览</button>
-          </div>
-        </div>
-      </div>
-    </div>
     <div id="floatingAiPanel" class="floating-ai-panel hidden w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-primary-100/60 bg-white/95 shadow-2xl">
       <div class="flex items-center justify-between border-b border-primary-100/60 px-4 py-3">
         <div>
@@ -553,7 +551,7 @@ document.addEventListener('DOMContentLoaded',function(){
   function setThemePref(key,value){document.documentElement.dataset[key]=value;localStorage.setItem('nav:'+key,value);if(key==='accent'&&themeMeta)themeMeta.setAttribute('content',themeColors[value]||themeColors.blue);if(key==='layout')applyLayout(value);updateThemeControls()}
   function updateThemeToggle(){if(themeToggle)themeToggle.textContent=document.documentElement.classList.contains('dark')?'☀️':'🌙'}
   function updateThemeControls(){document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset[btn.dataset.themeKey]===btn.dataset.themeValue)});document.querySelectorAll('.layout-toggle').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset.layout===btn.dataset.layout)})}
-  function applyLayout(layout){const normalized=['grid','list','grouped','masonry','dashboard'].includes(layout)?layout:'grouped';document.documentElement.dataset.layout=normalized;document.getElementById('layoutGridPanel')?.classList.toggle('active',['grid','list','masonry'].includes(normalized));document.getElementById('layoutGroupedPanel')?.classList.toggle('active',normalized==='grouped');document.getElementById('layoutDashboardPanel')?.classList.toggle('active',normalized==='dashboard')}
+  function applyLayout(layout){const normalized=['grid','list','grouped','masonry','dashboard'].includes(layout)?layout:'grid';document.documentElement.dataset.layout=normalized;document.getElementById('layoutGridPanel')?.classList.toggle('active',['grid','list','masonry'].includes(normalized));document.getElementById('layoutGroupedPanel')?.classList.toggle('active',normalized==='grouped');document.getElementById('layoutDashboardPanel')?.classList.toggle('active',normalized==='dashboard')}
   Object.keys(themeDefaults).forEach(function(key){document.documentElement.dataset[key]=getThemePref(key)});
   if(themeMeta)themeMeta.setAttribute('content',themeColors[getThemePref('accent')]||themeColors.blue);
   applyLayout(getThemePref('layout'));
@@ -563,7 +561,7 @@ document.addEventListener('DOMContentLoaded',function(){
   document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.addEventListener('click',function(){setThemePref(this.dataset.themeKey,this.dataset.themeValue)})});
   document.querySelectorAll('.layout-toggle').forEach(function(btn){btn.addEventListener('click',function(){setThemePref('layout',this.dataset.layout)})});
   document.getElementById('resetThemePrefs')?.addEventListener('click',function(){Object.keys(themeDefaults).forEach(function(key){localStorage.removeItem('nav:'+key);document.documentElement.dataset[key]=themeDefaults[key]});localStorage.removeItem('nav:theme');localStorage.removeItem('nav:skin');document.documentElement.classList.remove('dark');applyPresetSkin('paper');if(themeMeta)themeMeta.setAttribute('content',themeColors.blue);updateThemeToggle();updateThemeControls()});
-  const themePresets={paper:{dark:false,accent:'amber',density:'comfortable',bg:'soft',view:'detail',layout:'grouped'},starry:{dark:true,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grouped'},minimal:{dark:false,accent:'blue',density:'compact',bg:'plain',view:'minimal',layout:'list'},dark:{dark:true,accent:'blue',density:'comfortable',bg:'plain',view:'detail',layout:'grouped'},glass:{dark:false,accent:'purple',density:'spacious',bg:'gradient',view:'detail',layout:'grid'},dock:{dark:false,accent:'green',density:'compact',bg:'plain',view:'minimal',layout:'grid'},notion:{dark:false,accent:'amber',density:'comfortable',bg:'paper',view:'detail',layout:'list'}};
+  const themePresets={paper:{dark:false,accent:'amber',density:'comfortable',bg:'soft',view:'detail',layout:'grid'},starry:{dark:true,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grid'},minimal:{dark:false,accent:'blue',density:'compact',bg:'plain',view:'minimal',layout:'list'},dark:{dark:true,accent:'blue',density:'comfortable',bg:'plain',view:'detail',layout:'grid'},glass:{dark:false,accent:'purple',density:'spacious',bg:'gradient',view:'detail',layout:'grid'},dock:{dark:false,accent:'green',density:'compact',bg:'plain',view:'minimal',layout:'grid'},notion:{dark:false,accent:'amber',density:'comfortable',bg:'paper',view:'detail',layout:'list'}};
   function applyPresetSkin(name){document.documentElement.dataset.skin=name||'paper';localStorage.setItem('nav:skin',name||'paper')}
   applyPresetSkin(localStorage.getItem('nav:skin')||'paper');
   document.querySelectorAll('.theme-preset-btn').forEach(function(btn){btn.addEventListener('click',function(){const preset=themePresets[this.dataset.preset];if(!preset)return;const isDark=preset.dark;document.documentElement.classList.toggle('dark',isDark);localStorage.setItem('nav:theme',isDark?'dark':'light');applyPresetSkin(this.dataset.preset);updateThemeToggle();Object.keys(themeDefaults).forEach(function(key){if(preset[key]!==undefined){setThemePref(key,preset[key])}});updateThemeControls()})});
@@ -575,6 +573,11 @@ document.addEventListener('DOMContentLoaded',function(){
   const origSetThemePref=setThemePref;
   setThemePref=function(key,value){origSetThemePref(key,value);if(key==='bg')updateBgImageUI()};
   (function(){const savedBg=localStorage.getItem('nav:bg');const savedBgImage=localStorage.getItem('nav:bgImage');if(savedBg==='image'&&savedBgImage){document.body.style.setProperty('--nav-bg-image','url('+savedBgImage+')')}})();
+  const navMoreToggle=document.getElementById('navMoreToggle');
+  const navMoreMenu=document.getElementById('navMoreMenu');
+  function closeNavMoreMenu(){navMoreMenu?.classList.add('hidden');navMoreToggle?.setAttribute('aria-expanded','false')}
+  navMoreToggle?.addEventListener('click',function(e){e.stopPropagation();const opened=!navMoreMenu?.classList.contains('hidden');navMoreMenu?.classList.toggle('hidden',opened);this.setAttribute('aria-expanded',String(!opened));if(!opened)closeFloatingThemePanel()});
+  navMoreMenu?.addEventListener('click',function(e){e.stopPropagation()});
   const floatingThemeToggle=document.getElementById('floatingThemeToggle');
   const floatingThemePanel=document.getElementById('floatingThemePanel');
   const floatingAiToggle=document.getElementById('floatingAiToggle');
@@ -591,13 +594,13 @@ document.addEventListener('DOMContentLoaded',function(){
   function openFloatingAiPanel(){closeFloatingThemePanel();floatingAiPanel?.classList.remove('hidden');floatingAiToggle?.setAttribute('aria-expanded','true');updateAiFullscreenButton();setTimeout(()=>aiChatInput?.focus(),80)}
   function closeFloatingAiPanel(){floatingAiPanel?.classList.add('hidden');floatingAiPanel?.classList.remove('ai-fullscreen');floatingAiToggle?.setAttribute('aria-expanded','false');updateAiFullscreenButton()}
   function toggleAiFullscreen(){if(!floatingAiPanel)return;floatingAiPanel.classList.toggle('ai-fullscreen');floatingAiPanel.classList.remove('hidden');floatingAiToggle?.setAttribute('aria-expanded','true');updateAiFullscreenButton();setTimeout(()=>aiChatInput?.focus(),80)}
-  floatingThemeToggle?.addEventListener('click',function(e){e.stopPropagation();const opened=!floatingThemePanel?.classList.contains('hidden');floatingThemePanel?.classList.toggle('hidden',opened);this.setAttribute('aria-expanded',String(!opened));if(!opened){closeFloatingAiPanel()}});
+  floatingThemeToggle?.addEventListener('click',function(e){e.stopPropagation();const opened=!floatingThemePanel?.classList.contains('hidden');floatingThemePanel?.classList.toggle('hidden',opened);this.setAttribute('aria-expanded',String(!opened));if(!opened){closeFloatingAiPanel();closeNavMoreMenu()}});
   floatingAiToggle?.addEventListener('click',function(e){e.stopPropagation();const opened=!floatingAiPanel?.classList.contains('hidden');if(opened){closeFloatingAiPanel()}else{openFloatingAiPanel()}});
   closeAiPanelBtn?.addEventListener('click',function(e){e.stopPropagation();closeFloatingAiPanel()});
   toggleAiFullscreenBtn?.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();toggleAiFullscreen()});
   floatingThemePanel?.addEventListener('click',function(e){e.stopPropagation()});
   floatingAiPanel?.addEventListener('click',function(e){e.stopPropagation()});
-  document.addEventListener('click',function(){closeFloatingThemePanel();closeFloatingAiPanel()});
+  document.addEventListener('click',function(){closeFloatingThemePanel();closeFloatingAiPanel();closeNavMoreMenu()});
   function isEditableTarget(target){return target&&(/^(INPUT|TEXTAREA|SELECT)$/i.test(target.tagName)||target.isContentEditable)}
   function focusSiteSearch(selectText=false){if(!search)return false;search.focus({preventScroll:true});if(selectText)search.select();search.scrollIntoView({block:'center',behavior:'smooth'});return true}
   let activeResultIndex=-1;
@@ -605,7 +608,7 @@ document.addEventListener('DOMContentLoaded',function(){
   function clearActiveResult(){document.querySelectorAll('.site-card.result-active').forEach(el=>el.classList.remove('result-active'));activeResultIndex=-1}
   function setActiveResult(index){const cards=getVisibleResultCards();if(!cards.length){activeResultIndex=-1;return}const safeIdx=((index%cards.length)+cards.length)%cards.length;document.querySelectorAll('.site-card.result-active').forEach(el=>el.classList.remove('result-active'));const target=cards[safeIdx];if(!target)return;target.classList.add('result-active');activeResultIndex=safeIdx;target.scrollIntoView({block:'nearest',behavior:'smooth'})}
   function openActiveResult(){const cards=getVisibleResultCards();if(activeResultIndex<0||activeResultIndex>=cards.length)return false;const card=cards[activeResultIndex];const link=card?.querySelector('a[href]');if(!link)return false;const href=link.getAttribute('href')||'';if(!href||href==='#')return false;window.open(href,link.target||'_blank','noopener,noreferrer');return true}
-  document.addEventListener('keydown',function(e){const key=e.key||'';if(key==='Escape'){closeFloatingThemePanel();closeFloatingAiPanel();closeModal();clearActiveResult();if(document.activeElement===search)search.blur();return}if((e.ctrlKey||e.metaKey)&&key.toLowerCase()==='k'){e.preventDefault();closeFloatingThemePanel();closeFloatingAiPanel();focusSiteSearch(true);return}if(key==='/'&&!isEditableTarget(e.target)&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();closeFloatingThemePanel();closeFloatingAiPanel();focusSiteSearch(false);return}if((key==='ArrowDown'||key==='ArrowUp'||key==='Enter')&&document.activeElement===search){const cards=getVisibleResultCards();if(!cards.length)return;if(key==='ArrowDown'){e.preventDefault();setActiveResult(activeResultIndex<0?0:activeResultIndex+1)}else if(key==='ArrowUp'){e.preventDefault();setActiveResult(activeResultIndex<0?cards.length-1:activeResultIndex-1)}else if(key==='Enter'){if(openActiveResult()){e.preventDefault()}}}});
+  document.addEventListener('keydown',function(e){const key=e.key||'';if(key==='Escape'){closeFloatingThemePanel();closeFloatingAiPanel();closeNavMoreMenu();closeModal();clearActiveResult();if(document.activeElement===search)search.blur();return}if((e.ctrlKey||e.metaKey)&&key.toLowerCase()==='k'){e.preventDefault();closeFloatingThemePanel();closeFloatingAiPanel();focusSiteSearch(true);return}if(key==='/'&&!isEditableTarget(e.target)&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();closeFloatingThemePanel();closeFloatingAiPanel();focusSiteSearch(false);return}if((key==='ArrowDown'||key==='ArrowUp'||key==='Enter')&&document.activeElement===search){const cards=getVisibleResultCards();if(!cards.length)return;if(key==='ArrowDown'){e.preventDefault();setActiveResult(activeResultIndex<0?0:activeResultIndex+1)}else if(key==='ArrowUp'){e.preventDefault();setActiveResult(activeResultIndex<0?cards.length-1:activeResultIndex-1)}else if(key==='Enter'){if(openActiveResult()){e.preventDefault()}}}});
   document.getElementById('sitesGrid')?.addEventListener('mousedown',clearActiveResult,{capture:true});
   function normalizeAiText(text){return String(text||'').replace(/\\*\\*([^*]+)\\*\\*/g,'$1').replace(/__([^_]+)__/g,'$1').replace(/^\\s*[-*]\\s+/gm,'· ').replace(/\\n{3,}/g,'\\n\\n').trim()}
   let lastAiSites=[];

@@ -91,7 +91,6 @@ export function renderCategoryLinks(nodes, options, level = 0) {
     const expanded = expandedNames.has(cat.name);
     const isPrivate = isPrivateBookmarkCategory(cat.name);
     const iconText = renderCategoryIcon(cat.icon);
-    const safeDescription = escapeHTML(cat.description || '');
     const iconMarkup = iconText ? `<span class="category-icon">${iconText}</span>` : '';
     const titleParts = [cat.name];
     if (cat.description) titleParts.push(cat.description);
@@ -105,10 +104,9 @@ export function renderCategoryLinks(nodes, options, level = 0) {
 
     return `<div class="category-tree-node" data-level="${level}">
       <div class="flex items-center gap-1">
-        <a href="?${link.toString()}" class="category-link" data-category-name="${safeName}" data-has-icon="${iconText ? 'true' : 'false'}" style="padding-left:${12 + level * 14}px" title="${title}">
+        <a href="?${link.toString()}" class="category-link" data-category-name="${safeName}" data-has-icon="${iconText ? 'true' : 'false'}" style="padding-left:${10 + level * 12}px" title="${title}">
           ${iconMarkup}
           <span class="truncate">${safeName}</span>
-          ${safeDescription ? `<span class="ml-2 hidden truncate text-xs text-gray-400 sm:inline" title="${safeDescription}">${safeDescription}</span>` : ''}
           ${isPrivate && !privateUnlocked ? '<span class="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">锁</span>' : ''}
         </a>
         ${hasChildren ? `<button type="button" class="category-toggle h-8 w-8 flex-shrink-0 rounded-lg text-gray-500 hover:bg-gray-100" data-target="${childId}" aria-expanded="${expanded ? 'true' : 'false'}" title="${expanded ? '收起子类' : '展开子类'}"><span data-role="toggle-icon">${expanded ? '－' : '＋'}</span></button>` : ''}

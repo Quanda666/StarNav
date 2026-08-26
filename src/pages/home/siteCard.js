@@ -27,7 +27,7 @@ export function renderMiniSiteLink(site, meta = '', i18n = null) {
   </a>`;
 }
 
-export function renderGroupedSites(sites, isAdmin = false, i18n = null, draggable = false) {
+export function renderGroupedSites(sites, isAdmin = false, i18n = null, draggable = false, options = {}) {
   if (!sites.length) {
     return `<div class="layout-section text-center text-sm text-gray-500">${escapeHTML(i18n?.t?.('noBookmarks') || '当前没有可展示的书签。')}</div>`;
   }
@@ -39,13 +39,21 @@ export function renderGroupedSites(sites, isAdmin = false, i18n = null, draggabl
     groups.get(catalog).push(site);
   }
 
+  if (options.flat) {
+    return `<div class="site-groups">
+      <section class="site-group">
+        <div class="site-group-grid">
+          ${sites.map((site) => renderSiteCard(site, draggable, isAdmin, i18n)).join('')}
+        </div>
+      </section>
+    </div>`;
+  }
+
+  const hideHead = options.hideHead || groups.size <= 1;
   return `<div class="site-groups">
     ${[...groups.entries()].map(([catalog, items]) => `
       <section class="site-group">
-        <div class="site-group-head">
-          <h3>${escapeHTML(catalog)}</h3>
-          <span>${escapeHTML(i18n?.t?.('itemCount', { count: items.length }) || `${items.length} 个`)}</span>
-        </div>
+        ${hideHead ? '' : `<div class="site-group-head"><h3>${escapeHTML(catalog)}</h3><span>${escapeHTML(i18n?.t?.('itemCount', { count: items.length }) || `${items.length} 个`)}</span></div>`}
         <div class="site-group-grid">
           ${items.map((site) => renderSiteCard(site, draggable, isAdmin, i18n)).join('')}
         </div>
