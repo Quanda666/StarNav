@@ -191,9 +191,9 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     .nav-expand-sidebar,.nav-open-sidebar,.nav-close-sidebar{display:none}
     .nav-collapse-sidebar{display:inline-flex;width:26px;min-width:26px;height:26px;padding:0;border:0;background:transparent;border-radius:7px;font-size:1rem;color:var(--nav-muted);box-shadow:none}
     .nav-collapse-sidebar:hover{background:#f3eadf;color:var(--nav-ink)}
-    .nav-sidebar{position:fixed;left:0;top:var(--nav-topbar-h);bottom:0;width:var(--nav-sidebar-w);z-index:50;display:flex;flex-direction:column;padding:12px 10px 14px;background:#fffaf3;border-right:1px solid var(--nav-line);overflow:hidden}
-    .nav-all-row{display:flex;align-items:center;justify-content:flex-start;gap:2px;margin-bottom:4px}
-    .nav-cat-list{flex:1;min-height:0;overflow:auto}
+    .nav-sidebar{position:fixed;left:0;top:var(--nav-topbar-h);bottom:0;width:var(--nav-sidebar-w);z-index:50;display:flex;flex-direction:column;padding:10px 8px 12px;background:#fffaf3;border-right:1px solid var(--nav-line);overflow:hidden;container-type:inline-size;container-name:navside}
+    .nav-all-row{display:flex;align-items:center;justify-content:flex-start;gap:2px;flex:0 0 auto}
+    .nav-cat-list{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:2px}
     .nav-add-btn{width:100%;padding:9px 12px;border:0;border-radius:12px;background:var(--nav-primary);color:#fffdf8;font-weight:700}
     .nav-admin-dot{width:8px;height:8px;border-radius:50%;background:#2f6f5e;display:inline-block;margin-left:8px}
     .nav-main{margin-left:var(--nav-sidebar-w);min-height:calc(100vh - var(--nav-topbar-h))}
@@ -261,14 +261,17 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     .nav-footer-links{display:flex;gap:14px}
     .nav-footer-links a{color:var(--nav-muted);text-decoration:none}
     .nav-footer-links a:hover{color:var(--nav-ink)}
-    .nav-cat-list .category-tree-node + .category-tree-node{margin-top:2px}
-    .nav-cat-list .category-link{display:flex;align-items:center;gap:8px;min-width:0;width:100%;padding:8px 10px;border-radius:9px;color:var(--nav-ink);text-decoration:none;background:transparent!important;box-shadow:none!important;font-size:.875rem;line-height:1.3;font-weight:500}
-    .nav-cat-list .category-all-button,.nav-all-row .category-link{width:auto;flex:0 0 auto;padding:8px 10px;font-size:.875rem;font-weight:500}
+    .nav-cat-list > .category-tree-node{flex:1 1 0;min-height:2.6rem;display:flex;flex-direction:column}
+    .nav-cat-list > .category-tree-node > .flex{flex:1 0 auto;min-height:2.6rem;align-items:stretch}
+    .nav-cat-list > .category-tree-node > .flex > .category-link{flex:1;height:auto}
+    .nav-cat-list .category-link{display:flex;align-items:center;gap:.55em;min-width:0;width:100%;padding:.55em .7em;border-radius:9px;color:var(--nav-ink);text-decoration:none;background:transparent!important;box-shadow:none!important;font-size:clamp(.95rem,7.2cqi,1.05rem);line-height:1.3;font-weight:500}
+    .nav-cat-list .category-all-button,.nav-all-row .category-link{width:auto;flex:0 0 auto;align-self:stretch;padding:.55em .7em;font-size:clamp(.95rem,7.2cqi,1.05rem);font-weight:500}
     .nav-cat-list .category-link::before{display:none!important}
     .nav-cat-list .category-link:hover{background:#f3eadf!important;color:var(--nav-ink)!important}
     .nav-cat-list .category-active{background:#f0e5d6!important;color:var(--nav-ink)!important;font-weight:600!important}
-    .nav-cat-list .category-icon{display:inline-flex;width:1.15rem;height:1.15rem;flex:0 0 1.15rem;align-items:center;justify-content:center;font-size:1rem;color:var(--nav-muted)!important;background:transparent!important;box-shadow:none!important}
+    .nav-cat-list .category-icon{display:inline-flex;width:1.15em;height:1.15em;flex:0 0 1.15em;align-items:center;justify-content:center;font-size:1.05em;color:var(--nav-muted)!important;background:transparent!important;box-shadow:none!important}
     .nav-cat-list .category-lock{margin-left:auto;flex:0 0 auto}
+    .nav-cat-list .category-toggle{height:auto;width:1.8em;align-self:stretch}
     .nav-cat-list .category-icon svg{width:1em;height:1em}
     .nav-backtop{position:fixed;right:18px;bottom:18px;z-index:40;width:40px;height:40px;border:1px solid var(--nav-line);border-radius:14px;background:#fffaf3;color:var(--nav-ink);font-weight:800;box-shadow:0 10px 24px rgba(71,52,35,.12)}
     .floating-actions{right:18px;bottom:68px}
