@@ -308,9 +308,10 @@ body{padding:0!important}
   .admin-header .logout-btn{padding:7px 10px;font-size:.82rem}
   .sidebar-dock{display:none!important}
   .mobile-nav-toggle{display:inline-flex!important;align-items:center;justify-content:center;margin:0;padding:8px 12px;border-radius:999px;background:#fffdf8;color:var(--admin-text);border:1px solid var(--admin-line);font-size:.82rem;font-weight:700}
-  .mobile-nav-mask{position:fixed;inset:0;z-index:35;background:rgba(36,33,29,.38)}
+  .mobile-nav-mask{display:none;position:fixed;inset:0;z-index:35;background:rgba(36,33,29,.38)}
   .mobile-nav-mask[hidden]{display:none!important}
-  body.mobile-nav-open .mobile-nav-mask{display:block}
+  body.mobile-nav-open .mobile-nav-mask{display:block!important}
+  .tab-wrapper.sidebar-collapsed.sidebar-peeking::after{display:none!important}
   body.mobile-nav-open{overflow:hidden}
   .tab-wrapper{display:block!important;gap:0}
   .tab-wrapper.sidebar-collapsed{padding-left:0!important;overflow:visible!important}
