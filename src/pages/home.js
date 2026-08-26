@@ -98,18 +98,13 @@ export async function renderHomePage(request, env, ctx) {
   const siteIcon = sanitizeImageUrl(systemSettings.siteIcon) || sanitizeUrl(systemSettings.siteIcon) || '/pwa-icon.svg';
   const footerText = systemSettings.footerText || th('footer');
   const pageBackgroundImage = sanitizeImageUrl(systemSettings.backgroundImage) || '';
-  const defaultLayout = ['grid', 'list', 'grouped', 'masonry', 'dashboard'].includes(systemSettings.defaultLayout) ? systemSettings.defaultLayout : 'grid';
+  const defaultLayout = ['grid', 'list', 'grouped', 'masonry', 'dashboard'].includes(systemSettings.defaultLayout) ? systemSettings.defaultLayout : 'grouped';
   const defaultAccent = ['blue', 'green', 'purple', 'rose', 'amber'].includes(systemSettings.defaultAccent) ? systemSettings.defaultAccent : 'blue';
   const heroVisible = systemSettings.heroVisible !== 'false';
   const blogVisible = systemSettings.blogVisible !== 'false';
   const blogUrl = sanitizeUrl(systemSettings.blogUrl) || 'https://blog.110995.xyz/';
   const blogLabel = systemSettings.blogLabel || th('visitBlog');
-  const blogLink = blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer" class="mt-4 flex items-center px-4 py-2 text-gray-600 hover:text-primary-500 transition duration-300">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-          ${escapeHTML(blogLabel)}
-        </a>` : '';
+  const blogLink = blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer" class="nav-side-link">${escapeHTML(blogLabel)}</a>` : '';
   const announcement = {
     enabled: systemSettings.announcementEnabled === 'true' && Boolean(systemSettings.announcementMarkdown),
     title: systemSettings.announcementTitle || '系统公告',
@@ -153,7 +148,7 @@ export async function renderHomePage(request, env, ctx) {
     : currentSites.map((site) => renderSiteCard(site, canDragSort, adminAuthed, i18n)).join('');
   const groupedContent = privateCatalogLocked
     ? ''
-    : renderGroupedSites(currentSites, adminAuthed, i18n);
+    : renderGroupedSites(currentSites, adminAuthed, i18n, canDragSort);
   const dashboardContent = privateCatalogLocked
     ? ''
     : renderDashboardSites(currentSites, adminAuthed, i18n);
@@ -181,121 +176,97 @@ export async function renderHomePage(request, env, ctx) {
     (function(){try{const root=document.documentElement;const saved=localStorage.getItem('nav:theme');const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;if(saved==='dark'||(!saved&&prefersDark)){root.classList.add('dark')}var defaultAccent='${escapeHTML(defaultAccent)}',defaultLayout='${escapeHTML(defaultLayout)}',defaultBg='${pageBackgroundImage ? 'image' : 'soft'}';root.dataset.accent=localStorage.getItem('nav:accent')||defaultAccent;root.dataset.density=localStorage.getItem('nav:density')||'comfortable';root.dataset.bg=localStorage.getItem('nav:bg')||defaultBg;root.dataset.view=localStorage.getItem('nav:view')||'detail';root.dataset.layout=localStorage.getItem('nav:layout')||defaultLayout;var bgImage=localStorage.getItem('nav:bgImage')||'${escapeHTML(pageBackgroundImage)}';if(bgImage)document.documentElement.style.setProperty('--nav-bg-image','url('+bgImage+')');var now=new Date(),m=now.getMonth()+1,d=now.getDate();var festival='';if(m===1&&d<=3)festival='newyear';else if(m===2&&d===14)festival='valentine';else if(m===12&&(d>=24&&d<=25))festival='christmas';else if(m===10&&d===31)festival='halloween';else if(m===5&&d>=1&&d<=3)festival='labor';root.dataset.festival=festival}catch(e){}})();
   </script>
 </head>
-<body class="bg-secondary-50 text-gray-800">
-  <div class="fixed top-4 left-4 z-50 lg:hidden"><button id="sidebarToggle" class="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-xl leading-none shadow-md">☰</button></div>
-  <button id="expandSidebar" class="hidden lg:block fixed top-4 left-4 z-40 p-2 rounded-lg bg-white shadow-md hover:bg-gray-50 transition" title="展开侧栏">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  </button>
-  <div id="mobileOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 mobile-overlay lg:hidden"></div>
-  <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white shadow-md border-r border-primary-100/60 z-50 overflow-y-auto mobile-sidebar">
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-8">
-        <h2 class="text-2xl font-bold text-primary-600">${escapeHTML(siteName)}</h2>
-        <div class="flex items-center gap-2">
-          <button id="themeToggle" class="p-1.5 rounded-lg hover:bg-gray-100 transition" title="切换深色/浅色模式" aria-label="切换深色/浅色模式">🌙</button>
-          <button id="collapseSidebar" class="hidden lg:block p-1.5 rounded-lg hover:bg-gray-100 transition collapse-btn" title="收起侧栏">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button id="closeSidebar" class="lg:hidden p-1.5 text-2xl leading-none text-gray-600">×</button>
+<body class="nav-shell">
+  <header class="nav-topbar">
+    <button type="button" id="sidebarToggle" class="nav-icon-btn nav-open-sidebar" aria-label="打开分类">☰</button>
+    <button type="button" id="expandSidebar" class="nav-icon-btn nav-expand-sidebar" title="展开分类">☰</button>
+    <a href="/" class="nav-brand">${escapeHTML(siteName)}</a>
+    <div class="nav-search">
+      <input id="searchInput" type="search" placeholder="搜索书签、分类、标签…" autocomplete="off" enterkeyhint="search">
+      <kbd>⌘K</kbd>
+      <div id="searchHistoryBox" class="nav-search-history hidden">
+        <div class="nav-search-history-head">
+          <span>最近搜索</span>
+          <button type="button" id="clearSearchHistory">清空</button>
         </div>
+        <div id="searchHistoryList"></div>
       </div>
-      <div class="mb-6 sticky top-0 bg-white z-10 pt-2 pb-2 -mt-2">
-        <input id="searchInput" type="text" placeholder="搜索书签..." class="w-full px-4 py-2 border border-primary-100 rounded-lg shadow-sm">
-        <div id="searchHistoryBox" class="mt-3 hidden">
-          <div class="mb-1.5 flex items-center justify-between text-[11px] text-gray-500">
-            <span>最近搜索</span>
-            <button type="button" id="clearSearchHistory" class="hover:text-primary-600">清空</button>
-          </div>
-          <div id="searchHistoryList" class="flex flex-wrap gap-1.5"></div>
-        </div>
+    </div>
+    <div class="nav-top-actions">
+      <button type="button" id="themeToggle" class="nav-icon-btn" title="切换深色/浅色" aria-label="切换深色/浅色模式">🌙</button>
+      <button type="button" id="floatingAiToggle" class="nav-icon-btn" title="${th('aiAssistant')}" aria-expanded="false" aria-controls="floatingAiPanel">AI</button>
+      <button type="button" id="floatingThemeToggle" class="nav-icon-btn" title="${th('themeSettings')}" aria-expanded="false" aria-controls="floatingThemePanel">外观</button>
+    </div>
+  </header>
+  <div id="mobileOverlay" class="mobile-overlay"></div>
+  <aside id="sidebar" class="nav-sidebar mobile-sidebar">
+    <div class="nav-sidebar-head">
+      <div>
+        <p class="nav-kicker">分类</p>
+        ${heroVisible ? `<p class="nav-side-note">${escapeHTML(siteSubtitle)}</p>` : ''}
       </div>
-      ${spaceSwitcher}
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-medium text-gray-500 uppercase">${th('categoryNav')}</h3>
-        <input type="text" id="categoryFilterInput" placeholder="过滤分类..." class="w-28 px-2 py-1 text-xs border border-primary-100 rounded bg-gray-50 focus:bg-white outline-none focus:border-primary-300 transition dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
+      <div class="flex items-center gap-1">
+        <button id="collapseSidebar" class="nav-icon-btn nav-collapse-sidebar" title="收起分类">‹</button>
+        <button id="closeSidebar" class="nav-icon-btn nav-close-sidebar" aria-label="关闭分类">×</button>
       </div>
-      <div class="space-y-1" id="categoryList">
-        <a href="${escapeHTML(allLinkHref)}" class="category-all-button flex items-center px-3 py-2 rounded-lg w-full">${th('all')}</a>
-        ${categoryLinks}
-      </div>
-      <div class="mt-8 pt-6 border-t border-gray-200">
-        ${submissionEnabled ? `<button id="addSiteBtnSidebar" class="w-full px-4 py-2 bg-accent-500 text-white rounded-lg">${th('addBookmark')}</button>` : `<div class="text-xs text-primary-600 border rounded-lg p-3">${th('submissionClosed')}</div>`}
-        ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/" class="mt-3"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="w-full rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100">${th('exitPrivate')}</button></form>` : ''}
-        ${blogLink}
-        <a href="/admin" target="_blank" class="mt-4 flex items-center justify-between gap-3 px-4 py-2 text-gray-600 hover:text-primary-500 transition duration-300">
-          <span class="flex min-w-0 items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A8.966 8.966 0 0112 15c2.21 0 4.236.8 5.879 2.129M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a9 9 0 100 18 9 9 0 000-18z" />
-            </svg>
-            <span class="truncate">${th('adminPanel')}</span>
-          </span>
-          ${adminAuthed ? `<span class="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-sky-500 text-white shadow-sm ring-2 ring-sky-100" title="管理员已认证，可在前台编辑和拖拽排序" aria-label="管理员已认证">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M16.704 5.296a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414l2.543 2.543 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd" />
-            </svg>
-          </span>` : ''}
-        </a>
-      </div>
+    </div>
+    ${spaceSwitcher}
+    <input type="text" id="categoryFilterInput" placeholder="过滤分类" class="nav-cat-filter">
+    <div class="nav-cat-list" id="categoryList">
+      <a href="${escapeHTML(allLinkHref)}" class="category-all-button category-link">${th('all')}</a>
+      ${categoryLinks}
+    </div>
+    <div class="nav-sidebar-foot">
+      ${submissionEnabled ? `<button id="addSiteBtnSidebar" class="nav-add-btn">${th('addBookmark')}</button>` : `<div class="nav-side-note">${th('submissionClosed')}</div>`}
+      ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-side-link">${th('exitPrivate')}</button></form>` : ''}
+      ${blogLink}
+      <a href="/admin" target="_blank" class="nav-side-link">
+        <span>${th('adminPanel')}</span>
+        ${adminAuthed ? `<span class="nav-admin-dot" title="管理员已认证"></span>` : ''}
+      </a>
     </div>
   </aside>
 
-  <main class="lg:ml-64 min-h-screen main-content">
-    ${heroVisible ? `<header class="bg-primary-700 text-white py-10 px-6 md:px-10 border-b border-primary-600 shadow-sm">
-      <div class="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div class="flex-1 text-center md:text-left">
-          <span class="inline-flex rounded-full bg-primary-600/70 px-3 py-1 text-[11px] uppercase tracking-[.28em] text-secondary-200/80">${th('heroBadge')}</span>
-          <h1 class="mt-4 text-3xl md:text-4xl font-semibold">${escapeHTML(siteName)}</h1>
-          <p class="mt-3 text-sm md:text-base text-secondary-100/90">${escapeHTML(siteSubtitle)}</p>
-        </div>
-        <div class="rounded-2xl bg-white/10 px-6 py-5 shadow-lg border border-white/10"><p class="text-xs uppercase tracking-[.28em]">${th('overview')}</p><p class="mt-3 text-2xl font-semibold">${visibleSites.length}</p><p class="text-sm">${th('categoryCount', { count: categoryNames.length })}</p></div>
-      </div>
-    </header>` : ''}
-
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      <div id="myUsageSection" class="hidden mb-6 grid gap-4 md:grid-cols-2">
-        <div class="usage-card rounded-2xl border border-primary-100/60 bg-white/80 p-4 shadow-sm min-w-0" data-usage="favorites">
-          <div class="mb-2 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-gray-700">⭐ 我的收藏</h3>
-            <button type="button" data-usage-clear="favorites" class="text-[11px] text-gray-400 hover:text-primary-600">清空</button>
+  <main class="nav-main main-content">
+    <section class="nav-workspace">
+      <div id="myUsageSection" class="nav-usage hidden">
+        <div class="usage-card" data-usage="favorites">
+          <div class="usage-card-head">
+            <h3>收藏</h3>
+            <button type="button" data-usage-clear="favorites">清空</button>
           </div>
           <div data-usage-list="favorites" class="flex gap-2 text-xs overflow-x-auto pb-1 scrollbar-hide snap-x"></div>
-          <p class="usage-empty mt-1 text-[11px] text-gray-400">点击任意书签卡片右上角的 ⭐ 加入收藏</p>
+          <p class="usage-empty">悬停书签点星号即可收藏</p>
         </div>
-        <div class="usage-card rounded-2xl border border-primary-100/60 bg-white/80 p-4 shadow-sm min-w-0" data-usage="recent">
-          <div class="mb-2 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-gray-700">🕘 最近访问</h3>
-            <button type="button" data-usage-clear="recent" class="text-[11px] text-gray-400 hover:text-primary-600">清空</button>
+        <div class="usage-card" data-usage="recent">
+          <div class="usage-card-head">
+            <h3>最近</h3>
+            <button type="button" data-usage-clear="recent">清空</button>
           </div>
           <div data-usage-list="recent" class="flex gap-2 text-xs overflow-x-auto pb-1 scrollbar-hide snap-x"></div>
-          <p class="usage-empty mt-1 text-[11px] text-gray-400">访问书签后这里会自动记录最近 12 条</p>
+          <p class="usage-empty">访问后会出现在这里</p>
         </div>
       </div>
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-        <h2 id="listHeading" class="text-xl font-semibold text-gray-800">${escapeHTML(heading)}</h2>
-        <div class="flex flex-wrap items-center gap-2">
-          <div class="layout-mode-bar hidden sm:flex rounded-full border border-primary-100 bg-white p-1 shadow-sm" aria-label="${th('layoutMode')}">
-            <button type="button" class="layout-toggle px-3 py-1.5 rounded-full text-sm text-gray-600" data-layout="grid" title="${th('gridTitle')}">${th('grid')}</button>
-            <button type="button" class="layout-toggle px-3 py-1.5 rounded-full text-sm text-gray-600" data-layout="list" title="${th('listTitle')}">${th('list')}</button>
-            <button type="button" class="layout-toggle px-3 py-1.5 rounded-full text-sm text-gray-600" data-layout="grouped" title="${th('groupedTitle')}">${th('grouped')}</button>
-            <button type="button" class="layout-toggle px-3 py-1.5 rounded-full text-sm text-gray-600" data-layout="masonry" title="${th('masonryTitle')}">${th('masonry')}</button>
-            <button type="button" class="layout-toggle px-3 py-1.5 rounded-full text-sm text-gray-600" data-layout="dashboard" title="${th('dashboardTitle')}">${th('dashboard')}</button>
+      <div class="nav-toolbar">
+        <h2 id="listHeading">${escapeHTML(heading)}</h2>
+        <div class="nav-toolbar-actions">
+          <div class="layout-mode-bar" aria-label="${th('layoutMode')}">
+            <button type="button" class="layout-toggle" data-layout="grouped" title="${th('groupedTitle')}">${th('grouped')}</button>
+            <button type="button" class="layout-toggle" data-layout="grid" title="${th('gridTitle')}">${th('grid')}</button>
+            <button type="button" class="layout-toggle" data-layout="list" title="${th('listTitle')}">${th('list')}</button>
+            <button type="button" class="layout-toggle" data-layout="dashboard" title="${th('dashboardTitle')}">${th('dashboard')}</button>
           </div>
           ${sortLinks}
-          ${canDragSort ? `<button id="saveOrderBtn" class="px-4 py-2 rounded-lg bg-accent-500 text-white disabled:opacity-50" disabled>${th('saveDragSort')}</button>` : ''}
+          ${canDragSort ? `<button id="saveOrderBtn" class="nav-save-order" disabled>${th('saveDragSort')}</button>` : ''}
         </div>
       </div>
-      <div id="sitesPanel" class="rounded-2xl border border-primary-100/60 bg-white/80 p-4 sm:p-6 shadow-sm">
-        <div id="layoutGridPanel" class="layout-panel active">
-          <div id="sitesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+      <div id="sitesPanel" class="nav-sites">
+        <div id="layoutGridPanel" class="layout-panel">
+          <div id="sitesGrid" class="site-tile-grid">
             ${gridContent}
           </div>
         </div>
-        <div id="layoutGroupedPanel" class="layout-panel">
+        <div id="layoutGroupedPanel" class="layout-panel active">
           ${privateCatalogLocked ? renderPrivateBookmarkUnlockBox(catalog, i18n) : groupedContent}
         </div>
         <div id="layoutDashboardPanel" class="layout-panel">
@@ -303,7 +274,7 @@ export async function renderHomePage(request, env, ctx) {
         </div>
       </div>
     </section>
-    <footer class="bg-white py-8 px-6 mt-12 border-t border-primary-100 text-center text-gray-500">© ${new Date().getFullYear()} ${escapeHTML(siteName)} | ${escapeHTML(footerText)}</footer>
+    <footer class="nav-footer">© ${new Date().getFullYear()} ${escapeHTML(siteName)} · ${escapeHTML(footerText)}</footer>
   </main>
 
   <div class="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-3 floating-actions">
@@ -399,11 +370,7 @@ export async function renderHomePage(request, env, ctx) {
         <p class="mt-2 text-[11px] text-gray-500">未配置模型时会自动使用本地书签检索结果回答。</p>
       </form>
     </div>
-    <div class="floating-action-stack" role="toolbar" aria-label="快捷操作">
-      <button type="button" id="floatingAiToggle" class="floating-action-btn" title="${th('aiAssistant')}" aria-expanded="false" aria-controls="floatingAiPanel"><span aria-hidden="true">🤖</span><span class="floating-label">AI</span></button>
-      <button type="button" id="floatingThemeToggle" class="floating-action-btn" title="${th('themeSettings')}" aria-expanded="false" aria-controls="floatingThemePanel"><span aria-hidden="true">🎨</span><span class="floating-label">外观</span></button>
-      <button type="button" id="backToTopBtn" class="floating-action-btn hidden" title="${th('backToTop')}" aria-label="${th('backToTop')}"><span aria-hidden="true">↑</span><span class="floating-label">顶部</span></button>
-    </div>
+    <button type="button" id="backToTopBtn" class="nav-backtop hidden" title="${th('backToTop')}" aria-label="${th('backToTop')}">↑</button>
   </div>
 
   ${submissionEnabled ? renderSubmitModal(datalistOptions) : ''}
@@ -592,8 +559,8 @@ document.addEventListener('DOMContentLoaded',function(){
   function getThemePref(key){return localStorage.getItem('nav:'+key)||themeDefaults[key]}
   function setThemePref(key,value){document.documentElement.dataset[key]=value;localStorage.setItem('nav:'+key,value);if(key==='accent'&&themeMeta)themeMeta.setAttribute('content',themeColors[value]||themeColors.blue);if(key==='layout')applyLayout(value);updateThemeControls()}
   function updateThemeToggle(){if(themeToggle)themeToggle.textContent=document.documentElement.classList.contains('dark')?'☀️':'🌙'}
-  function updateThemeControls(){document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset[btn.dataset.themeKey]===btn.dataset.themeValue)});document.querySelectorAll('.layout-toggle').forEach(function(btn){const active=document.documentElement.dataset.layout===btn.dataset.layout;btn.classList.toggle('bg-primary-600',active);btn.classList.toggle('text-white',active);btn.classList.toggle('text-gray-600',!active)})}
-  function applyLayout(layout){const normalized=['grid','list','grouped','masonry','dashboard'].includes(layout)?layout:'grid';document.documentElement.dataset.layout=normalized;document.getElementById('layoutGridPanel')?.classList.toggle('active',['grid','list','masonry'].includes(normalized));document.getElementById('layoutGroupedPanel')?.classList.toggle('active',normalized==='grouped');document.getElementById('layoutDashboardPanel')?.classList.toggle('active',normalized==='dashboard')}
+  function updateThemeControls(){document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset[btn.dataset.themeKey]===btn.dataset.themeValue)});document.querySelectorAll('.layout-toggle').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset.layout===btn.dataset.layout)})}
+  function applyLayout(layout){const normalized=['grid','list','grouped','masonry','dashboard'].includes(layout)?layout:'grouped';document.documentElement.dataset.layout=normalized;document.getElementById('layoutGridPanel')?.classList.toggle('active',['grid','list','masonry'].includes(normalized));document.getElementById('layoutGroupedPanel')?.classList.toggle('active',normalized==='grouped');document.getElementById('layoutDashboardPanel')?.classList.toggle('active',normalized==='dashboard')}
   Object.keys(themeDefaults).forEach(function(key){document.documentElement.dataset[key]=getThemePref(key)});
   if(themeMeta)themeMeta.setAttribute('content',themeColors[getThemePref('accent')]||themeColors.blue);
   applyLayout(getThemePref('layout'));
@@ -603,7 +570,7 @@ document.addEventListener('DOMContentLoaded',function(){
   document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.addEventListener('click',function(){setThemePref(this.dataset.themeKey,this.dataset.themeValue)})});
   document.querySelectorAll('.layout-toggle').forEach(function(btn){btn.addEventListener('click',function(){setThemePref('layout',this.dataset.layout)})});
   document.getElementById('resetThemePrefs')?.addEventListener('click',function(){Object.keys(themeDefaults).forEach(function(key){localStorage.removeItem('nav:'+key);document.documentElement.dataset[key]=themeDefaults[key]});localStorage.removeItem('nav:theme');document.documentElement.classList.remove('dark');if(themeMeta)themeMeta.setAttribute('content',themeColors.blue);updateThemeToggle();updateThemeControls()});
-  const themePresets={starry:{dark:false,accent:'blue',density:'comfortable',bg:'soft',view:'detail',layout:'grid'},minimal:{dark:false,accent:'blue',density:'compact',bg:'plain',view:'minimal',layout:'list'},dark:{dark:true,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grid'},glass:{dark:false,accent:'purple',density:'spacious',bg:'gradient',view:'detail',layout:'masonry'},dock:{dark:false,accent:'green',density:'compact',bg:'plain',view:'minimal',layout:'grid'},notion:{dark:false,accent:'amber',density:'comfortable',bg:'paper',view:'detail',layout:'list'}};
+  const themePresets={starry:{dark:false,accent:'blue',density:'comfortable',bg:'soft',view:'detail',layout:'grouped'},minimal:{dark:false,accent:'blue',density:'compact',bg:'plain',view:'minimal',layout:'list'},dark:{dark:true,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grouped'},glass:{dark:false,accent:'purple',density:'spacious',bg:'gradient',view:'detail',layout:'grid'},dock:{dark:false,accent:'green',density:'compact',bg:'plain',view:'minimal',layout:'grouped'},notion:{dark:false,accent:'amber',density:'comfortable',bg:'paper',view:'detail',layout:'grouped'}};
   document.querySelectorAll('.theme-preset-btn').forEach(function(btn){btn.addEventListener('click',function(){const preset=themePresets[this.dataset.preset];if(!preset)return;const isDark=preset.dark;document.documentElement.classList.toggle('dark',isDark);localStorage.setItem('nav:theme',isDark?'dark':'light');updateThemeToggle();Object.keys(themeDefaults).forEach(function(key){if(preset[key]!==undefined){setThemePref(key,preset[key])}});updateThemeControls()})});
   const bgImageUrlBox=document.getElementById('bgImageUrlBox');
   const bgImageUrlInput=document.getElementById('bgImageUrlInput');
@@ -794,7 +761,7 @@ document.addEventListener('DOMContentLoaded',function(){
     });
   }
 
-  document.querySelectorAll('.copy-btn').forEach(btn=>btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const url=this.dataset.url;if(!url)return;navigator.clipboard.writeText(url).then(()=>{this.textContent='已复制';setTimeout(()=>this.textContent='复制',1200)})}));
+  document.getElementById('sitesPanel')?.addEventListener('click',function(e){const btn=e.target.closest('.copy-btn,.search-copy-btn');if(!btn)return;e.preventDefault();e.stopPropagation();const url=btn.dataset.url;if(!url)return;const old=btn.textContent;navigator.clipboard.writeText(url).then(()=>{btn.textContent='已复制';setTimeout(()=>btn.textContent=old,1200)})});
 
   const search=document.getElementById('searchInput'), grid=document.getElementById('sitesGrid'), heading=document.getElementById('listHeading');
   const originalGridHTML=grid?.innerHTML||'', originalHeading=heading?.textContent||'';
@@ -804,20 +771,24 @@ document.addEventListener('DOMContentLoaded',function(){
   function getSearchHistory(){try{return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY)||'[]').filter(Boolean).slice(0,8)}catch{return[]}}
   function setSearchHistory(items){localStorage.setItem(SEARCH_HISTORY_KEY,JSON.stringify(items.slice(0,8)));renderSearchHistory()}
   function addSearchHistory(kw){const term=String(kw||'').trim();if(!term)return;const items=[term,...getSearchHistory().filter(item=>item!==term)].slice(0,8);setSearchHistory(items)}
-  function renderSearchHistory(){if(!searchHistoryBox||!searchHistoryList)return;const items=getSearchHistory();searchHistoryBox.classList.toggle('hidden',!items.length);searchHistoryList.innerHTML=items.map(function(item){return '<button type="button" class="search-history-chip rounded-full bg-primary-50 px-2.5 py-1 text-[11px] text-primary-700 hover:bg-primary-100" data-keyword="'+escapeText(item)+'">'+escapeText(item)+'</button>'}).join('')}
+  function renderSearchHistory(){if(!searchHistoryBox||!searchHistoryList)return;const items=getSearchHistory();searchHistoryList.innerHTML=items.map(function(item){return '<button type="button" class="search-history-chip" data-keyword="'+escapeText(item)+'">'+escapeText(item)+'</button>'}).join('')}
+  function showSearchHistory(){if(!searchHistoryBox)return;searchHistoryBox.classList.toggle('hidden',!getSearchHistory().length)}
+  function hideSearchHistory(){searchHistoryBox?.classList.add('hidden')}
   function escapeText(v){return String(v??'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
   function highlightText(v,kw){const text=escapeText(v);if(!kw)return text;const safe=kw.replace(/[-\\/\\\\^*+?.()|[\\]{}]/g,'\\\\$&');try{return text.replace(new RegExp('('+safe+')','ig'),'<mark class="rounded bg-amber-100 px-0.5 text-amber-900">$1</mark>')}catch{return text}}
   function normalizeClientUrl(v){const t=String(v||'').trim();return /^https?:\\/\\//i.test(t)?t:(/^[\\w.-]+\\.[\\w.-]+/.test(t)?'https://'+t:'')}
   function isClientUnhealthySite(site){const statusCode=Number(site?.last_status_code);return Boolean(site?.last_error)||(Number.isFinite(statusCode)&&(statusCode<200||statusCode>=400))}
   function renderClientHealthBadge(site){if(!site?.last_checked_at||!isClientUnhealthySite(site))return'';const details=[site.last_status_code?'HTTP '+site.last_status_code:'',site.last_error||'',site.last_checked_at?'最近检测：'+String(site.last_checked_at).slice(0,19):''].filter(Boolean).join(' · ');return '<span class="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600" title="'+escapeText(details||'最近检测异常')+'">可能失效</span>'}
-  function renderSearchResultCard(site,kw){const name=site.name||'未命名',cat=site.catelog||'未分类',desc=site.desc||'暂无描述',url=normalizeClientUrl(site.url),visit=url?'/go/'+encodeURIComponent(site.id):'#',tags=Array.isArray(site.tags)?site.tags:[],hits=Math.max(0,Number(site.hits)||0),logo=normalizeClientUrl(site.logo),initial=escapeText((name.trim().charAt(0)||'站').toUpperCase());return '<div class="site-card group bg-white border border-primary-100/60 rounded-xl shadow-sm overflow-hidden" data-id="'+escapeText(site.id)+'"><div class="p-5"><a href="'+escapeText(visit)+'" '+(url?'target="_blank" rel="noopener noreferrer"':'')+' class="block"><div class="flex items-start"><div class="flex-shrink-0 mr-4">'+(logo?'<img src="'+escapeText(logo)+'" alt="'+escapeText(name)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" class="w-10 h-10 rounded-lg object-cover bg-gray-100" onerror="this.style.display=\\'none\\';this.nextElementSibling.style.display=\\'flex\\'"><div class="w-10 h-10 rounded-lg bg-primary-600 items-center justify-center text-white font-semibold text-lg" style="display:none">'+initial+'</div>':'<div class="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center text-white font-semibold text-lg">'+initial+'</div>')+'</div><div class="flex-1 min-w-0"><h3 class="text-base font-medium text-gray-900 truncate">'+highlightText(name,kw)+'</h3><div class="mt-1 flex flex-wrap items-center gap-1.5"><span class="inline-flex items-center px-2 py-.5 rounded-full text-xs font-medium bg-secondary-100 text-primary-700">'+highlightText(cat,kw)+'</span>'+renderClientHealthBadge(site)+'</div></div></div><p class="mt-2 text-sm text-gray-600 line-clamp-2" title="'+escapeText(desc)+'">'+highlightText(desc,kw)+'</p></a>'+(tags.length?'<div class="mt-3 flex flex-wrap gap-1.5">'+tags.map(function(tag){return '<a href="?tag='+encodeURIComponent(tag)+'" class="rounded-full bg-primary-50 px-2 py-0.5 text-[11px] text-primary-600 hover:bg-primary-100">#'+highlightText(tag,kw)+'</a>'}).join('')+'</div>':'')+'<div class="mt-3 flex items-center justify-between gap-2"><span class="text-xs text-primary-600 truncate max-w-[140px]">'+highlightText(url||site.url||(i18n?.t?.('noLink') || '未提供链接'),kw)+'</span><div class="flex flex-shrink-0 items-center gap-2"><span class="text-[11px] text-gray-400">'+hits+' 次</span><button class="search-copy-btn px-2 py-1 rounded-full text-xs bg-accent-100 text-accent-700" data-url="'+escapeText(url)+'">${escapeHTML(i18n?.t?.('copy') || '复制')}</button></div></div></div></div>'}
+  function renderSearchResultCard(site,kw){const name=site.name||'未命名',cat=site.catelog||'未分类',desc=site.desc||'暂无描述',url=normalizeClientUrl(site.url),visit=url?'/go/'+encodeURIComponent(site.id):'#',tags=Array.isArray(site.tags)?site.tags:[],hits=Math.max(0,Number(site.hits)||0),logo=normalizeClientUrl(site.logo),initial=escapeText((name.trim().charAt(0)||'站').toUpperCase());const logoHtml=logo?'<img src="'+escapeText(logo)+'" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.display=\\'none\\';this.nextElementSibling.style.display=\\'flex\\'"><span class="site-card-fallback" style="display:none">'+initial+'</span>':'<span class="site-card-fallback">'+initial+'</span>';const tagsHtml=tags.length?'<div class="site-card-tags">'+tags.map(function(tag){return '<a href="?tag='+encodeURIComponent(tag)+'">#'+highlightText(tag,kw)+'</a>'}).join('')+'</div>':'';return '<div class="site-card" data-id="'+escapeText(site.id)+'" data-name="'+escapeText(name)+'" data-url="'+escapeText(url||site.url||'')+'" data-catalog="'+escapeText(cat)+'" data-tags="'+escapeText(tags.join(' '))+'"><a href="'+escapeText(visit)+'" '+(url?'target="_blank" rel="noopener noreferrer"':'')+' class="site-card-main"><span class="site-card-logo">'+logoHtml+'</span><span class="site-card-copy"><span class="site-card-title">'+highlightText(name,kw)+renderClientHealthBadge(site)+'</span><span class="site-card-desc" title="'+escapeText(desc)+'">'+highlightText(desc,kw)+'</span></span></a><div class="site-card-meta">'+tagsHtml+'<div class="site-card-foot"><span class="site-card-url">'+highlightText(url||site.url||'未提供链接',kw)+'</span><span class="site-card-hits">'+hits+' 次</span><button type="button" class="copy-btn search-copy-btn" data-url="'+escapeText(url)+'">复制</button></div></div></div>'}
   function renderSearchEmpty(kw){const safeKw=escapeText(kw);const tagHint='tag:'+safeKw;const catHint='cat:'+safeKw;return '<div class="col-span-full rounded-2xl border border-dashed border-primary-200 bg-primary-50/60 p-8 text-center"><div class="text-4xl">🔎</div><h3 class="mt-4 text-lg font-semibold text-primary-800">没有找到相关书签</h3><p class="mt-2 text-sm text-primary-600">可以尝试更短关键词、分类名、标签名、网站名称、域名或描述词。</p><div class="mt-4 flex flex-wrap justify-center gap-2 text-xs"><button type="button" class="search-suggest rounded-full bg-white px-3 py-1.5 text-primary-700 shadow-sm" data-keyword="'+safeKw.slice(0,2)+'">改搜前两个字</button><button type="button" class="search-suggest rounded-full bg-white px-3 py-1.5 text-primary-700 shadow-sm" data-keyword="'+escapeText(tagHint)+'">按标签语法</button><button type="button" class="search-suggest rounded-full bg-white px-3 py-1.5 text-primary-700 shadow-sm" data-keyword="'+escapeText(catHint)+'">按分类语法</button><button type="button" id="searchAskAiBtn" class="rounded-full bg-primary-600 px-3 py-1.5 text-white shadow-sm">让 AI 帮忙找</button>'+(document.getElementById('addSiteBtnSidebar')?'<button type="button" id="searchSubmitSiteBtn" class="rounded-full bg-accent-500 px-3 py-1.5 text-white shadow-sm">提交新站</button>':'')+'</div><p class="mt-3 text-xs text-gray-500">当前搜索：'+safeKw+'</p></div>'}
   renderSearchHistory();
+  search?.addEventListener('focus',showSearchHistory);
+  search?.addEventListener('blur',function(){setTimeout(hideSearchHistory,180)});
   searchHistoryList?.addEventListener('click',function(e){const btn=e.target.closest('.search-history-chip');if(!btn||!search)return;search.value=btn.dataset.keyword||'';search.dispatchEvent(new Event('input',{bubbles:true}));search.focus()});
-  clearSearchHistory?.addEventListener('click',function(){localStorage.removeItem(SEARCH_HISTORY_KEY);renderSearchHistory()});
+  clearSearchHistory?.addEventListener('click',function(){localStorage.removeItem(SEARCH_HISTORY_KEY);renderSearchHistory();hideSearchHistory()});
   grid?.addEventListener('click',function(e){const suggest=e.target.closest('.search-suggest');if(suggest&&search){e.preventDefault();e.stopPropagation();search.value=suggest.dataset.keyword||'';search.dispatchEvent(new Event('input',{bubbles:true}));search.focus();return}if(e.target.closest('#searchAskAiBtn')){e.preventDefault();e.stopPropagation();openFloatingAiPanel();if(aiChatInput){aiChatInput.value='帮我找：'+(search?.value||'');aiChatInput.focus()}return}if(e.target.closest('#searchSubmitSiteBtn')){e.preventDefault();e.stopPropagation();modal?.classList.remove('opacity-0','invisible')}});
   search?.addEventListener('input',function(){const kw=this.value.trim();clearTimeout(searchTimer);if(!kw){if(searchController)searchController.abort();grid.innerHTML=originalGridHTML;heading.textContent=originalHeading;applyLayout(getThemePref('layout'));updateThemeControls();return}applyLayout('grid');heading.textContent='搜索中 · '+kw;grid.innerHTML='<div class="col-span-full rounded-2xl border border-primary-100 bg-white p-8 text-center text-primary-600">正在全站搜索...</div>';searchTimer=setTimeout(function(){if(searchController)searchController.abort();searchController=new AbortController();fetch('/api/search?q='+encodeURIComponent(kw)+'&limit=80',{signal:searchController.signal}).then(r=>r.json()).then(d=>{const items=Array.isArray(d.data)?d.data:[];addSearchHistory(kw);heading.textContent='全站搜索 · '+kw+' · '+items.length+' 个结果';grid.innerHTML=items.length?items.map(item=>renderSearchResultCard(item,kw)).join(''):renderSearchEmpty(kw)}).catch(err=>{if(err.name==='AbortError')return;heading.textContent='搜索失败';grid.innerHTML='<div class="col-span-full rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-700">搜索失败，请稍后重试。</div>'})},260)});
-  grid?.addEventListener('click',function(e){const btn=e.target.closest('.search-copy-btn');if(!btn)return;e.preventDefault();e.stopPropagation();const url=btn.dataset.url;if(!url)return;navigator.clipboard.writeText(url).then(()=>{btn.textContent='已复制';setTimeout(()=>btn.textContent='复制',1200)})});
+
 
   const modal=document.getElementById('addSiteModal'), openBtn=document.getElementById('addSiteBtnSidebar');
   function closeModal(){modal?.classList.add('opacity-0','invisible')}

@@ -27,7 +27,7 @@ export function renderMiniSiteLink(site, meta = '', i18n = null) {
   </a>`;
 }
 
-export function renderGroupedSites(sites, isAdmin = false, i18n = null) {
+export function renderGroupedSites(sites, isAdmin = false, i18n = null, draggable = false) {
   if (!sites.length) {
     return `<div class="layout-section text-center text-sm text-gray-500">${escapeHTML(i18n?.t?.('noBookmarks') || '当前没有可展示的书签。')}</div>`;
   }
@@ -39,15 +39,15 @@ export function renderGroupedSites(sites, isAdmin = false, i18n = null) {
     groups.get(catalog).push(site);
   }
 
-  return `<div class="space-y-4">
+  return `<div class="site-groups">
     ${[...groups.entries()].map(([catalog, items]) => `
-      <section class="layout-section">
-        <div class="layout-section-title">
-          <span>${escapeHTML(catalog)}</span>
-          <span class="rounded-full bg-primary-50 px-2 py-0.5 text-xs text-primary-600">${escapeHTML(i18n?.t?.('itemCount', { count: items.length }) || `${items.length} 个`)}</span>
+      <section class="site-group">
+        <div class="site-group-head">
+          <h3>${escapeHTML(catalog)}</h3>
+          <span>${escapeHTML(i18n?.t?.('itemCount', { count: items.length }) || `${items.length} 个`)}</span>
         </div>
-        <div class="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
-          ${items.map((site) => renderMiniSiteLink(site, '', i18n)).join('')}
+        <div class="site-group-grid">
+          ${items.map((site) => renderSiteCard(site, draggable, isAdmin, i18n)).join('')}
         </div>
       </section>
     `).join('')}
@@ -101,22 +101,31 @@ export function renderSiteCard(site, draggable, isAdmin = false, i18n = null) {
   const hits = Math.max(0, Number(site.hits) || 0);
   const tags = Array.isArray(site.tags) ? site.tags : [];
   const tagLinks = tags.length
-    ? `<div class="mt-3 flex flex-wrap gap-1.5">${tags.map((tag) => `<a href="?tag=${encodeURIComponent(tag)}" class="rounded-full bg-primary-50 px-2 py-0.5 text-[11px] text-primary-600 hover:bg-primary-100" onclick="event.stopPropagation()">#${escapeHTML(tag)}</a>`).join('')}</div>`
+    ? `<div class="site-card-tags">${tags.map((tag) => `<a href="?tag=${encodeURIComponent(tag)}" onclick="event.stopPropagation()">#${escapeHTML(tag)}</a>`).join('')}</div>`
     : '';
   const adminActions = isAdmin
-    ? `<div class="mt-3 flex gap-2 border-t border-primary-50 pt-3"><button type="button" class="front-edit-btn flex-1 rounded-lg bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100" data-id="${site.id}">${escapeHTML(i18n?.t?.('edit') || '编辑')}</button><button type="button" class="front-delete-btn flex-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100" data-id="${site.id}" data-name="${escapeHTML(name)}">${escapeHTML(i18n?.t?.('delete') || '删除')}</button></div>`
+    ? `<div class="site-card-admin"><button type="button" class="front-edit-btn" data-id="${site.id}">${escapeHTML(i18n?.t?.('edit') || '编辑')}</button><button type="button" class="front-delete-btn" data-id="${site.id}" data-name="${escapeHTML(name)}">${escapeHTML(i18n?.t?.('delete') || '删除')}</button></div>`
     : '';
-  return `<div class="site-card group bg-white border border-primary-100/60 rounded-xl shadow-sm overflow-hidden ${draggable ? 'cursor-move' : ''}" data-id="${site.id}" data-name="${escapeHTML(name)}" data-url="${escapeHTML(normalizedUrl || site.url || '')}" data-catalog="${escapeHTML(catalog)}" data-tags="${escapeHTML(tags.join(' '))}" ${draggable ? 'draggable="true"' : ''}>
-    <div class="p-5">
-      <a href="${escapeHTML(visitUrl)}" ${normalizedUrl ? 'target="_blank" rel="noopener noreferrer"' : ''} class="block">
-        <div class="flex items-start"><div class="flex-shrink-0 mr-4">${logoUrl ? `<img src="${escapeHTML(logoUrl)}" alt="${escapeHTML(name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" class="w-10 h-10 rounded-lg object-cover bg-gray-100" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="w-10 h-10 rounded-lg bg-primary-600 items-center justify-center text-white font-semibold text-lg" style="display:none">${initial}</div>` : `<div class="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center text-white font-semibold text-lg">${initial}</div>`}</div>
-        <div class="flex-1 min-w-0"><h3 class="text-base font-medium text-gray-900 truncate">${escapeHTML(name)}</h3><div class="mt-1 flex flex-wrap items-center gap-1.5"><span class="inline-flex items-center px-2 py-.5 rounded-full text-xs font-medium bg-secondary-100 text-primary-700">${escapeHTML(catalog)}</span>${renderHealthBadge(site)}</div></div></div>
-        <p class="mt-2 text-sm text-gray-600 line-clamp-2" title="${safeDesc}">${safeDesc}</p>
-      </a>
+  const logo = logoUrl
+    ? `<img src="${escapeHTML(logoUrl)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="site-card-fallback" style="display:none">${initial}</span>`
+    : `<span class="site-card-fallback">${initial}</span>`;
+  return `<div class="site-card${draggable ? ' is-draggable' : ''}" data-id="${site.id}" data-name="${escapeHTML(name)}" data-url="${escapeHTML(normalizedUrl || site.url || '')}" data-catalog="${escapeHTML(catalog)}" data-tags="${escapeHTML(tags.join(' '))}" ${draggable ? 'draggable="true"' : ''}>
+    <a href="${escapeHTML(visitUrl)}" ${normalizedUrl ? 'target="_blank" rel="noopener noreferrer"' : ''} class="site-card-main">
+      <span class="site-card-logo">${logo}</span>
+      <span class="site-card-copy">
+        <span class="site-card-title">${escapeHTML(name)}${renderHealthBadge(site)}</span>
+        <span class="site-card-desc" title="${safeDesc}">${safeDesc}</span>
+      </span>
+    </a>
+    <div class="site-card-meta">
       ${tagLinks}
-      <div class="mt-3 flex items-center justify-between gap-2"><span class="text-xs text-primary-600 truncate max-w-[140px]">${escapeHTML(normalizedUrl || site.url || (i18n?.t?.('noLink') || '未提供链接'))}</span><div class="flex flex-shrink-0 items-center gap-2"><span class="text-[11px] text-gray-400" title="${escapeHTML(i18n?.t?.('visitCount') || '访问次数')}">${escapeHTML(i18n?.t?.('hits', { count: hits }) || `${hits} 次`)}</span><button class="copy-btn px-2 py-1 rounded-full text-xs bg-accent-100 text-accent-700" data-url="${escapeHTML(normalizedUrl)}">${escapeHTML(i18n?.t?.('copy') || '复制')}</button></div></div>
-      ${adminActions}
+      <div class="site-card-foot">
+        <span class="site-card-url">${escapeHTML(normalizedUrl || site.url || (i18n?.t?.('noLink') || '未提供链接'))}</span>
+        <span class="site-card-hits" title="${escapeHTML(i18n?.t?.('visitCount') || '访问次数')}">${escapeHTML(i18n?.t?.('hits', { count: hits }) || `${hits} 次`)}</span>
+        <button type="button" class="copy-btn" data-url="${escapeHTML(normalizedUrl)}">${escapeHTML(i18n?.t?.('copy') || '复制')}</button>
+      </div>
     </div>
+    ${adminActions}
   </div>`;
 }
 
