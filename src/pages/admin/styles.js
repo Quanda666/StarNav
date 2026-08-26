@@ -293,23 +293,70 @@ body{padding:0!important}
 .analytics-panel{border:0!important;box-shadow:none!important;background:transparent!important;padding:4px 0 12px!important}
 .analytics-panel-title{margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--admin-line)}
 .tab-wrapper{gap:16px}
+.mobile-nav-toggle,.mobile-nav-mask{display:none}
 @media(max-width:1100px){
   .settings-stack,.token-form-grid{grid-template-columns:1fr}
 }
 @media(max-width:980px){
-  .sidebar-group{flex-direction:row;align-items:center;flex-wrap:nowrap;border:0;margin:0;padding:0}
-  .sidebar-group-label{display:none}
-  .tab-wrapper.sidebar-collapsed{grid-template-columns:minmax(0,1fr)!important;padding-left:0}
-  .tab-wrapper.sidebar-collapsed .tab-buttons{position:relative;transform:none;width:auto;pointer-events:auto}
-  .tab-wrapper.sidebar-collapsed .sidebar-clip{left:176px}
-}
-@media(max-width:640px){
+  .container{padding:10px 12px 88px!important}
+  .admin-header{display:grid!important;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px}
+  .admin-header h1{font-size:1rem;text-align:center}
+  .admin-header .logout-btn{padding:7px 10px;font-size:.82rem}
+  .mobile-nav-toggle{display:inline-flex;align-items:center;justify-content:center;margin:0;padding:8px 12px;border-radius:999px;background:#fffdf8;color:var(--admin-text);border:1px solid var(--admin-line);font-size:.82rem;font-weight:700}
+  .mobile-nav-mask{position:fixed;inset:0;z-index:35;background:rgba(36,33,29,.38)}
+  .mobile-nav-mask[hidden]{display:none!important}
+  body.mobile-nav-open .mobile-nav-mask{display:block}
+  body.mobile-nav-open{overflow:hidden}
+  .sidebar-clip{display:none!important}
+  .tab-wrapper{display:block!important;gap:0}
+  .tab-wrapper.sidebar-collapsed{padding-left:0!important;overflow:visible!important}
+  .tab-buttons,.tab-wrapper.sidebar-collapsed .tab-buttons{position:fixed!important;left:0;top:0;bottom:0;width:min(280px,86vw)!important;z-index:40;margin:0;padding:18px 12px 24px!important;border-radius:0 18px 18px 0!important;transform:translateX(-110%)!important;overflow-y:auto!important;overflow-x:hidden!important;pointer-events:auto!important;box-shadow:18px 0 40px rgba(71,52,35,.18)!important;background:#fffaf3!important}
+  body.mobile-nav-open .tab-buttons,body.mobile-nav-open .tab-wrapper.sidebar-collapsed .tab-buttons{transform:translateX(0)!important}
+  .sidebar-group{flex-direction:column!important;align-items:stretch!important;flex-wrap:nowrap!important;border-top:1px solid var(--admin-line);margin-top:8px;padding-top:8px}
+  .sidebar-group:first-of-type{border-top:0;margin-top:0;padding-top:0}
+  .sidebar-group-label{display:block!important}
+  .tab-button{width:100%}
+  .tab-wrapper.sidebar-collapsed .tab-text,.tab-wrapper.sidebar-collapsed .nav-badge{display:inline-block!important;opacity:1!important;position:static!important;transform:none!important}
+  .tab-content{padding:12px!important}
+  .page-head{display:block}
+  .page-head h2{font-size:1.05rem}
+  .config-list-toolbar{display:grid;grid-template-columns:1fr;gap:8px}
+  .config-list-toolbar select,.config-list-toolbar #openAddSiteBtn,.config-list-toolbar #searchInput{width:100%;min-width:0}
+  #configDensityMode{display:none}
+  .table-wrapper{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+  #config .table-wrapper,#pending .table-wrapper{overflow:visible!important}
+  #configTable,#pendingTable,#configTable thead,#pendingTable thead,#configTable tbody,#pendingTable tbody,#configTable tr,#pendingTable tr,#configTable td,#pendingTable td{display:block;width:100%;box-sizing:border-box}
+  #configTable thead,#pendingTable thead{display:none}
+  #configTable tr,#pendingTable tr{margin:0 0 12px;padding:12px;border:1px solid var(--admin-line);border-radius:16px;background:#fffdf8}
+  #configTable td,#pendingTable td{padding:6px 0;border:0;min-width:0!important}
+  #configTable td:nth-child(1){display:flex;justify-content:flex-end;padding-top:0}
+  #configTable td:nth-child(3)::before,#configTable td:nth-child(4)::before{display:block;margin-bottom:4px;color:var(--admin-muted);font-size:.72rem;font-weight:700}
+  #configTable td:nth-child(3)::before{content:'分类'}
+  #configTable td:nth-child(4)::before{content:'标签'}
+  #configTable .actions,#pendingTable .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  #configTable .actions button,#pendingTable .actions button{width:100%;margin:0;padding:8px 6px}
+  #pendingTable td:nth-child(1){color:var(--admin-muted);font-size:.78rem}
+  #pendingTable td:nth-child(2){font-weight:700}
+  #pendingTable td:nth-child(3)::before,#pendingTable td:nth-child(5)::before,#pendingTable td:nth-child(6)::before,#pendingTable td:nth-child(7)::before{display:block;margin-bottom:4px;color:var(--admin-muted);font-size:.72rem;font-weight:700}
+  #pendingTable td:nth-child(3)::before{content:'网址'}
+  #pendingTable td:nth-child(5)::before{content:'描述'}
+  #pendingTable td:nth-child(6)::before{content:'分类'}
+  #pendingTable td:nth-child(7)::before{content:'标签'}
+  #pendingTable .actions{grid-template-columns:1fr 1fr}
+  .analytics-summary,.analytics-grid,.analytics-ops-strip,.quality-grid{grid-template-columns:1fr!important}
+  .analytics-card{min-width:0}
+  #categoryTable,#tagTable,#tagReviewTable,#apiTokenTable,#backupTable,#operationLogTable,#spaceTable{min-width:0!important;width:100%}
+  #categoryTable th,#categoryTable td,#tagTable th,#tagTable td,#operationLogTable th,#operationLogTable td,#apiTokenTable th,#apiTokenTable td,#backupTable th,#backupTable td{white-space:normal}
   .add-site-grid{grid-template-columns:1fr}
   .add-site-span-2{grid-column:auto}
-  .config-list-toolbar{display:grid;grid-template-columns:1fr}
-  .config-list-toolbar #openAddSiteBtn{width:100%}
-  .page-head,.settings-card-head{display:block}
+  .add-site-modal{padding:12px;align-items:flex-end}
+  .add-site-modal .add-site-modal-content{width:100%;max-width:none;max-height:92vh;overflow:auto}
+  .settings-card-head{display:block}
   .settings-card-head small{display:block;margin-top:4px}
-  .backup-io-grid{grid-template-columns:1fr}
+  .backup-io-grid,.webdav-form-grid{grid-template-columns:1fr}
+  .private-password-row{display:grid;grid-template-columns:1fr;gap:8px}
+  .ai-actions{display:grid;grid-template-columns:1fr;gap:8px}
+  .ai-actions button{width:100%}
+  .pagination{justify-content:space-between}
 }
 `;
