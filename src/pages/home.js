@@ -130,7 +130,9 @@ export async function renderHomePage(request, env, ctx) {
   const tagLabel = tagFilter ? `#${tagFilter}` : '';
   const heading = privateCatalogLocked
     ? `${PRIVATE_BOOKMARK_CATEGORY} · ${t('locked')}`
-    : [tagLabel, sortLabel].filter(Boolean).join(' · ');
+    : (catalogExists
+      ? `${catalog}${tagLabel ? ` · ${tagLabel}` : ''}${sortLabel ? ` · ${sortLabel}` : ''} · ${t('sitesCount', { count: currentSites.length })}`
+      : `${tagLabel || sortLabel || '全部收藏'}${tagLabel && sortLabel ? ` · ${sortLabel}` : ''} · ${t('sitesCount', { count: currentSites.length })}`);
   const sortLinks = renderSortLinks({ catalog, tag: tagFilter, sortMode, space: currentSpaceSlug, disabled: privateCatalogLocked, i18n });
   const siteIndex = visibleSites.map((site) => ({
     id: site.id,
@@ -145,7 +147,7 @@ export async function renderHomePage(request, env, ctx) {
     : currentSites.map((site) => renderSiteCard(site, canDragSort, adminAuthed, i18n)).join('');
   const groupedContent = privateCatalogLocked
     ? ''
-    : renderGroupedSites(currentSites, adminAuthed, i18n, canDragSort, { hideHead: Boolean(catalog), flat: !catalog });
+    : renderGroupedSites(currentSites, adminAuthed, i18n, canDragSort, { hideHead: Boolean(catalog) });
   const dashboardContent = privateCatalogLocked
     ? ''
     : renderDashboardSites(currentSites, adminAuthed, i18n);
@@ -196,10 +198,10 @@ export async function renderHomePage(request, env, ctx) {
       <div class="nav-more">
         <button type="button" id="navMoreToggle" class="nav-icon-btn" title="更多" aria-expanded="false" aria-controls="navMoreMenu">⋯</button>
         <div id="navMoreMenu" class="nav-more-menu hidden">
-          <button type="button" id="floatingThemeToggle" class="nav-more-item" title="${th('themeSettings')}" aria-expanded="false" aria-controls="floatingThemePanel">外观</button>
-          ${blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer" class="nav-more-item">${escapeHTML(blogLabel)}</a>` : ''}
-          <a href="/admin" target="_blank" class="nav-more-item">${th('adminPanel')}${adminAuthed ? '<span class="nav-admin-dot" title="管理员已认证"></span>' : ''}</a>
-          ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/" class="nav-more-form"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-more-item">${th('exitPrivate')}</button></form>` : ''}
+          <button type="button" id="floatingThemeToggle" class="nav-more-item" title="${th('themeSettings')}" aria-expanded="false" aria-controls="floatingThemePanel"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>${th('themeSettings')}</button>
+          ${blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer" class="nav-more-item"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span>${escapeHTML(blogLabel)}</a>` : ''}
+          <a href="/admin" target="_blank" class="nav-more-item"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.7.9 1.2 1.6 1.3H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>${th('adminPanel')}${adminAuthed ? '<span class="nav-admin-dot" title="管理员已认证"></span>' : ''}</a>
+          ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/" class="nav-more-form"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-more-item"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></span>${th('exitPrivate')}</button></form>` : ''}
         </div>
         <div id="floatingThemePanel" class="theme-panel floating-theme-panel hidden w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-primary-100/60 bg-white/95 p-4 shadow-2xl">
           <div class="mb-3 flex items-center justify-between">
@@ -309,7 +311,7 @@ export async function renderHomePage(request, env, ctx) {
         </div>
       </div>
       <div class="nav-toolbar">
-        <h2 id="listHeading"${heading ? '' : ' class="hidden"'}>${escapeHTML(heading)}</h2>
+        <h2 id="listHeading">${escapeHTML(heading)}</h2>
         <div class="nav-toolbar-actions">
           <div class="layout-mode-bar" aria-label="${th('layoutMode')}">
             <button type="button" class="layout-toggle" data-layout="grid" title="${th('gridTitle')}">${th('grid')}</button>

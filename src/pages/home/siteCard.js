@@ -39,17 +39,7 @@ export function renderGroupedSites(sites, isAdmin = false, i18n = null, draggabl
     groups.get(catalog).push(site);
   }
 
-  if (options.flat) {
-    return `<div class="site-groups">
-      <section class="site-group">
-        <div class="site-group-grid">
-          ${sites.map((site) => renderSiteCard(site, draggable, isAdmin, i18n)).join('')}
-        </div>
-      </section>
-    </div>`;
-  }
-
-  const hideHead = options.hideHead || groups.size <= 1;
+  const hideHead = options.hideHead;
   return `<div class="site-groups">
     ${[...groups.entries()].map(([catalog, items]) => `
       <section class="site-group">
