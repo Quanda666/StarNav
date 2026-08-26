@@ -100,7 +100,6 @@ export async function renderHomePage(request, env, ctx) {
   const pageBackgroundImage = sanitizeImageUrl(systemSettings.backgroundImage) || '';
   const defaultLayout = ['grid', 'list', 'grouped', 'masonry', 'dashboard'].includes(systemSettings.defaultLayout) ? systemSettings.defaultLayout : 'grouped';
   const defaultAccent = ['blue', 'green', 'purple', 'rose', 'amber'].includes(systemSettings.defaultAccent) ? systemSettings.defaultAccent : 'blue';
-  const heroVisible = systemSettings.heroVisible !== 'false';
   const blogVisible = systemSettings.blogVisible !== 'false';
   const blogUrl = sanitizeUrl(systemSettings.blogUrl) || 'https://blog.110995.xyz/';
   const blogLabel = systemSettings.blogLabel || th('visitBlog');
@@ -193,7 +192,7 @@ export async function renderHomePage(request, env, ctx) {
       </div>
     </div>
     <div class="nav-top-actions">
-      ${submissionEnabled ? `<button type="button" id="addSiteBtnSidebar" class="nav-add-btn">${th('addBookmark')}</button>` : ''}
+      ${submissionEnabled ? `<button type="button" id="addSiteBtnSidebar" class="nav-add-btn" title="${th('addBookmark')}" aria-label="${th('addBookmark')}">+</button>` : ''}
       <button type="button" id="themeToggle" class="nav-icon-btn" title="切换深色/浅色" aria-label="切换深色/浅色模式">🌙</button>
       <button type="button" id="floatingAiToggle" class="nav-icon-btn" title="${th('aiAssistant')}" aria-expanded="false" aria-controls="floatingAiPanel">AI</button>
       <button type="button" id="floatingThemeToggle" class="nav-icon-btn" title="${th('themeSettings')}" aria-expanded="false" aria-controls="floatingThemePanel">外观</button>
@@ -202,22 +201,22 @@ export async function renderHomePage(request, env, ctx) {
   <div id="mobileOverlay" class="mobile-overlay"></div>
   <aside id="sidebar" class="nav-sidebar mobile-sidebar">
     <div class="nav-sidebar-head">
-      <div>
-        <p class="nav-kicker">分类</p>
-        ${heroVisible ? `<p class="nav-side-note">${escapeHTML(siteSubtitle)}</p>` : ''}
-      </div>
-      <div class="flex items-center gap-1">
-        <button id="collapseSidebar" class="nav-icon-btn nav-collapse-sidebar" title="收起分类">‹</button>
-        <button id="closeSidebar" class="nav-icon-btn nav-close-sidebar" aria-label="关闭分类">×</button>
-      </div>
+      <button id="collapseSidebar" class="nav-icon-btn nav-collapse-sidebar" title="收起分类">‹</button>
+      <button id="closeSidebar" class="nav-icon-btn nav-close-sidebar" aria-label="关闭分类">×</button>
     </div>
     ${spaceSwitcher}
-    <input type="text" id="categoryFilterInput" placeholder="过滤分类" class="nav-cat-filter">
     <div class="nav-cat-list" id="categoryList">
       <a href="${escapeHTML(allLinkHref)}" class="category-all-button category-link">${th('all')}</a>
       ${categoryLinks}
     </div>
-    ${visitorPrivateAccess && !adminAuthed ? `<div class="nav-sidebar-foot"><form method="post" action="/"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-side-link">${th('exitPrivate')}</button></form></div>` : ''}
+    <div class="nav-sidebar-foot">
+      ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-side-link">${th('exitPrivate')}</button></form>` : ''}
+      ${blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer" class="nav-side-link">${escapeHTML(blogLabel)}</a>` : ''}
+      <a href="/admin" target="_blank" class="nav-side-link">
+        <span>${th('adminPanel')}</span>
+        ${adminAuthed ? `<span class="nav-admin-dot" title="管理员已认证"></span>` : ''}
+      </a>
+    </div>
   </aside>
 
   <main class="nav-main main-content">
@@ -267,13 +266,7 @@ export async function renderHomePage(request, env, ctx) {
         </div>
       </div>
     </section>
-    <footer class="nav-footer">
-      <span>© ${new Date().getFullYear()} ${escapeHTML(siteName)} · ${escapeHTML(footerText)}</span>
-      <span class="nav-footer-links">
-        ${blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(blogLabel)}</a>` : ''}
-        <a href="/admin" target="_blank">${th('adminPanel')}${adminAuthed ? ' · 已登录' : ''}</a>
-      </span>
-    </footer>
+    <footer class="nav-footer">© ${new Date().getFullYear()} ${escapeHTML(siteName)} · ${escapeHTML(footerText)}</footer>
   </main>
 
   <div class="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-3 floating-actions">
@@ -713,55 +706,6 @@ document.addEventListener('DOMContentLoaded',function(){
     });
     window.addEventListener('beforeunload', clearPending);
   })();
-
-  const categoryFilterInput = document.getElementById('categoryFilterInput');
-  if (categoryFilterInput) {
-    categoryFilterInput.addEventListener('input', function() {
-      const text = this.value.trim().toLowerCase();
-      const nodes = document.querySelectorAll('#categoryList .category-tree-node');
-      if (!text) {
-        nodes.forEach(node => {
-          node.style.display = '';
-          const toggleBtn = node.querySelector('.category-toggle');
-          const targetId = toggleBtn?.dataset.target;
-          if (targetId) {
-            const target = document.getElementById(targetId);
-            if (target) {
-              const shouldBeExpanded = expandedCats.includes(targetId);
-              target.classList.toggle('hidden', !shouldBeExpanded);
-              toggleBtn.setAttribute('aria-expanded', String(shouldBeExpanded));
-              const icon = toggleBtn.querySelector('[data-role="toggle-icon"]');
-              if (icon) icon.textContent = shouldBeExpanded ? '－' : '＋';
-            }
-          }
-        });
-        return;
-      }
-      
-      nodes.forEach(node => node.style.display = 'none');
-      document.querySelectorAll('#categoryList a.category-link').forEach(link => {
-        if (link.classList.contains('category-all-button')) return;
-        const catName = (link.dataset.categoryName || '').toLowerCase();
-        if (catName.includes(text)) {
-          let current = link.closest('.category-tree-node');
-          while (current && current.id !== 'categoryList') {
-            current.style.display = '';
-            const parentList = current.parentElement;
-            if (parentList && parentList.id && parentList.id.startsWith('category-children-')) {
-              parentList.classList.remove('hidden');
-              const toggleBtn = document.querySelector('.category-toggle[data-target="'+parentList.id+'"]');
-              if (toggleBtn) {
-                toggleBtn.setAttribute('aria-expanded', 'true');
-                const icon = toggleBtn.querySelector('[data-role="toggle-icon"]');
-                if (icon) icon.textContent = '－';
-              }
-            }
-            current = parentList ? parentList.closest('.category-tree-node') : null;
-          }
-        }
-      });
-    });
-  }
 
   document.getElementById('sitesPanel')?.addEventListener('click',function(e){const btn=e.target.closest('.copy-btn,.search-copy-btn');if(!btn)return;e.preventDefault();e.stopPropagation();const url=btn.dataset.url;if(!url)return;const old=btn.textContent;navigator.clipboard.writeText(url).then(()=>{btn.textContent='已复制';setTimeout(()=>btn.textContent=old,1200)})});
 
