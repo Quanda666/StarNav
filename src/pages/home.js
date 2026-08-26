@@ -203,75 +203,98 @@ export async function renderHomePage(request, env, ctx) {
           <a href="/admin" target="_blank" class="nav-more-item"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.7.9 1.2 1.6 1.3H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>${th('adminPanel')}${adminAuthed ? '<span class="nav-admin-dot" title="管理员已认证"></span>' : ''}</a>
           ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/" class="nav-more-form"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-more-item"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></span>${th('exitPrivate')}</button></form>` : ''}
         </div>
-        <div id="floatingThemePanel" class="theme-panel floating-theme-panel hidden w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-primary-100/60 bg-white/95 p-4 shadow-2xl">
-          <div class="mb-3 flex items-center justify-between">
+        <div id="floatingThemePanel" class="theme-studio floating-theme-panel hidden" role="dialog" aria-labelledby="themeStudioTitle">
+          <div class="theme-studio-head">
             <div>
-              <h3 class="text-sm font-semibold text-gray-900">${th('themeSettings')}</h3>
-              <p class="text-xs text-gray-500">${th('themeDesc')}</p>
+              <h3 id="themeStudioTitle">${th('themeSettings')}</h3>
+              <p>选一套气质，再微调颜色和排版</p>
             </div>
-            <button type="button" id="resetThemePrefs" class="text-xs text-primary-600 hover:underline">${th('reset')}</button>
+            <button type="button" id="resetThemePrefs" class="theme-studio-reset">${th('reset')}</button>
           </div>
-          <div class="space-y-3 text-xs text-gray-600">
-            <div>
-              <div class="mb-1.5 font-medium">预设主题</div>
-              <div class="grid grid-cols-3 gap-1.5" id="themePresetGroup">
-                <button type="button" class="theme-preset-btn theme-segment" data-preset="paper" title="纸感：暖底、分组磁贴">纸感</button>
-                <button type="button" class="theme-preset-btn theme-segment" data-preset="starry" title="星空：夜空底、玻璃卡">星空</button>
-                <button type="button" class="theme-preset-btn theme-segment" data-preset="minimal" title="极简：白底细线、列表">极简</button>
-                <button type="button" class="theme-preset-btn theme-segment" data-preset="dark" title="暗黑：炭黑、高对比">暗黑</button>
-                <button type="button" class="theme-preset-btn theme-segment" data-preset="glass" title="玻璃：雾面、宽松">玻璃</button>
-                <button type="button" class="theme-preset-btn theme-segment" data-preset="dock" title="Dock：大图标宫格">Dock</button>
-                <button type="button" class="theme-preset-btn theme-segment" data-preset="notion" title="Notion：纸纹、左边线">Notion</button>
+          <div class="theme-studio-body">
+            <section class="theme-studio-block">
+              <div class="theme-studio-label">皮肤</div>
+              <div class="theme-skin-grid" id="themePresetGroup">
+                <button type="button" class="theme-preset-btn theme-skin" data-preset="paper" title="纸感：暖底、圆角磁贴">
+                  <span class="theme-skin-preview tsp-paper" aria-hidden="true"><span class="tsp-bar"></span><span class="tsp-body"><span class="tsp-side"></span><span class="tsp-cards"><i></i><i></i><i></i></span></span></span>
+                  <span class="theme-skin-name">纸感</span>
+                </button>
+                <button type="button" class="theme-preset-btn theme-skin" data-preset="starry" title="星空：夜空底、玻璃卡">
+                  <span class="theme-skin-preview tsp-starry" aria-hidden="true"><span class="tsp-bar"></span><span class="tsp-body"><span class="tsp-side"></span><span class="tsp-cards"><i></i><i></i><i></i></span></span></span>
+                  <span class="theme-skin-name">星空</span>
+                </button>
+                <button type="button" class="theme-preset-btn theme-skin" data-preset="minimal" title="极简：白底细线、列表">
+                  <span class="theme-skin-preview tsp-minimal" aria-hidden="true"><span class="tsp-bar"></span><span class="tsp-body"><span class="tsp-side"></span><span class="tsp-cards tsp-list"><i></i><i></i><i></i></span></span></span>
+                  <span class="theme-skin-name">极简</span>
+                </button>
+                <button type="button" class="theme-preset-btn theme-skin" data-preset="dark" title="暗黑：炭黑、高对比">
+                  <span class="theme-skin-preview tsp-dark" aria-hidden="true"><span class="tsp-bar"></span><span class="tsp-body"><span class="tsp-side"></span><span class="tsp-cards"><i></i><i></i><i></i></span></span></span>
+                  <span class="theme-skin-name">暗黑</span>
+                </button>
+                <button type="button" class="theme-preset-btn theme-skin" data-preset="glass" title="玻璃：雾面、宽松">
+                  <span class="theme-skin-preview tsp-glass" aria-hidden="true"><span class="tsp-bar"></span><span class="tsp-body"><span class="tsp-side"></span><span class="tsp-cards"><i></i><i></i><i></i></span></span></span>
+                  <span class="theme-skin-name">玻璃</span>
+                </button>
+                <button type="button" class="theme-preset-btn theme-skin" data-preset="dock" title="Dock：大图标宫格">
+                  <span class="theme-skin-preview tsp-dock" aria-hidden="true"><span class="tsp-bar"></span><span class="tsp-body"><span class="tsp-side"></span><span class="tsp-cards tsp-icons"><i></i><i></i><i></i><i></i></span></span></span>
+                  <span class="theme-skin-name">Dock</span>
+                </button>
+                <button type="button" class="theme-preset-btn theme-skin" data-preset="notion" title="Notion：纸纹、左边线">
+                  <span class="theme-skin-preview tsp-notion" aria-hidden="true"><span class="tsp-bar"></span><span class="tsp-body"><span class="tsp-side"></span><span class="tsp-cards tsp-list"><i></i><i></i><i></i></span></span></span>
+                  <span class="theme-skin-name">Notion</span>
+                </button>
               </div>
-            </div>
-            <div>
-              <div class="mb-1.5 font-medium">${th('themeColor')}</div>
-              <div class="grid grid-cols-5 gap-1.5" data-theme-group="accent">
-                <button type="button" class="theme-choice h-7 rounded-full bg-[#254267] ring-offset-2" data-theme-key="accent" data-theme-value="blue" title="星空蓝"></button>
-                <button type="button" class="theme-choice h-7 rounded-full bg-[#3c976d] ring-offset-2" data-theme-key="accent" data-theme-value="green" title="森林绿"></button>
-                <button type="button" class="theme-choice h-7 rounded-full bg-[#8b5cf6] ring-offset-2" data-theme-key="accent" data-theme-value="purple" title="暮光紫"></button>
-                <button type="button" class="theme-choice h-7 rounded-full bg-[#e0527d] ring-offset-2" data-theme-key="accent" data-theme-value="rose" title="蔷薇红"></button>
-                <button type="button" class="theme-choice h-7 rounded-full bg-[#d97706] ring-offset-2" data-theme-key="accent" data-theme-value="amber" title="琥珀金"></button>
+            </section>
+            <section class="theme-studio-block">
+              <div class="theme-studio-label">${th('themeColor')}</div>
+              <div class="theme-swatch-row" data-theme-group="accent">
+                <button type="button" class="theme-choice theme-swatch" style="--swatch:#254267" data-theme-key="accent" data-theme-value="blue" title="星空蓝"></button>
+                <button type="button" class="theme-choice theme-swatch" style="--swatch:#3c976d" data-theme-key="accent" data-theme-value="green" title="森林绿"></button>
+                <button type="button" class="theme-choice theme-swatch" style="--swatch:#8b5cf6" data-theme-key="accent" data-theme-value="purple" title="暮光紫"></button>
+                <button type="button" class="theme-choice theme-swatch" style="--swatch:#e0527d" data-theme-key="accent" data-theme-value="rose" title="蔷薇红"></button>
+                <button type="button" class="theme-choice theme-swatch" style="--swatch:#d97706" data-theme-key="accent" data-theme-value="amber" title="琥珀金"></button>
               </div>
-            </div>
-            <div>
-              <div class="mb-1.5 font-medium">${th('density')}</div>
-              <div class="grid grid-cols-3 gap-1.5" data-theme-group="density">
-                <button type="button" class="theme-segment" data-theme-key="density" data-theme-value="compact">${th('compact')}</button>
-                <button type="button" class="theme-segment" data-theme-key="density" data-theme-value="comfortable">${th('comfortable')}</button>
-                <button type="button" class="theme-segment" data-theme-key="density" data-theme-value="spacious">${th('spacious')}</button>
+            </section>
+            <section class="theme-studio-block">
+              <div class="theme-studio-row">
+                <div class="theme-studio-label">${th('density')}</div>
+                <div class="theme-chip-row" data-theme-group="density">
+                  <button type="button" class="theme-chip" data-theme-key="density" data-theme-value="compact">${th('compact')}</button>
+                  <button type="button" class="theme-chip" data-theme-key="density" data-theme-value="comfortable">${th('comfortable')}</button>
+                  <button type="button" class="theme-chip" data-theme-key="density" data-theme-value="spacious">${th('spacious')}</button>
+                </div>
               </div>
-            </div>
-            <div>
-              <div class="mb-1.5 font-medium">${th('bgStyle')}</div>
-              <div class="grid grid-cols-4 gap-1.5" data-theme-group="bg">
-                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="plain">${th('plain')}</button>
-                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="soft">${th('soft')}</button>
-                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="gradient">${th('gradient')}</button>
-                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="paper">${th('paper')}</button>
-                <button type="button" class="theme-segment" data-theme-key="bg" data-theme-value="image">图片</button>
+              <div class="theme-studio-row">
+                <div class="theme-studio-label">${th('bgStyle')}</div>
+                <div class="theme-chip-row" data-theme-group="bg">
+                  <button type="button" class="theme-chip" data-theme-key="bg" data-theme-value="plain">${th('plain')}</button>
+                  <button type="button" class="theme-chip" data-theme-key="bg" data-theme-value="soft">${th('soft')}</button>
+                  <button type="button" class="theme-chip" data-theme-key="bg" data-theme-value="gradient">${th('gradient')}</button>
+                  <button type="button" class="theme-chip" data-theme-key="bg" data-theme-value="paper">${th('paper')}</button>
+                  <button type="button" class="theme-chip" data-theme-key="bg" data-theme-value="image">图片</button>
+                </div>
               </div>
-              <div id="bgImageUrlBox" class="mt-1.5 hidden">
-                <input id="bgImageUrlInput" type="url" placeholder="背景图片 URL" class="w-full rounded-lg border border-primary-100/60 bg-white px-2.5 py-1.5 text-[11px] outline-none focus:border-primary-300">
+              <div id="bgImageUrlBox" class="theme-bg-url hidden">
+                <input id="bgImageUrlInput" type="url" placeholder="粘贴背景图片 URL">
               </div>
-            </div>
-            <div>
-              <div class="mb-1.5 font-medium">${th('viewMode')}</div>
-              <div class="grid grid-cols-2 gap-1.5" data-theme-group="view">
-                <button type="button" class="theme-segment" data-theme-key="view" data-theme-value="detail">${th('detail')}</button>
-                <button type="button" class="theme-segment" data-theme-key="view" data-theme-value="minimal">${th('minimal')}</button>
+              <div class="theme-studio-row">
+                <div class="theme-studio-label">${th('viewMode')}</div>
+                <div class="theme-chip-row" data-theme-group="view">
+                  <button type="button" class="theme-chip" data-theme-key="view" data-theme-value="detail">${th('detail')}</button>
+                  <button type="button" class="theme-chip" data-theme-key="view" data-theme-value="minimal">${th('minimal')}</button>
+                </div>
               </div>
-            </div>
-            <div>
-              <div class="mb-1.5 font-medium">${th('homeLayout')}</div>
-              <div class="grid grid-cols-3 gap-1.5" data-theme-group="layout">
-                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="grid">卡片</button>
-                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="list">列表</button>
-                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="grouped">分组</button>
-                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="masonry">瀑布</button>
-                <button type="button" class="theme-segment" data-theme-key="layout" data-theme-value="dashboard">概览</button>
+              <div class="theme-studio-row">
+                <div class="theme-studio-label">${th('homeLayout')}</div>
+                <div class="theme-chip-row" data-theme-group="layout">
+                  <button type="button" class="theme-chip" data-theme-key="layout" data-theme-value="grid">卡片</button>
+                  <button type="button" class="theme-chip" data-theme-key="layout" data-theme-value="list">列表</button>
+                  <button type="button" class="theme-chip" data-theme-key="layout" data-theme-value="grouped">分组</button>
+                  <button type="button" class="theme-chip" data-theme-key="layout" data-theme-value="masonry">瀑布</button>
+                  <button type="button" class="theme-chip" data-theme-key="layout" data-theme-value="dashboard">概览</button>
+                </div>
               </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>
@@ -552,7 +575,7 @@ document.addEventListener('DOMContentLoaded',function(){
   function getThemePref(key){return localStorage.getItem('nav:'+key)||themeDefaults[key]}
   function setThemePref(key,value){document.documentElement.dataset[key]=value;localStorage.setItem('nav:'+key,value);if(key==='accent'&&themeMeta)themeMeta.setAttribute('content',themeColors[value]||themeColors.blue);if(key==='layout')applyLayout(value);updateThemeControls()}
   function updateThemeToggle(){if(themeToggle)themeToggle.textContent=document.documentElement.classList.contains('dark')?'☀️':'🌙'}
-  function updateThemeControls(){document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset[btn.dataset.themeKey]===btn.dataset.themeValue)});document.querySelectorAll('.layout-toggle').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset.layout===btn.dataset.layout)})}
+  function updateThemeControls(){document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset[btn.dataset.themeKey]===btn.dataset.themeValue)});document.querySelectorAll('.layout-toggle').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset.layout===btn.dataset.layout)});document.querySelectorAll('.theme-preset-btn').forEach(function(btn){btn.classList.toggle('active',(document.documentElement.dataset.skin||'paper')===btn.dataset.preset)})}
   function applyLayout(layout){const normalized=['grid','list','grouped','masonry','dashboard'].includes(layout)?layout:'grid';document.documentElement.dataset.layout=normalized;document.getElementById('layoutGridPanel')?.classList.toggle('active',['grid','list','masonry'].includes(normalized));document.getElementById('layoutGroupedPanel')?.classList.toggle('active',normalized==='grouped');document.getElementById('layoutDashboardPanel')?.classList.toggle('active',normalized==='dashboard')}
   Object.keys(themeDefaults).forEach(function(key){document.documentElement.dataset[key]=getThemePref(key)});
   if(themeMeta)themeMeta.setAttribute('content',themeColors[getThemePref('accent')]||themeColors.blue);
