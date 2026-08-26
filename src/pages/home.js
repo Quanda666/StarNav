@@ -370,16 +370,16 @@ export async function renderHomePage(request, env, ctx) {
     <div id="floatingAiPanel" class="floating-ai-panel hidden w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-primary-100/60 bg-white/95 shadow-2xl">
       <div class="flex items-center justify-between border-b border-primary-100/60 px-4 py-3">
         <div>
-          <h3 class="text-sm font-semibold text-gray-900">AI 助理</h3>
+          <h3 class="text-sm font-semibold text-gray-900">AI 小助理</h3>
           <p class="text-xs text-gray-500">优先检索本站书签，再生成回复</p>
         </div>
         <div class="flex items-center gap-1">
-          <button type="button" id="toggleAiFullscreen" class="rounded-full px-2 py-1 text-xs text-gray-500 hover:bg-primary-50" aria-label="全屏显示 AI 助理" title="全屏显示">全屏</button>
-          <button type="button" id="closeAiPanel" class="rounded-full px-2 py-1 text-gray-500 hover:bg-primary-50" aria-label="关闭 AI 助理">×</button>
+          <button type="button" id="toggleAiFullscreen" class="rounded-full px-2 py-1 text-xs text-gray-500 hover:bg-primary-50" aria-label="全屏显示 AI 小助理" title="全屏显示">全屏</button>
+          <button type="button" id="closeAiPanel" class="rounded-full px-2 py-1 text-gray-500 hover:bg-primary-50" aria-label="关闭 AI 小助理">×</button>
         </div>
       </div>
       <div id="aiChatBody" class="ai-chat-body space-y-3 p-4">
-        <div class="ai-message assistant">你好，我是本站 AI 助理。你可以问我：“有没有图片压缩工具？”、“某个网站放在哪个分类？”、“帮我找设计相关书签”。</div>
+        <div class="ai-message assistant">你好，我是本站 AI 小助理。你可以问我：“有没有图片压缩工具？”、“某个网站放在哪个分类？”、“帮我找设计相关书签”。</div>
       </div>
       <form id="aiChatForm" class="border-t border-primary-100/60 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
         <div class="flex gap-2">
@@ -620,7 +620,7 @@ document.addEventListener('DOMContentLoaded',function(){
   const aiSendBtn=document.getElementById('aiSendBtn');
   const backToTopBtn=document.getElementById('backToTopBtn');
   function closeFloatingThemePanel(){floatingThemePanel?.classList.add('hidden');floatingThemeToggle?.setAttribute('aria-expanded','false')}
-  function updateAiFullscreenButton(){if(!toggleAiFullscreenBtn||!floatingAiPanel)return;const full=floatingAiPanel.classList.contains('ai-fullscreen');toggleAiFullscreenBtn.textContent=full?'还原':'全屏';toggleAiFullscreenBtn.title=full?'还原窗口':'全屏显示';toggleAiFullscreenBtn.setAttribute('aria-label',full?'还原 AI 助理窗口':'全屏显示 AI 助理')}
+  function updateAiFullscreenButton(){if(!toggleAiFullscreenBtn||!floatingAiPanel)return;const full=floatingAiPanel.classList.contains('ai-fullscreen');toggleAiFullscreenBtn.textContent=full?'还原':'全屏';toggleAiFullscreenBtn.title=full?'还原窗口':'全屏显示';toggleAiFullscreenBtn.setAttribute('aria-label',full?'还原 AI 小助理窗口':'全屏显示 AI 小助理')}
   function openFloatingAiPanel(){closeFloatingThemePanel();floatingAiPanel?.classList.remove('hidden');floatingAiToggle?.setAttribute('aria-expanded','true');updateAiFullscreenButton();setTimeout(()=>aiChatInput?.focus(),80)}
   function closeFloatingAiPanel(){floatingAiPanel?.classList.add('hidden');floatingAiPanel?.classList.remove('ai-fullscreen');floatingAiToggle?.setAttribute('aria-expanded','false');updateAiFullscreenButton()}
   function toggleAiFullscreen(){if(!floatingAiPanel)return;floatingAiPanel.classList.toggle('ai-fullscreen');floatingAiPanel.classList.remove('hidden');floatingAiToggle?.setAttribute('aria-expanded','true');updateAiFullscreenButton();setTimeout(()=>aiChatInput?.focus(),80)}
@@ -646,7 +646,7 @@ document.addEventListener('DOMContentLoaded',function(){
   function createAiSiteCard(site){const card=document.createElement('div');card.className='ai-site-card rounded-xl border border-primary-100/70 bg-white/80 p-3 text-xs shadow-sm';const name=site.name||'未命名';const cat=site.catelog||'未分类';const desc=site.desc||'暂无描述';const rawUrl=site.url||'';const normalizedUrl=normalizeAiSiteUrl(rawUrl);const visitUrl=site.id?('/go/'+encodeURIComponent(site.id)):(normalizedUrl||'#');card.innerHTML='<div class="flex items-start justify-between gap-2"><div class="min-w-0 flex-1"><div class="truncate text-sm font-semibold text-gray-900"></div><div class="mt-1 inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-[11px] text-primary-700"></div></div><span class="flex-shrink-0 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] text-accent-700">本站书签</span></div><p class="mt-2 line-clamp-2 text-gray-600"></p><div class="mt-2 truncate text-[11px] text-primary-600"></div><div class="mt-3 flex gap-2"><a class="ai-card-visit flex-1 rounded-lg bg-primary-600 px-3 py-1.5 text-center font-medium text-white" target="_blank" rel="noopener noreferrer">访问</a><button type="button" class="ai-card-copy rounded-lg bg-accent-100 px-3 py-1.5 font-medium text-accent-700">复制</button></div>';card.querySelector('.text-sm').textContent=name;card.querySelector('.bg-primary-50').textContent=cat;card.querySelector('p').textContent=desc;card.querySelector('.text-primary-600').textContent=normalizedUrl||rawUrl||'未提供链接';const visit=card.querySelector('.ai-card-visit');visit.href=visitUrl;if(!normalizedUrl&&!site.id){visit.classList.add('pointer-events-none','opacity-50')}const copy=card.querySelector('.ai-card-copy');copy.dataset.url=normalizedUrl||rawUrl;return card}
   function appendAiMessage(role,text,sites){if(!aiChatBody)return;const msg=document.createElement('div');msg.className='ai-message '+role;msg.textContent=normalizeAiText(text);aiChatBody.appendChild(msg);if(role==='assistant'&&Array.isArray(sites)&&sites.length){lastAiSites=sites.slice(0,5).map(function(site){return{id:site.id}}).filter(function(site){return site.id});const wrap=document.createElement('div');wrap.className='space-y-2';sites.slice(0,6).forEach(function(site){wrap.appendChild(createAiSiteCard(site))});aiChatBody.appendChild(wrap)}aiChatBody.scrollTop=aiChatBody.scrollHeight}
   aiChatBody?.addEventListener('click',function(e){const btn=e.target.closest('.ai-card-copy');if(!btn)return;e.preventDefault();const url=btn.dataset.url;if(!url)return;const old=btn.textContent;navigator.clipboard.writeText(url).then(()=>{btn.textContent='已复制';setTimeout(()=>btn.textContent=old,1200)}).catch(()=>{btn.textContent='复制失败';setTimeout(()=>btn.textContent=old,1200)})});
-  aiChatForm?.addEventListener('submit',function(e){e.preventDefault();const text=aiChatInput?.value.trim();if(!text)return;appendAiMessage('user',text);aiChatInput.value='';aiSendBtn.disabled=true;aiSendBtn.textContent='思考中';fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,previousSites:lastAiSites})}).then(r=>r.json()).then(d=>{const data=d.data||{};appendAiMessage('assistant',data.answer||d.message||'暂时没有得到回复。',data.sites||[])}).catch(()=>appendAiMessage('assistant','AI 助理暂时无法连接，请稍后重试。')).finally(()=>{aiSendBtn.disabled=false;aiSendBtn.textContent='发送';aiChatInput?.focus()})});
+  aiChatForm?.addEventListener('submit',function(e){e.preventDefault();const text=aiChatInput?.value.trim();if(!text)return;appendAiMessage('user',text);aiChatInput.value='';aiSendBtn.disabled=true;aiSendBtn.textContent='思考中';fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,previousSites:lastAiSites})}).then(r=>r.json()).then(d=>{const data=d.data||{};appendAiMessage('assistant',data.answer||d.message||'暂时没有得到回复。',data.sites||[])}).catch(()=>appendAiMessage('assistant','AI 小助理暂时无法连接，请稍后重试。')).finally(()=>{aiSendBtn.disabled=false;aiSendBtn.textContent='发送';aiChatInput?.focus()})});
   function updateBackToTopVisibility(){if(!backToTopBtn)return;backToTopBtn.classList.toggle('hidden',window.scrollY<360)}
   window.addEventListener('scroll',updateBackToTopVisibility,{passive:true});
   updateBackToTopVisibility();

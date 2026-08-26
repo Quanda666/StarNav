@@ -69,7 +69,7 @@ export const I18N_MESSAGES = {
     language: '语言',
     languageSettings: '语言设置',
     languageDesc: '选择网站界面语言',
-    aiAssistant: 'AI 助理',
+    aiAssistant: 'AI 小助理',
     backToTop: '回到顶部',
     footer: '愿你在此找到方向',
     noBookmarks: '当前没有可展示的书签。',
