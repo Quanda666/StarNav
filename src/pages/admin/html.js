@@ -403,16 +403,30 @@ export const adminHtml = `<!DOCTYPE html>
           <section class="settings-card">
             <div class="settings-card-head">
               <h3>首页展示</h3>
-              <small>默认布局、主题色和入口开关</small>
+              <small>默认皮肤、布局、主题色和入口开关</small>
             </div>
             <div class="system-settings-grid">
               <div>
+                <label for="systemDefaultSkin">默认皮肤</label>
+                <select id="systemDefaultSkin">
+                  <option value="">跟访客本地设置</option>
+                  <option value="paper">纸感</option>
+                  <option value="starry">星空</option>
+                  <option value="minimal">极简</option>
+                  <option value="dark">暗黑</option>
+                  <option value="glass">玻璃</option>
+                  <option value="dock">Dock</option>
+                  <option value="notion">Notion</option>
+                </select>
+              </div>
+              <div>
                 <label for="systemDefaultLayout">默认首页布局</label>
                 <select id="systemDefaultLayout">
-                  <option value="">默认分组</option>
-                  <option value="grouped">分组</option>
+                  <option value="">卡片（推荐）</option>
                   <option value="grid">卡片</option>
                   <option value="list">列表</option>
+                  <option value="grouped">分组</option>
+                  <option value="masonry">瀑布</option>
                   <option value="dashboard">概览</option>
                 </select>
               </div>
@@ -425,6 +439,15 @@ export const adminHtml = `<!DOCTYPE html>
                   <option value="purple">暮光紫</option>
                   <option value="rose">蔷薇红</option>
                   <option value="amber">琥珀金</option>
+                </select>
+              </div>
+              <div>
+                <label for="systemDefaultDensity">默认卡片密度</label>
+                <select id="systemDefaultDensity">
+                  <option value="">默认舒适</option>
+                  <option value="compact">紧凑</option>
+                  <option value="comfortable">舒适</option>
+                  <option value="spacious">宽松</option>
                 </select>
               </div>
             </div>

@@ -17,6 +17,8 @@ export const DEFAULT_SYSTEM_SETTINGS = {
   blogLabel: '访问博客',
   defaultLayout: '',
   defaultAccent: '',
+  defaultSkin: '',
+  defaultDensity: '',
   announcementEnabled: 'false',
   announcementTitle: '系统公告',
   announcementMarkdown: '',
@@ -35,6 +37,8 @@ const FIELD_LIMITS = {
   blogLabel: 80,
   defaultLayout: 20,
   defaultAccent: 20,
+  defaultSkin: 20,
+  defaultDensity: 20,
   announcementTitle: 80,
   announcementMarkdown: 5000,
   announcementVersion: 40,
@@ -82,6 +86,8 @@ export async function getSystemSettings(env) {
   settings.blogLabel = limitText(settings.blogLabel, 'blogLabel') || DEFAULT_SYSTEM_SETTINGS.blogLabel;
   settings.defaultLayout = limitText(settings.defaultLayout, 'defaultLayout');
   settings.defaultAccent = limitText(settings.defaultAccent, 'defaultAccent');
+  settings.defaultSkin = limitText(settings.defaultSkin, 'defaultSkin');
+  settings.defaultDensity = limitText(settings.defaultDensity, 'defaultDensity');
   settings.announcementEnabled = boolString(settings.announcementEnabled);
   settings.announcementTitle = limitText(settings.announcementTitle, 'announcementTitle') || DEFAULT_SYSTEM_SETTINGS.announcementTitle;
   settings.announcementMarkdown = limitText(settings.announcementMarkdown, 'announcementMarkdown');
@@ -108,6 +114,8 @@ export async function updateSystemSettings(env, payload = {}) {
     blogLabel: limitText(payload.blogLabel, 'blogLabel') || DEFAULT_SYSTEM_SETTINGS.blogLabel,
     defaultLayout: limitText(payload.defaultLayout, 'defaultLayout'),
     defaultAccent: limitText(payload.defaultAccent, 'defaultAccent'),
+    defaultSkin: limitText(payload.defaultSkin, 'defaultSkin'),
+    defaultDensity: limitText(payload.defaultDensity, 'defaultDensity'),
     announcementEnabled: boolString(payload.announcementEnabled),
     announcementTitle: limitText(payload.announcementTitle, 'announcementTitle') || DEFAULT_SYSTEM_SETTINGS.announcementTitle,
     announcementMarkdown: limitText(payload.announcementMarkdown, 'announcementMarkdown'),
