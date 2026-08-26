@@ -99,8 +99,8 @@ export async function renderHomePage(request, env, ctx) {
   const footerText = systemSettings.footerText || th('footer');
   const pageBackgroundImage = sanitizeImageUrl(systemSettings.backgroundImage) || '';
   const defaultLayout = ['grid', 'list', 'grouped', 'masonry', 'dashboard'].includes(systemSettings.defaultLayout) ? systemSettings.defaultLayout : 'grid';
-  const defaultAccent = ['blue', 'green', 'purple', 'rose', 'amber'].includes(systemSettings.defaultAccent) ? systemSettings.defaultAccent : 'blue';
-  const defaultSkin = ['paper', 'starry', 'minimal', 'dark', 'glass', 'dock', 'notion'].includes(systemSettings.defaultSkin) ? systemSettings.defaultSkin : 'paper';
+  const defaultAccent = ['blue', 'green', 'purple', 'rose', 'amber', 'cyan', 'indigo', 'graphite'].includes(systemSettings.defaultAccent) ? systemSettings.defaultAccent : 'blue';
+  const defaultSkin = ['paper', 'starry', 'minimal', 'dark', 'glass', 'dock', 'notion', 'aurora'].includes(systemSettings.defaultSkin) ? systemSettings.defaultSkin : 'paper';
   const defaultDensity = ['compact', 'comfortable', 'spacious'].includes(systemSettings.defaultDensity) ? systemSettings.defaultDensity : 'comfortable';
   const blogVisible = systemSettings.blogVisible !== 'false';
   const blogUrl = sanitizeUrl(systemSettings.blogUrl) || 'https://blog.110995.xyz/';
@@ -160,7 +160,7 @@ export async function renderHomePage(request, env, ctx) {
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>${escapeHTML(siteName)}</title>
-  <meta name="theme-color" content="${escapeHTML(defaultAccent === 'green' ? '#265c44' : (defaultAccent === 'purple' ? '#5b3b8c' : (defaultAccent === 'rose' ? '#9f3758' : (defaultAccent === 'amber' ? '#8a5a16' : '#254267'))))}">
+  <meta name="theme-color" content="${escapeHTML(defaultAccent === 'green' ? '#265c44' : (defaultAccent === 'purple' ? '#5b3b8c' : (defaultAccent === 'rose' ? '#9f3758' : (defaultAccent === 'amber' ? '#8a5a16' : (defaultAccent === 'cyan' ? '#0e5a5f' : (defaultAccent === 'indigo' ? '#333f86' : (defaultAccent === 'graphite' ? '#2f3a44' : '#254267')))))))}">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="${escapeHTML(siteName)}">
@@ -246,6 +246,10 @@ export async function renderHomePage(request, env, ctx) {
                   <span class="theme-skin-preview tsp-notion" aria-hidden="true"><span class="tsp-bar"></span><span class="tsp-body"><span class="tsp-side"></span><span class="tsp-cards tsp-list"><i></i><i></i><i></i></span></span></span>
                   <span class="theme-skin-name">Notion</span>
                 </button>
+                <button type="button" class="theme-preset-btn theme-skin" data-preset="aurora" title="极光：薄荷紫渐变、光晕卡片">
+                  <span class="theme-skin-preview tsp-aurora" aria-hidden="true"><span class="tsp-bar"></span><span class="tsp-body"><span class="tsp-side"></span><span class="tsp-cards"><i></i><i></i><i></i></span></span></span>
+                  <span class="theme-skin-name">极光</span>
+                </button>
               </div>
             </section>
             <section class="theme-studio-block">
@@ -256,6 +260,9 @@ export async function renderHomePage(request, env, ctx) {
                 <button type="button" class="theme-choice theme-swatch" style="--swatch:#8b5cf6" data-theme-key="accent" data-theme-value="purple" title="暮光紫"></button>
                 <button type="button" class="theme-choice theme-swatch" style="--swatch:#e0527d" data-theme-key="accent" data-theme-value="rose" title="蔷薇红"></button>
                 <button type="button" class="theme-choice theme-swatch" style="--swatch:#d97706" data-theme-key="accent" data-theme-value="amber" title="琥珀金"></button>
+                <button type="button" class="theme-choice theme-swatch" style="--swatch:#14a08a" data-theme-key="accent" data-theme-value="cyan" title="青碧"></button>
+                <button type="button" class="theme-choice theme-swatch" style="--swatch:#6366f1" data-theme-key="accent" data-theme-value="indigo" title="黛蓝"></button>
+                <button type="button" class="theme-choice theme-swatch" style="--swatch:#64748b" data-theme-key="accent" data-theme-value="graphite" title="石墨"></button>
               </div>
             </section>
             <section class="theme-studio-block">
@@ -339,12 +346,6 @@ export async function renderHomePage(request, env, ctx) {
       <div class="nav-toolbar">
         <h2 id="listHeading">${escapeHTML(heading)}</h2>
         <div class="nav-toolbar-actions">
-          <div class="layout-mode-bar" aria-label="${th('layoutMode')}">
-            <button type="button" class="layout-toggle" data-layout="grid" title="${th('gridTitle')}">${th('grid')}</button>
-            <button type="button" class="layout-toggle" data-layout="grouped" title="${th('groupedTitle')}">${th('grouped')}</button>
-            <button type="button" class="layout-toggle" data-layout="list" title="${th('listTitle')}">${th('list')}</button>
-            <button type="button" class="layout-toggle" data-layout="dashboard" title="${th('dashboardTitle')}">${th('dashboard')}</button>
-          </div>
           ${sortLinks}
           ${canDragSort ? `<button id="saveOrderBtn" class="nav-save-order" disabled>${th('saveDragSort')}</button>` : ''}
         </div>
@@ -574,11 +575,11 @@ document.addEventListener('DOMContentLoaded',function(){
   const themeToggle=document.getElementById('themeToggle');
   const themeMeta=document.querySelector('meta[name="theme-color"]');
   const themeDefaults={accent:'${escapeHTML(defaultAccent)}',density:'${escapeHTML(defaultDensity)}',bg:'${pageBackgroundImage ? 'image' : 'soft'}',view:'detail',layout:'${escapeHTML(defaultLayout)}'};
-  const themeColors={blue:'#254267',green:'#265c44',purple:'#5b3b8c',rose:'#9f3758',amber:'#8a5a16'};
+  const themeColors={blue:'#254267',green:'#265c44',purple:'#5b3b8c',rose:'#9f3758',amber:'#8a5a16',cyan:'#0e5a5f',indigo:'#333f86',graphite:'#2f3a44'};
   function getThemePref(key){return localStorage.getItem('nav:'+key)||themeDefaults[key]}
   function setThemePref(key,value){document.documentElement.dataset[key]=value;localStorage.setItem('nav:'+key,value);if(key==='accent'&&themeMeta)themeMeta.setAttribute('content',themeColors[value]||themeColors.blue);if(key==='layout')applyLayout(value);updateThemeControls()}
   function updateThemeToggle(){if(themeToggle)themeToggle.textContent=document.documentElement.classList.contains('dark')?'☀️':'🌙'}
-  function updateThemeControls(){document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset[btn.dataset.themeKey]===btn.dataset.themeValue)});document.querySelectorAll('.layout-toggle').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset.layout===btn.dataset.layout)});document.querySelectorAll('.theme-preset-btn').forEach(function(btn){btn.classList.toggle('active',(document.documentElement.dataset.skin||'paper')===btn.dataset.preset)})}
+  function updateThemeControls(){document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.classList.toggle('active',document.documentElement.dataset[btn.dataset.themeKey]===btn.dataset.themeValue)});document.querySelectorAll('.theme-preset-btn').forEach(function(btn){btn.classList.toggle('active',(document.documentElement.dataset.skin||'paper')===btn.dataset.preset)})}
   function applyLayout(layout){const normalized=['grid','list','grouped','masonry','dashboard'].includes(layout)?layout:'grid';document.documentElement.dataset.layout=normalized;document.getElementById('layoutGridPanel')?.classList.toggle('active',['grid','list','masonry'].includes(normalized));document.getElementById('layoutGroupedPanel')?.classList.toggle('active',normalized==='grouped');document.getElementById('layoutDashboardPanel')?.classList.toggle('active',normalized==='dashboard')}
   Object.keys(themeDefaults).forEach(function(key){document.documentElement.dataset[key]=getThemePref(key)});
   if(themeMeta)themeMeta.setAttribute('content',themeColors[getThemePref('accent')]||themeColors.blue);
@@ -587,10 +588,9 @@ document.addEventListener('DOMContentLoaded',function(){
   updateThemeControls();
   themeToggle?.addEventListener('click',function(){const nextDark=!document.documentElement.classList.contains('dark');document.documentElement.classList.toggle('dark',nextDark);localStorage.setItem('nav:theme',nextDark?'dark':'light');updateThemeToggle()});
   document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.addEventListener('click',function(){setThemePref(this.dataset.themeKey,this.dataset.themeValue)})});
-  document.querySelectorAll('.layout-toggle').forEach(function(btn){btn.addEventListener('click',function(){setThemePref('layout',this.dataset.layout)})});
   const defaultSkinName='${escapeHTML(defaultSkin)}';
   document.getElementById('resetThemePrefs')?.addEventListener('click',function(){Object.keys(themeDefaults).forEach(function(key){localStorage.removeItem('nav:'+key);document.documentElement.dataset[key]=themeDefaults[key]});localStorage.removeItem('nav:theme');localStorage.removeItem('nav:skin');document.documentElement.classList.remove('dark');applyPresetSkin(defaultSkinName);if(themeMeta)themeMeta.setAttribute('content',themeColors[themeDefaults.accent]||themeColors.blue);updateThemeToggle();updateThemeControls()});
-  const themePresets={paper:{dark:false,accent:'amber',density:'comfortable',bg:'soft',view:'detail',layout:'grid'},starry:{dark:true,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grid'},minimal:{dark:false,accent:'blue',density:'compact',bg:'plain',view:'minimal',layout:'list'},dark:{dark:true,accent:'blue',density:'comfortable',bg:'plain',view:'detail',layout:'grid'},glass:{dark:false,accent:'purple',density:'spacious',bg:'gradient',view:'detail',layout:'grid'},dock:{dark:false,accent:'green',density:'compact',bg:'plain',view:'minimal',layout:'grid'},notion:{dark:false,accent:'amber',density:'comfortable',bg:'paper',view:'detail',layout:'list'}};
+  const themePresets={paper:{dark:false,accent:'amber',density:'comfortable',bg:'soft',view:'detail',layout:'grid'},starry:{dark:true,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grid'},minimal:{dark:false,accent:'blue',density:'compact',bg:'plain',view:'minimal',layout:'list'},dark:{dark:true,accent:'blue',density:'comfortable',bg:'plain',view:'detail',layout:'grid'},glass:{dark:false,accent:'purple',density:'spacious',bg:'gradient',view:'detail',layout:'grid'},dock:{dark:false,accent:'green',density:'compact',bg:'plain',view:'minimal',layout:'grid'},notion:{dark:false,accent:'amber',density:'comfortable',bg:'paper',view:'detail',layout:'list'},aurora:{dark:false,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grid'}};
   function applyPresetSkin(name){document.documentElement.dataset.skin=name||'paper';localStorage.setItem('nav:skin',name||'paper')}
   applyPresetSkin(localStorage.getItem('nav:skin')||defaultSkinName);
   document.querySelectorAll('.theme-preset-btn').forEach(function(btn){btn.addEventListener('click',function(){const preset=themePresets[this.dataset.preset];if(!preset)return;const isDark=preset.dark;document.documentElement.classList.toggle('dark',isDark);localStorage.setItem('nav:theme',isDark?'dark':'light');applyPresetSkin(this.dataset.preset);updateThemeToggle();Object.keys(themeDefaults).forEach(function(key){if(preset[key]!==undefined){setThemePref(key,preset[key])}});updateThemeControls()})});
@@ -611,6 +611,11 @@ document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('navMoreAi')?.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();if(Date.now()<menuPanelGuardUntil)return;openFloatingAiPanel();closeNavMoreMenu();menuPanelGuardUntil=Date.now()+500});
   const floatingThemeToggle=document.getElementById('floatingThemeToggle');
   const floatingThemePanel=document.getElementById('floatingThemePanel');
+  const themePanelHost=document.querySelector('.nav-more');
+  function placeThemePanel(){if(!floatingThemePanel||!themePanelHost)return;if(window.innerWidth<1024){if(floatingThemePanel.parentElement!==document.body){document.body.appendChild(floatingThemePanel);floatingThemePanel.classList.add('theme-panel-detached')}}else if(floatingThemePanel.parentElement!==themePanelHost){floatingThemePanel.classList.remove('theme-panel-detached');themePanelHost.appendChild(floatingThemePanel)}}
+  let themeResizeTimer=0;
+  window.addEventListener('resize',function(){clearTimeout(themeResizeTimer);themeResizeTimer=setTimeout(placeThemePanel,120)},{passive:true});
+  placeThemePanel();
   const floatingAiToggle=document.getElementById('floatingAiToggle');
   const floatingAiPanel=document.getElementById('floatingAiPanel');
   const closeAiPanelBtn=document.getElementById('closeAiPanel');

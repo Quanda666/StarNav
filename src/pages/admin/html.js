@@ -417,6 +417,7 @@ export const adminHtml = `<!DOCTYPE html>
                   <option value="glass">玻璃</option>
                   <option value="dock">Dock</option>
                   <option value="notion">Notion</option>
+                  <option value="aurora">极光</option>
                 </select>
               </div>
               <div>
@@ -439,6 +440,9 @@ export const adminHtml = `<!DOCTYPE html>
                   <option value="purple">暮光紫</option>
                   <option value="rose">蔷薇红</option>
                   <option value="amber">琥珀金</option>
+                  <option value="cyan">青碧</option>
+                  <option value="indigo">黛蓝</option>
+                  <option value="graphite">石墨</option>
                 </select>
               </div>
               <div>
