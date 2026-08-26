@@ -158,7 +158,7 @@ export async function renderHomePage(request, env, ctx) {
 <html lang="${escapeHTML(lang)}" dir="${escapeHTML(dir)}">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>${escapeHTML(siteName)}</title>
   <meta name="theme-color" content="${escapeHTML(defaultAccent === 'green' ? '#265c44' : (defaultAccent === 'purple' ? '#5b3b8c' : (defaultAccent === 'rose' ? '#9f3758' : (defaultAccent === 'amber' ? '#8a5a16' : '#254267'))))}">
   <meta name="mobile-web-app-capable" content="yes">
@@ -201,6 +201,7 @@ export async function renderHomePage(request, env, ctx) {
         <button type="button" id="navMoreToggle" class="nav-icon-btn" title="更多" aria-expanded="false" aria-controls="navMoreMenu">⋯</button>
         <div id="navMoreMenu" class="nav-more-menu hidden">
           <button type="button" id="floatingThemeToggle" class="nav-more-item" title="${th('themeSettings')}" aria-expanded="false" aria-controls="floatingThemePanel"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>${th('themeSettings')}</button>
+          <button type="button" id="navMoreAi" class="nav-more-item nav-more-ai"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="7" width="16" height="11" rx="3"/><path d="M12 3v4M9 12h.01M15 12h.01"/></svg></span>${th('aiAssistant')}</button>
           ${blogVisible && blogUrl ? `<a href="${escapeHTML(blogUrl)}" target="_blank" rel="noopener noreferrer" class="nav-more-item"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span>${escapeHTML(blogLabel)}</a>` : ''}
           <a href="/admin" target="_blank" class="nav-more-item"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.7.9 1.2 1.6 1.3H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>${th('adminPanel')}${adminAuthed ? '<span class="nav-admin-dot" title="管理员已认证"></span>' : ''}</a>
           ${visitorPrivateAccess && !adminAuthed ? `<form method="post" action="/" class="nav-more-form"><input type="hidden" name="_action" value="logout-private"><button type="submit" class="nav-more-item"><span class="nav-more-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></span>${th('exitPrivate')}</button></form>` : ''}
@@ -606,6 +607,7 @@ document.addEventListener('DOMContentLoaded',function(){
   function closeNavMoreMenu(){navMoreMenu?.classList.add('hidden');navMoreToggle?.setAttribute('aria-expanded','false')}
   navMoreToggle?.addEventListener('click',function(e){e.stopPropagation();const opened=!navMoreMenu?.classList.contains('hidden');navMoreMenu?.classList.toggle('hidden',opened);this.setAttribute('aria-expanded',String(!opened));if(!opened)closeFloatingThemePanel()});
   navMoreMenu?.addEventListener('click',function(e){e.stopPropagation()});
+  document.getElementById('navMoreAi')?.addEventListener('click',function(){closeNavMoreMenu();openFloatingAiPanel()});
   const floatingThemeToggle=document.getElementById('floatingThemeToggle');
   const floatingThemePanel=document.getElementById('floatingThemePanel');
   const floatingAiToggle=document.getElementById('floatingAiToggle');
