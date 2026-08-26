@@ -605,9 +605,10 @@ document.addEventListener('DOMContentLoaded',function(){
   const navMoreToggle=document.getElementById('navMoreToggle');
   const navMoreMenu=document.getElementById('navMoreMenu');
   function closeNavMoreMenu(){navMoreMenu?.classList.add('hidden');navMoreToggle?.setAttribute('aria-expanded','false')}
+  let menuPanelGuardUntil=0;
   navMoreToggle?.addEventListener('click',function(e){e.stopPropagation();const opened=!navMoreMenu?.classList.contains('hidden');navMoreMenu?.classList.toggle('hidden',opened);this.setAttribute('aria-expanded',String(!opened));if(!opened)closeFloatingThemePanel()});
   navMoreMenu?.addEventListener('click',function(e){e.stopPropagation()});
-  document.getElementById('navMoreAi')?.addEventListener('click',function(){closeNavMoreMenu();openFloatingAiPanel()});
+  document.getElementById('navMoreAi')?.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();if(Date.now()<menuPanelGuardUntil)return;openFloatingAiPanel();closeNavMoreMenu();menuPanelGuardUntil=Date.now()+500});
   const floatingThemeToggle=document.getElementById('floatingThemeToggle');
   const floatingThemePanel=document.getElementById('floatingThemePanel');
   const floatingAiToggle=document.getElementById('floatingAiToggle');
@@ -624,13 +625,13 @@ document.addEventListener('DOMContentLoaded',function(){
   function openFloatingAiPanel(){closeFloatingThemePanel();floatingAiPanel?.classList.remove('hidden');floatingAiToggle?.setAttribute('aria-expanded','true');updateAiFullscreenButton();setTimeout(()=>aiChatInput?.focus(),80)}
   function closeFloatingAiPanel(){floatingAiPanel?.classList.add('hidden');floatingAiPanel?.classList.remove('ai-fullscreen');floatingAiToggle?.setAttribute('aria-expanded','false');updateAiFullscreenButton()}
   function toggleAiFullscreen(){if(!floatingAiPanel)return;floatingAiPanel.classList.toggle('ai-fullscreen');floatingAiPanel.classList.remove('hidden');floatingAiToggle?.setAttribute('aria-expanded','true');updateAiFullscreenButton();setTimeout(()=>aiChatInput?.focus(),80)}
-  floatingThemeToggle?.addEventListener('click',function(e){e.stopPropagation();const opened=!floatingThemePanel?.classList.contains('hidden');floatingThemePanel?.classList.toggle('hidden',opened);this.setAttribute('aria-expanded',String(!opened));if(!opened){closeFloatingAiPanel();closeNavMoreMenu()}});
+  floatingThemeToggle?.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const opening=floatingThemePanel?.classList.contains('hidden');if(opening&&Date.now()<menuPanelGuardUntil)return;floatingThemePanel?.classList.toggle('hidden',!opening);this.setAttribute('aria-expanded',String(opening));if(opening){menuPanelGuardUntil=Date.now()+500;closeFloatingAiPanel();closeNavMoreMenu()}else{menuPanelGuardUntil=0}});
   floatingAiToggle?.addEventListener('click',function(e){e.stopPropagation();const opened=!floatingAiPanel?.classList.contains('hidden');if(opened){closeFloatingAiPanel()}else{openFloatingAiPanel()}});
   closeAiPanelBtn?.addEventListener('click',function(e){e.stopPropagation();closeFloatingAiPanel()});
   toggleAiFullscreenBtn?.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();toggleAiFullscreen()});
   floatingThemePanel?.addEventListener('click',function(e){e.stopPropagation()});
   floatingAiPanel?.addEventListener('click',function(e){e.stopPropagation()});
-  document.addEventListener('click',function(){closeFloatingThemePanel();closeFloatingAiPanel();closeNavMoreMenu()});
+  document.addEventListener('click',function(){if(Date.now()<menuPanelGuardUntil)return;closeFloatingThemePanel();closeFloatingAiPanel();closeNavMoreMenu()});
   function isEditableTarget(target){return target&&(/^(INPUT|TEXTAREA|SELECT)$/i.test(target.tagName)||target.isContentEditable)}
   function focusSiteSearch(selectText=false){if(!search)return false;search.focus({preventScroll:true});if(selectText)search.select();search.scrollIntoView({block:'center',behavior:'smooth'});return true}
   let activeResultIndex=-1;
