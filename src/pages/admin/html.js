@@ -16,6 +16,7 @@ export const adminHtml = `<!DOCTYPE html>
 <body>
   <div class="container">
     <header class="admin-header">
+      <button type="button" class="sidebar-dock" id="sidebarToggle" title="收起侧栏">收起</button>
       <button type="button" class="mobile-nav-toggle" id="mobileNavToggle" aria-label="打开菜单" aria-expanded="false">菜单</button>
       <h1>StarNav 管理台</h1>
       <form id="logoutForm" method="post" action="/admin/logout">
@@ -27,10 +28,6 @@ export const adminHtml = `<!DOCTYPE html>
     <div id="message" style="display:none;"></div>
 
     <div class="tab-wrapper">
-      <button class="sidebar-clip" id="sidebarToggle" type="button" title="把侧栏别成书签">
-        <span class="sidebar-clip-notch"></span>
-        <span class="sidebar-clip-text">别住</span>
-      </button>
       <aside class="tab-buttons" id="sidebarNav">
         <div class="sidebar-group">
           <div class="sidebar-group-label">内容</div>
