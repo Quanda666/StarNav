@@ -199,8 +199,7 @@ function renderSimpleMarkdown(md){const nl=String.fromCharCode(10);let text=esca
 function formatInlineMarkdown(text){let out=text;while(out.includes('**')){const s=out.indexOf('**');const e=out.indexOf('**',s+2);if(e<0)break;out=out.slice(0,s)+'<strong>'+out.slice(s+2,e)+'</strong>'+out.slice(e+2)}return out}
 const ANN_TAGS=['更新','维护','活动','提示','重要'];
 function annUid(prefix){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7)}
-function annToday(){return new Date().toISOString().slice(0,10)}
-// 当前中国时区（UTC+8）时间，datetime-local 值格式 YYYY-MM-DDTHH:mm
+// 当前中国时区（UTC+8）时间，格式 YYYY-MM-DDTHH:mm
 function annNow(){return new Date(Date.now()+8*3600*1000).toISOString().slice(0,16)}
 function createAnnouncementItem(entry={}){
   const item=document.createElement('div');item.className='ann-edit-item';item.dataset.entryId=entry.id||annUid('a');
@@ -212,8 +211,8 @@ function createAnnouncementItem(entry={}){
 }
 function createTimelineItem(entry={}){
   const item=document.createElement('div');item.className='ann-edit-item';item.dataset.entryId=entry.id||annUid('t');
-  const dateVal=entry.date?(/T/.test(entry.date)?entry.date:entry.date+'T09:00'):annNow();
-  item.innerHTML='<div class="ann-edit-row"><input type="datetime-local" class="ann-edit-date" value="'+escapeHTML(dateVal)+'"><input type="text" class="ann-edit-title" placeholder="节点标题（如 v1.2.0 新功能）" value="'+escapeHTML(entry.title||'')+'"><button type="button" class="ann-edit-del del-btn">删除</button></div><textarea class="ann-edit-content" rows="2" placeholder="节点说明（可选，支持 Markdown）">'+escapeHTML(entry.content||'')+'</textarea>';
+  const pubTime=entry.date||annNow();
+  item.innerHTML='<div class="ann-edit-row"><input type="text" class="ann-edit-title" placeholder="节点标题（如 v1.2.0 新功能）" value="'+escapeHTML(entry.title||'')+'"><input type="hidden" class="ann-edit-date" value="'+escapeHTML(pubTime)+'"><small class="ann-publish-time" title="发布时间（中国时区）">发布于 '+escapeHTML(pubTime.replace('T',' '))+'</small><button type="button" class="ann-edit-del del-btn">删除</button></div><textarea class="ann-edit-content" rows="2" placeholder="节点说明（可选，支持 Markdown）">'+escapeHTML(entry.content||'')+'</textarea>';
   item.querySelector('.ann-edit-del').addEventListener('click',function(){item.remove()});
   return item;
 }

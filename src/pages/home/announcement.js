@@ -42,9 +42,8 @@ function renderAnnouncementItem(entry) {
   const tag = entry.tag || '提示';
   const tagClass = TAG_META[tag] || 'info';
   const parsed = timelineTimestamp(entry.date);
-  const dateHtml = parsed
-    ? `<time class="ann-item-date" data-ts="${parsed.ts}" data-has-time="${parsed.hasTime ? '1' : '0'}">${escapeHTML(formatShanghai(parsed.ts, parsed.hasTime))}</time>`
-    : `<time class="ann-item-date">${escapeHTML(entry.date || '')}</time>`;
+  const dateText = parsed ? formatShanghai(parsed.ts, false) : String(entry.date || '').slice(0, 10);
+  const dateHtml = dateText ? `<time class="ann-item-date">${escapeHTML(dateText)}</time>` : '';
   return `<article class="ann-item">
     <header class="ann-item-head">
       <span class="ann-tag ann-tag-${tagClass}">${escapeHTML(tag)}</span>
@@ -55,7 +54,7 @@ function renderAnnouncementItem(entry) {
   </article>`;
 }
 
-// 时间线时间按中国时区（UTC+8）解析；前台脚本再补「x 周前」的相对时间。
+// 时间按中国时区（UTC+8）解析与展示。通知只显示日期，时间线显示发布时刻。
 function timelineTimestamp(raw) {
   const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(String(raw || '').trim());
   if (!m) return null;
@@ -72,9 +71,8 @@ function formatShanghai(ts, hasTime) {
 
 function renderTimelineItem(entry) {
   const parsed = timelineTimestamp(entry.date);
-  const dateHtml = parsed
-    ? `<time class="ann-timeline-date" data-ts="${parsed.ts}" data-has-time="${parsed.hasTime ? '1' : '0'}">${escapeHTML(formatShanghai(parsed.ts, parsed.hasTime))}</time>`
-    : `<time class="ann-timeline-date">${escapeHTML(entry.date || '')}</time>`;
+  const dateText = parsed ? formatShanghai(parsed.ts, parsed.hasTime) : String(entry.date || '');
+  const dateHtml = dateText ? `<time class="ann-timeline-date">${escapeHTML(dateText)}</time>` : '';
   return `<li class="ann-timeline-item">
     <h4 class="ann-timeline-title">${escapeHTML(entry.title || '')}</h4>
     ${dateHtml}

@@ -597,31 +597,6 @@ document.addEventListener('DOMContentLoaded',function(){
       if(panelA){panelA.hidden=isTimeline;panelA.classList.toggle('active',!isTimeline)}
       if(panelT){panelT.hidden=!isTimeline;panelT.classList.toggle('active',isTimeline)}
     }
-    // 时间线节点：显示「相对时间 + 中国时区绝对时间」，如「3 天前 2026-08-18 09:30」
-    function formatRelativeTime(ts){
-      const diff=Date.now()-ts;
-      if(diff<0)return '';
-      const m=Math.floor(diff/60000);
-      if(m<1)return '刚刚';
-      if(m<60)return m+' 分钟前';
-      const h=Math.floor(m/60);
-      if(h<24)return h+' 小时前';
-      const d=Math.floor(h/24);
-      if(d<7)return d+' 天前';
-      const w=Math.floor(d/7);
-      if(d<30)return w+' 周前';
-      const mo=Math.floor(d/30);
-      if(mo<12)return mo+' 个月前';
-      return Math.floor(mo/12)+' 年前';
-    }
-    announcementModal.querySelectorAll('.ann-timeline-date[data-ts],.ann-item-date[data-ts]').forEach(function(t){
-      const ts=Number(t.dataset.ts);
-      if(!ts)return;
-      const absolute=t.textContent;
-      function refresh(){const rel=formatRelativeTime(ts);t.textContent=rel?rel+' '+absolute:absolute}
-      refresh();
-      setInterval(refresh,60000);
-    });
     announcementModal.querySelectorAll('.ann-tab').forEach(function(btn){btn.addEventListener('click',function(){switchAnnouncementTab(btn.dataset.annTab)})});
     announcementBell&&announcementBell.addEventListener('click',function(){openAnnouncement('announcements')});
     try{if(autoPopup||localStorage.getItem(seenKey)!=='1'){bellDot&&bellDot.classList.remove('hidden')}}catch(e){}

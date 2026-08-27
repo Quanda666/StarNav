@@ -507,7 +507,7 @@ export const adminHtml = `<!DOCTYPE html>
               <summary>🕒 更新时间线<span class="ann-section-hint">站点更新日志，显示在弹窗的「时间线」标签页</span></summary>
               <div id="timelineList" class="ann-edit-list"></div>
               <button type="button" id="addTimelineEntry" class="secondary-btn">+ 添加时间线节点</button>
-              <p class="category-hint">时间按中国时区（UTC+8）记录与展示；留空时前台公告弹窗只显示「通知」一个标签页。</p>
+              <p class="category-hint">发布时间按中国时区（UTC+8）自动记录，无需手动选择；留空时前台公告弹窗只显示「通知」一个标签页。</p>
             </details>
           </section>
 
