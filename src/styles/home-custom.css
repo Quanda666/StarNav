@@ -135,8 +135,8 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     html.dark .announcement-body h1,html.dark .announcement-body h2,html.dark .announcement-body h3{color:#93c5fd}
 
     /* 公告铃铛入口与红点 */
-    .announcement-bell{position:relative}
-    .announcement-bell-dot{position:absolute;top:4px;right:5px;width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
+    .announcement-bell{position:relative;overflow:visible}
+    .announcement-bell-dot{position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px rgba(255,255,255,.9);pointer-events:none;z-index:1}
     .announcement-bell-dot.hidden{display:none}
     html.dark .announcement-bell-dot{box-shadow:0 0 0 2px rgba(15,23,42,.9)}
 

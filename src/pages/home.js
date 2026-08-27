@@ -18,7 +18,7 @@ import {
 import { renderPrivateBookmarkUnlockBox, renderPrivateBookmarkPasswordPage } from './home/privateAccess.js';
 import { flattenCategories, getAncestorNames, renderCategoryLinks } from './home/categories.js';
 import { renderSiteCard, renderGroupedSites, renderDashboardSites, sortSitesForView, renderSortLinks } from './home/siteCard.js';
-import { renderAnnouncementModal } from './home/announcement.js';
+import { announcementUnreadVersion, renderAnnouncementModal } from './home/announcement.js';
 import { renderFrontAdminModal, renderSubmitModal } from './home/modals.js';
 import { frontAdminScript, dragScript, myUsageScript } from './home/scripts.js';
 import { homeCssVersion } from './home/css.js';
@@ -127,7 +127,7 @@ export async function renderHomePage(request, env, ctx) {
     title: systemSettings.announcementTitle || '公告',
     entries: effectiveAnnouncements,
     timeline: timelineEntries,
-    version: effectiveAnnouncements[0]?.id || systemSettings.announcementVersion || '1',
+    version: announcementUnreadVersion(effectiveAnnouncements, timelineEntries),
     showOnce: systemSettings.announcementShowOnce !== 'false',
     buttonText: systemSettings.announcementButtonText || '我知道了',
     autoPopup: systemSettings.announcementEnabled === 'true',

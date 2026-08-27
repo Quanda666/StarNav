@@ -81,8 +81,24 @@ function renderTimelineItem(entry) {
 }
 
 /**
+ * 未读红点 / “只显示一次”的版本号：通知或时间线任一内容变化都会更新。
+ */
+export function announcementUnreadVersion(entries = [], timeline = []) {
+  const payload = JSON.stringify({
+    a: (entries || []).map((e) => [e.id, e.title, e.date, e.tag, e.content]),
+    t: (timeline || []).map((e) => [e.id, e.title, e.date, e.content]),
+  });
+  let hash = 2166136261;
+  for (let i = 0; i < payload.length; i += 1) {
+    hash ^= payload.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `v${(hash >>> 0).toString(36)}`;
+}
+
+/**
  * 渲染 New API 风格公告弹窗：左侧「通知」、右侧「时间线」两个标签页。
- * data-version 用于“只显示一次”记录（取最新公告 id）。
+ * data-version 用于未读红点与“只显示一次”记录。
  */
 export function renderAnnouncementModal({ title = '公告', entries = [], timeline = [], version = '1', showOnce = true, buttonText = '我知道了' }) {
   const showTimeline = timeline.length > 0;
