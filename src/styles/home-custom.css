@@ -234,7 +234,8 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     .nav-search-history-head button{color:var(--nav-accent)}
     .search-history-chip{margin:0 6px 6px 0;padding:4px 10px;border:1px solid var(--nav-line);border-radius:999px;background:#fffdf8;color:var(--nav-ink);font-size:.75rem}
     .nav-top-actions{display:flex;align-items:center;gap:8px;margin-left:auto;position:relative;flex-shrink:0}
-    .nav-top-actions .nav-add-btn{width:36px;min-width:36px;height:36px;padding:0;border-radius:12px;font-size:1.25rem;line-height:1;font-weight:600}
+    .nav-top-actions .nav-add-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;min-width:36px;height:36px;padding:0;border:1px solid var(--nav-line);border-radius:12px;background:#fffdf8;color:var(--nav-ink);font-size:1.25rem;line-height:1;font-weight:600;box-shadow:none;cursor:pointer}
+    .nav-top-actions .nav-add-btn:hover{background:#f3eadf}
     .nav-more{position:relative}
     .nav-more-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:80;min-width:148px;padding:6px;border:1px solid var(--nav-line);border-radius:14px;background:#fffaf3;box-shadow:0 16px 36px rgba(71,52,35,.14)}
     .nav-more-item,.nav-more-form .nav-more-item{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;border-radius:10px;background:transparent;color:var(--nav-ink);text-align:left;text-decoration:none;font-size:.84rem;white-space:pre-line}
