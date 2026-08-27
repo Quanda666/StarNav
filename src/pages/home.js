@@ -234,7 +234,10 @@ export async function renderHomePage(request, env, ctx) {
               <h3 id="themeStudioTitle">${th('themeSettings')}</h3>
               <p>选一套气质，再微调颜色和排版</p>
             </div>
-            <button type="button" id="resetThemePrefs" class="theme-studio-reset">${th('reset')}</button>
+            <div class="theme-studio-head-actions">
+              <button type="button" id="resetThemePrefs" class="theme-studio-reset">${th('reset')}</button>
+              <button type="button" id="closeThemePanel" class="theme-studio-cancel">取消</button>
+            </div>
           </div>
           <div class="theme-studio-body">
             <section class="theme-studio-block">
@@ -657,6 +660,7 @@ document.addEventListener('DOMContentLoaded',function(){
   document.querySelectorAll('[data-theme-key]').forEach(function(btn){btn.addEventListener('click',function(){setThemePref(this.dataset.themeKey,this.dataset.themeValue)})});
   const defaultSkinName='${escapeHTML(defaultSkin)}';
   document.getElementById('resetThemePrefs')?.addEventListener('click',function(){Object.keys(themeDefaults).forEach(function(key){localStorage.removeItem('nav:'+key);document.documentElement.dataset[key]=themeDefaults[key]});localStorage.removeItem('nav:theme');localStorage.removeItem('nav:skin');document.documentElement.classList.remove('dark');applyPresetSkin(defaultSkinName);if(themeMeta)themeMeta.setAttribute('content',themeColors[themeDefaults.accent]||themeColors.blue);updateThemeToggle();updateThemeControls()});
+  document.getElementById('closeThemePanel')?.addEventListener('click',function(){closeFloatingThemePanel()});
   const themePresets={paper:{dark:false,accent:'amber',density:'comfortable',bg:'soft',view:'detail',layout:'grid'},starry:{dark:true,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grid'},minimal:{dark:false,accent:'blue',density:'compact',bg:'plain',view:'minimal',layout:'list'},dark:{dark:true,accent:'blue',density:'comfortable',bg:'plain',view:'detail',layout:'grid'},glass:{dark:false,accent:'purple',density:'spacious',bg:'gradient',view:'detail',layout:'grid'},dock:{dark:false,accent:'green',density:'compact',bg:'plain',view:'minimal',layout:'grid'},notion:{dark:false,accent:'amber',density:'comfortable',bg:'paper',view:'detail',layout:'list'},aurora:{dark:false,accent:'blue',density:'comfortable',bg:'gradient',view:'detail',layout:'grid'}};
   function applyPresetSkin(name){document.documentElement.dataset.skin=name||'paper';localStorage.setItem('nav:skin',name||'paper')}
   applyPresetSkin(localStorage.getItem('nav:skin')||defaultSkinName);
