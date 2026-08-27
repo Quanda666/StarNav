@@ -2,66 +2,129 @@
 
 基于 Cloudflare Workers + D1 + KV 的书签导航。适合个人或小团队当首页导航、工具站或轻量书签库。
 
-本项目由 [wangwangit/nav](https://github.com/wangwangit/nav) 迭代而来，已从单文件 Worker 拆成模块化结构。
+本项目由 [wangwangit/nav](https://github.com/wangwangit/nav) 迭代而来，已从单文件 Worker 拆成模块化结构，并持续演进为带完整后台、AI 助理、开放 API、浏览器插件和 WebHook 的整套服务。
 
 ## 界面预览
 
-前台支持分类、搜索、标签、主题、多布局、AI 助理和访客提交。
+前台支持分类、搜索、标签、多布局、主题皮肤、AI 助理、访客提交、系统公告和私人书签。
 
-![首页预览](https://img.110995.xyz/file/blog/34kEoYV9.png)
+![前台首页预览](https://img.110995.xyz/file/blog/bHT48zsg.png)
 
-后台用 Cookie 会话登录，不在 URL 里带账号密码。
+管理员登录页采用左右分栏品牌区，移动端自动适配为居中卡片。
 
-![登录预览](https://img.110995.xyz/file/blog/T0Im9zqj.png)
+![管理员登录页预览](https://img.110995.xyz/file/blog/tjysHzVN.png)
 
-后台覆盖书签、分类、审核、系统设置、AI、备份、Token 和 WebHook。
+后台使用 Cookie 会话登录，不在 URL 里带账号密码，覆盖书签、分类、标签、审核、AI、备份、Token、WebHook、操作日志等。
 
-![后台预览](https://img.110995.xyz/file/blog/DjI70oWp.png)
+![后台管理预览](https://img.110995.xyz/file/blog/6szyVsnU.png)
 
 ## 能做什么
 
-- **前台**：分类导航、全站搜索、标签筛选、多布局、主题、热门/最近访问、访客提交、系统公告、私人书签、PWA。
-- **后台**：书签增删改、批量操作、链接检测、提交审核、分类/标签、品牌与公告、AI 接口、导入导出、备份恢复。
-- **接入**：公开只读 API、Bearer Token 写入、浏览器插件、WebHook。
+- **前台**
+  - 分类树、标签筛选、全站搜索（支持 `tag:` / `cat:` / `url:` / `is:` 等语法）
+  - 卡片 / 列表 / 分组 / 瀑布 / 概览等多布局，8 套主题皮肤（纸感、星空、极简、暗黑、玻璃、Dock、Notion、极光）
+  - 主题色、卡片密度、背景、暗黑模式、移动端适配
+  - 热门 / 最近访问、收藏、快捷键、AI 小助理、访客提交新站
+  - 系统公告（通知 + 时间线双标签弹窗）、私人书签访问、PWA 离线与安装
+- **后台**
+  - 书签增删改查、批量操作、链接失效检测、提交审核
+  - 分类管理（父子分类、图标、颜色）、标签管理与批量合并、AI 标签 / 分类推荐
+  - AI 分析（无标签、疑似重复、搜索缺口、分类错误）、访问分析、提交分析
+  - 系统设置（站点品牌、首页展示、私人书签、系统公告、时间线）
+  - 导入导出（新增结构 / 旧版 config.json / HTML / CSV）、手动备份、定时备份、恢复
+  - API Token、WebHook、操作日志
+- **接入**
+  - 公开只读 API、Bearer Token 写入、API Discovery、OpenAPI 描述
+  - Manifest V3 浏览器插件（一键收藏当前页、查重、AI 推荐）
+  - WebHook 事件推送、WebDAV 备份
+- **多空间（预留）**
+  - 数据库 `spaces` 表、空间服务与 `GET /api/spaces` 读取接口已实现
+  - 空间增删改接口当前处于稳定化冻结状态（返回 409），前台空间切换与后台空间管理界面暂未开放
 
 细节不在这里展开，见 [文档索引](docs/README.md)。
 
-## 快速部署
+## 🚀 快速部署
 
-两条路：
+你可以选择两种部署路径：
 
-- 不熟命令行：按 [网页版部署教程](docs/web-deployment-guide.md)
-- 本地 / CI：按下面做，部署前可对照 [检查清单](docs/deployment-checklist.md)
+- **网页版全流程部署**：适合不熟悉命令行和 Wrangler 的用户，见 [Cloudflare 网页版全流程部署教程](docs/web-deployment-guide.md)。
+- **Wrangler 部署**：适合开发者和需要本地调试、自动化发布的场景，按下方步骤执行。
+
+### 1. 安装依赖
 
 ```bash
 npm install
+```
+
+### 2. 创建 D1 数据库
+
+```bash
 npx wrangler d1 create book
+```
+
+将生成的数据库 ID 写入 `wrangler.toml` 中的 D1 绑定。
+
+### 3. 初始化数据库
+
+```bash
 npx wrangler d1 execute book --file=schema.sql --remote
+```
+
+### 4. 创建 KV 命名空间
+
+```bash
 npx wrangler kv namespace create NAV_AUTH
 ```
 
-把生成的 D1 ID 和 KV namespace id 写进 `wrangler.toml`，再写入管理员账号：
+将生成的 namespace id 写入 `wrangler.toml` 中的 KV 绑定。
+
+### 5. 设置管理员账号密码
+
+在 Cloudflare KV `NAV_AUTH` 中添加：
+
+```text
+admin_username = 你的管理员用户名
+admin_password = 你的管理员密码
+```
+
+也可以用 Wrangler 写入：
 
 ```bash
 npx wrangler kv key put admin_username admin --binding=NAV_AUTH --remote
 npx wrangler kv key put admin_password your-password --binding=NAV_AUTH --remote
 ```
 
+### 6. 本地检查
+
 ```bash
 npm run quality
+```
+
+部署前建议同时查看 [docs/deployment-checklist.md](docs/deployment-checklist.md)，逐项确认 D1、KV、管理员账号、API Token、WebHook、Cron Trigger 和备份策略。
+
+### 7. 部署
+
+```bash
 npx wrangler deploy
 ```
 
-部署后先打开 `/admin` 登录，加一条书签，再访问前台。空库直接开首页可能打不开。
+部署完成后先访问：
+
+- 后台管理：`https://你的域名/admin`
+- 然后登录管理员账户在后台添加一个书签，再访问前台
+- 如果不然直接打开前台会打不开
 
 ## 常用命令
 
 ```bash
-npm run dev          # 本地开发
+npm run dev          # 本地开发（构建 CSS + wrangler dev）
+npm run build:css    # 构建首页 CSS 产物
 npm run check        # JS 语法检查
 npm test             # 测试
-npm run quality      # 语法 + 测试
-npx wrangler deploy  # 发布
+npm run quality      # 语法检查 + 测试
+npm run deploy       # 构建 CSS + 发布
+npm run db:init      # 初始化 D1 表结构
+npm run db:backup    # 导出 D1 到 backup.sql
 ```
 
 ## 文档
@@ -76,11 +139,11 @@ npx wrangler deploy  # 发布
 | [WebHook](docs/webhook-guide.md) | 写操作事件推送 |
 | [备份与导入导出](docs/backup-restore-guide.md) | 合并/覆盖、定时备份、旧 config.json |
 
-从旧单文件版本升级：先导出旧后台 `config.json`，部署本版并执行 `schema.sql`，再在后台导入。完整步骤见备份文档。
+从旧单文件版本升级：先导出旧后台 `config.json`，部署本版并初始化数据库，再在后台导入。完整步骤见备份文档。
 
 ## 技术栈
 
-Cloudflare Workers、D1、KV、Wrangler、原生 JavaScript。
+Cloudflare Workers、D1、KV、Wrangler、原生 JavaScript、Tailwind CSS。
 
 ## 许可证
 

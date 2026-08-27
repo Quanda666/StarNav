@@ -58,6 +58,9 @@
   - `operationLogService.js`
   - `privateBookmarkService.js`
   - `systemSettingsService.js`
+  - `spaceService.js`
+  - `migrationService.js`
+  - `systemHealthService.js`
 - 页面层：
   - `src/pages/home.js`
   - `src/pages/adminAssets.js`

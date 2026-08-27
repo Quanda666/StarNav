@@ -40,6 +40,7 @@ src/handlers/
 src/services/
 src/pages/
 src/lib/
+extensions/
 schema.sql
 wrangler.toml
 package.json
@@ -49,6 +50,11 @@ README.md
 其中：
 
 - `src/index.js` 是 Worker 入口。
+- `src/handlers/` 处理 API、后台、跳转和 PWA 路由。
+- `src/services/` 业务服务层，如书签、分类、标签、AI、备份、WebHook、空间等。
+- `src/pages/` 前台与后台页面渲染。
+- `src/lib/` 工具、鉴权、加密、边缘缓存等公共能力。
+- `extensions/` 内置的浏览器插件。
 - `schema.sql` 用于初始化 D1 数据库。
 - `wrangler.toml` 用于声明 Worker 名称、入口、D1 绑定和 KV 绑定。
 - `package.json` 用于安装依赖和执行构建 / 部署流程。
@@ -115,7 +121,30 @@ Cloudflare D1 网页 Console 有时对一次性粘贴多条 SQL 不够稳定。�
 4. 等页面提示成功后，清空编辑框。
 5. 再复制下一个代码块继续执行。
 
-#### 1. 创建 `sites` 表
+> 提示：更稳妥的做法是直接用命令行执行整份 `schema.sql`：
+>
+> ```bash
+> npx wrangler d1 execute book --file=schema.sql --remote
+> ```
+
+#### 1. 创建 `spaces` 表（多空间，可选）
+
+```sql
+CREATE TABLE IF NOT EXISTS spaces (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL UNIQUE,
+  icon TEXT,
+  color TEXT,
+  description TEXT,
+  visibility TEXT NOT NULL DEFAULT 'public',
+  sort_order INTEGER NOT NULL DEFAULT 9999,
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### 2. 创建 `sites` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS sites (
@@ -126,6 +155,7 @@ CREATE TABLE IF NOT EXISTS sites (
   desc TEXT,
   catelog TEXT NOT NULL,
   category_id INTEGER,
+  space_id INTEGER,
   visibility TEXT NOT NULL DEFAULT 'public',
   sort_order INTEGER NOT NULL DEFAULT 9999,
   hits INTEGER DEFAULT 0,
@@ -133,12 +163,15 @@ CREATE TABLE IF NOT EXISTS sites (
   last_checked_at TIMESTAMP,
   last_status_code INTEGER,
   last_error TEXT,
+  url_key TEXT,
   create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE SET NULL,
+  FOREIGN KEY(space_id) REFERENCES spaces(id) ON DELETE CASCADE
 );
 ```
 
-#### 2. 创建 `pending_sites` 表
+#### 3. 创建 `pending_sites` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS pending_sites (
@@ -157,7 +190,7 @@ CREATE TABLE IF NOT EXISTS pending_sites (
 );
 ```
 
-#### 3. 创建 `category_orders` 表
+#### 4. 创建 `category_orders` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS category_orders (
@@ -166,24 +199,26 @@ CREATE TABLE IF NOT EXISTS category_orders (
 );
 ```
 
-#### 4. 创建 `categories` 表
+#### 5. 创建 `categories` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
   parent_id INTEGER,
+  space_id INTEGER,
   sort_order INTEGER NOT NULL DEFAULT 9999,
   icon TEXT,
   color TEXT,
   description TEXT,
   create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(parent_id) REFERENCES categories(id) ON DELETE SET NULL
+  FOREIGN KEY(parent_id) REFERENCES categories(id) ON DELETE SET NULL,
+  FOREIGN KEY(space_id) REFERENCES spaces(id) ON DELETE CASCADE
 );
 ```
 
-#### 5. 创建 `tags` 表
+#### 6. 创建 `tags` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS tags (
@@ -193,7 +228,7 @@ CREATE TABLE IF NOT EXISTS tags (
 );
 ```
 
-#### 6. 创建 `site_tags` 表
+#### 7. 创建 `site_tags` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS site_tags (
@@ -205,7 +240,7 @@ CREATE TABLE IF NOT EXISTS site_tags (
 );
 ```
 
-#### 7. 创建 `category_metadata` 表
+#### 8. 创建 `category_metadata` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS category_metadata (
@@ -215,7 +250,7 @@ CREATE TABLE IF NOT EXISTS category_metadata (
 );
 ```
 
-#### 8. 创建 `settings` 表
+#### 9. 创建 `settings` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS settings (
@@ -225,7 +260,7 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 ```
 
-#### 9. 创建 `search_terms` 表
+#### 10. 创建 `search_terms` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS search_terms (
@@ -239,7 +274,7 @@ CREATE TABLE IF NOT EXISTS search_terms (
 );
 ```
 
-#### 10. 创建 `operation_logs` 表
+#### 11. 创建 `operation_logs` 表
 
 ```sql
 CREATE TABLE IF NOT EXISTS operation_logs (
@@ -258,63 +293,19 @@ CREATE TABLE IF NOT EXISTS operation_logs (
 
 表创建完成后，再按下面顺序**每次只执行一个索引语句**。
 
-#### 11. 创建分类父级索引
-
 ```sql
 CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
-```
-
-#### 12. 创建分类排序索引
-
-```sql
+CREATE INDEX IF NOT EXISTS idx_categories_space ON categories(space_id);
 CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order, name);
-```
-
-#### 13. 创建书签分类索引
-
-```sql
 CREATE INDEX IF NOT EXISTS idx_sites_catelog ON sites(catelog);
-```
-
-#### 14. 创建书签排序索引
-
-```sql
+CREATE INDEX IF NOT EXISTS idx_sites_space ON sites(space_id);
 CREATE INDEX IF NOT EXISTS idx_sites_sort ON sites(catelog, sort_order, create_time);
-```
-
-#### 15. 创建标签名称索引
-
-```sql
+CREATE INDEX IF NOT EXISTS idx_sites_url_key ON sites(url_key);
 CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
-```
-
-#### 16. 创建书签标签关联索引
-
-```sql
 CREATE INDEX IF NOT EXISTS idx_site_tags_tag ON site_tags(tag_id, site_id);
-```
-
-#### 17. 创建搜索热度索引
-
-```sql
 CREATE INDEX IF NOT EXISTS idx_search_terms_total ON search_terms(total_searches DESC, last_searched_at DESC);
-```
-
-#### 18. 创建无结果搜索索引
-
-```sql
 CREATE INDEX IF NOT EXISTS idx_search_terms_zero ON search_terms(zero_result_count DESC, last_searched_at DESC);
-```
-
-#### 19. 创建操作日志时间索引
-
-```sql
 CREATE INDEX IF NOT EXISTS idx_operation_logs_create_time ON operation_logs(create_time DESC, id DESC);
-```
-
-#### 20. 创建操作日志动作索引
-
-```sql
 CREATE INDEX IF NOT EXISTS idx_operation_logs_action ON operation_logs(action, create_time DESC);
 ```
 
@@ -324,16 +315,21 @@ CREATE INDEX IF NOT EXISTS idx_operation_logs_action ON operation_logs(action, c
 
 核心表包括：
 
+- `spaces`
 - `sites`
 - `pending_sites`
 - `categories`
 - `tags`
 - `site_tags`
+- `category_orders`
+- `category_metadata`
 - `settings`
 - `search_terms`
 - `operation_logs`
 
 如果提示某些表已经存在，通常是重复执行导致的，因为项目使用了 `CREATE TABLE IF NOT EXISTS`，一般可以忽略。
+
+> 项目也内置自动迁移逻辑：请求进入时会调用 `ensureSchema` 尽量补齐缺失的字段和表，多数新增字段无需手动执行 SQL。但首次部署仍建议执行 `schema.sql` 完整初始化。
 
 ---
 
