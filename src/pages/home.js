@@ -204,6 +204,7 @@ export async function renderHomePage(request, env, ctx) {
     <button type="button" id="expandSidebar" class="nav-icon-btn nav-expand-sidebar" title="展开分类">☰</button>
     <a href="/" class="nav-brand">${escapeHTML(siteName)}</a>
     <div class="nav-search">
+      <svg class="nav-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
       <input id="searchInput" type="search" placeholder="搜索书签…" autocomplete="off" enterkeyhint="search">
       <kbd>⌘K</kbd>
       <div id="searchHistoryBox" class="nav-search-history hidden">
