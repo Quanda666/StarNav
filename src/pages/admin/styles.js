@@ -120,7 +120,16 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .ann-edit-item{border:1px solid var(--admin-line);border-radius:14px;padding:12px;background:#fffdf8;display:flex;flex-direction:column;gap:8px}
 .ann-edit-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .ann-edit-row input[type="text"]{flex:1;min-width:140px;margin:0}
-.ann-edit-row input[type="date"]{margin:0;width:auto}
+.ann-edit-row input[type="date"],.ann-edit-row input[type="datetime-local"]{margin:0;width:auto}
+.ann-section{margin-top:12px;border:1px solid var(--admin-line);border-radius:14px;background:#fffdf8;overflow:hidden}
+.ann-section summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:600;color:var(--admin-text);display:flex;align-items:center;gap:8px;user-select:none}
+.ann-section summary::-webkit-details-marker{display:none}
+.ann-section summary::after{content:"▸";margin-left:auto;color:var(--admin-muted);transition:transform .15s ease}
+.ann-section[open] summary::after{transform:rotate(90deg)}
+.ann-section-hint{font-weight:400;font-size:.78rem;color:var(--admin-muted)}
+.ann-section .ann-edit-list{padding:0 14px}
+.ann-section .secondary-btn{margin:0 14px}
+.ann-section .category-hint{padding:0 14px}
 .ann-edit-row select{margin:0;width:auto}
 .ann-edit-item textarea{margin:0;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.85rem}
 @media(max-width:640px){.system-settings-grid{grid-template-columns:1fr}}

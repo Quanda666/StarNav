@@ -51,7 +51,8 @@ const FIELD_LIMITS = {
 
 export const ANNOUNCEMENT_TAGS = ['更新', '维护', '活动', '提示', '重要'];
 
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+// 允许 YYYY-MM-DD 或 YYYY-MM-DDTHH:mm（时间线按中国时区解释）
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
 
 function safeJsonArray(value) {
   if (Array.isArray(value)) return value;

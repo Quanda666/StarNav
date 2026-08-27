@@ -200,6 +200,8 @@ function formatInlineMarkdown(text){let out=text;while(out.includes('**')){const
 const ANN_TAGS=['更新','维护','活动','提示','重要'];
 function annUid(prefix){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7)}
 function annToday(){return new Date().toISOString().slice(0,10)}
+// 时间线默认当前本地时间（datetime-local 值格式 YYYY-MM-DDTHH:mm），保存后按中国时区解释
+function annNow(){const d=new Date(Date.now()-new Date().getTimezoneOffset()*60000);return d.toISOString().slice(0,16)}
 function createAnnouncementItem(entry={}){
   const item=document.createElement('div');item.className='ann-edit-item';item.dataset.entryId=entry.id||annUid('a');
   const tagOptions=ANN_TAGS.map(t=>'<option value="'+t+'"'+(entry.tag===t?' selected':'')+'>'+t+'</option>').join('');
@@ -209,7 +211,8 @@ function createAnnouncementItem(entry={}){
 }
 function createTimelineItem(entry={}){
   const item=document.createElement('div');item.className='ann-edit-item';item.dataset.entryId=entry.id||annUid('t');
-  item.innerHTML='<div class="ann-edit-row"><input type="date" class="ann-edit-date" value="'+escapeHTML(entry.date||annToday())+'"><input type="text" class="ann-edit-title" placeholder="节点标题（如 v1.2.0 新功能）" value="'+escapeHTML(entry.title||'')+'"><button type="button" class="ann-edit-del del-btn">删除</button></div><textarea class="ann-edit-content" rows="2" placeholder="节点说明（可选，支持 Markdown）">'+escapeHTML(entry.content||'')+'</textarea>';
+  const dateVal=entry.date?(/T/.test(entry.date)?entry.date:entry.date+'T09:00'):annNow();
+  item.innerHTML='<div class="ann-edit-row"><input type="datetime-local" class="ann-edit-date" value="'+escapeHTML(dateVal)+'"><input type="text" class="ann-edit-title" placeholder="节点标题（如 v1.2.0 新功能）" value="'+escapeHTML(entry.title||'')+'"><button type="button" class="ann-edit-del del-btn">删除</button></div><textarea class="ann-edit-content" rows="2" placeholder="节点说明（可选，支持 Markdown）">'+escapeHTML(entry.content||'')+'</textarea>';
   item.querySelector('.ann-edit-del').addEventListener('click',function(){item.remove()});
   return item;
 }

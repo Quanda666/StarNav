@@ -51,16 +51,35 @@ function renderAnnouncementItem(entry) {
   </article>`;
 }
 
+// 时间线时间按中国时区（UTC+8）解析；前台脚本再补「x 周前」的相对时间。
+function timelineTimestamp(raw) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(String(raw || '').trim());
+  if (!m) return null;
+  const hasTime = m[4] !== undefined;
+  const ts = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) - 8 * 3600 * 1000;
+  return { ts, hasTime };
+}
+
+function formatShanghai(ts, hasTime) {
+  const d = new Date(ts + 8 * 3600 * 1000);
+  const date = d.toISOString().slice(0, 10);
+  return hasTime ? `${date} ${d.toISOString().slice(11, 16)}` : date;
+}
+
 function renderTimelineItem(entry) {
+  const parsed = timelineTimestamp(entry.date);
+  const dateHtml = parsed
+    ? `<time class="ann-timeline-date" data-ts="${parsed.ts}" data-has-time="${parsed.hasTime ? '1' : '0'}">${escapeHTML(formatShanghai(parsed.ts, parsed.hasTime))}</time>`
+    : `<time class="ann-timeline-date">${escapeHTML(entry.date || '')}</time>`;
   return `<li class="ann-timeline-item">
-    <time class="ann-timeline-date">${escapeHTML(entry.date || '')}</time>
+    ${dateHtml}
     <h4 class="ann-timeline-title">${escapeHTML(entry.title || '')}</h4>
     ${entry.content ? `<div class="ann-timeline-content announcement-body">${renderMarkdownContent(entry.content)}</div>` : ''}
   </li>`;
 }
 
 /**
- * 渲染 New API 风格公告弹窗：左侧「系统公告」、右侧「时间线」两个标签页。
+ * 渲染 New API 风格公告弹窗：左侧「通知」、右侧「时间线」两个标签页。
  * data-version 用于“只显示一次”记录（取最新公告 id）。
  */
 export function renderAnnouncementModal({ title = '公告', entries = [], timeline = [], version = '1', showOnce = true, buttonText = '我知道了' }) {
@@ -69,7 +88,7 @@ export function renderAnnouncementModal({ title = '公告', entries = [], timeli
   const showOnceAttr = showOnce ? 'true' : 'false';
   const announcementsHtml = entries.length
     ? entries.map(renderAnnouncementItem).join('')
-    : '<p class="ann-empty">暂无公告</p>';
+    : '<p class="ann-empty">暂无通知</p>';
   const timelineHtml = timeline.length
     ? `<ul class="ann-timeline">${timeline.map(renderTimelineItem).join('')}</ul>`
     : '<p class="ann-empty">暂无更新记录</p>';
@@ -83,7 +102,7 @@ export function renderAnnouncementModal({ title = '公告', entries = [], timeli
         <button type="button" class="announcement-close rounded-full px-2 py-1 text-gray-500 hover:bg-primary-50" aria-label="关闭公告">×</button>
       </div>
       ${showTimeline ? `<div class="ann-tabs" role="tablist">
-        <button type="button" class="ann-tab active" data-ann-tab="announcements" role="tab" aria-selected="true">系统公告</button>
+        <button type="button" class="ann-tab active" data-ann-tab="announcements" role="tab" aria-selected="true">通知</button>
         <button type="button" class="ann-tab" data-ann-tab="timeline" role="tab" aria-selected="false">时间线</button>
       </div>` : ''}
       <div class="ann-modal-body">

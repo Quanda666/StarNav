@@ -491,26 +491,25 @@ export const adminHtml = `<!DOCTYPE html>
 
           <section class="settings-card">
             <div class="settings-card-head">
-              <h3>系统公告</h3>
-              <small>多条公告，按发布日期倒序展示在首页公告弹窗（支持 Markdown）</small>
+              <h3>公告与通知</h3>
+              <small>通知与更新时间线统一展示在首页公告弹窗（支持 Markdown），内容多时折叠管理，避免页面过长</small>
             </div>
-            <label><input type="checkbox" id="announcementEnabled"> 有新公告时自动弹窗提醒访客</label>
+            <label><input type="checkbox" id="announcementEnabled"> 有新通知时自动弹窗提醒访客</label>
             <label><input type="checkbox" id="announcementShowOnce"> 当天关闭后不再自动弹出（铃铛仍可查看）</label>
             <label for="announcementButtonText">确认按钮文字</label>
             <input type="text" id="announcementButtonText" placeholder="我知道了">
-            <div id="announcementList" class="ann-edit-list"></div>
-            <button type="button" id="addAnnouncement" class="secondary-btn">+ 添加公告</button>
-            <p class="category-hint">最新一条公告会作为“未读”判断依据；修改置顶公告后访客会重新看到红点提醒。</p>
-          </section>
-
-          <section class="settings-card">
-            <div class="settings-card-head">
-              <h3>更新时间线</h3>
-              <small>站点更新日志，显示在公告弹窗的「时间线」标签页</small>
-            </div>
-            <div id="timelineList" class="ann-edit-list"></div>
-            <button type="button" id="addTimelineEntry" class="secondary-btn">+ 添加时间线节点</button>
-            <p class="category-hint">留空时前台公告弹窗只显示「系统公告」一个标签页。</p>
+            <details class="ann-section">
+              <summary>📢 通知列表<span class="ann-section-hint">点击展开 / 收起，按发布日期倒序展示</span></summary>
+              <div id="announcementList" class="ann-edit-list"></div>
+              <button type="button" id="addAnnouncement" class="secondary-btn">+ 添加通知</button>
+              <p class="category-hint">最新一条通知会作为“未读”判断依据；修改置顶通知后访客会重新看到红点提醒。</p>
+            </details>
+            <details class="ann-section">
+              <summary>🕒 更新时间线<span class="ann-section-hint">站点更新日志，显示在弹窗的「时间线」标签页</span></summary>
+              <div id="timelineList" class="ann-edit-list"></div>
+              <button type="button" id="addTimelineEntry" class="secondary-btn">+ 添加时间线节点</button>
+              <p class="category-hint">时间按中国时区（UTC+8）记录与展示；留空时前台公告弹窗只显示「通知」一个标签页。</p>
+            </details>
           </section>
 
           <div class="settings-footer">
