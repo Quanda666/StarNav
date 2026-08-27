@@ -18,7 +18,7 @@ import {
 import { renderPrivateBookmarkUnlockBox, renderPrivateBookmarkPasswordPage } from './home/privateAccess.js';
 import { flattenCategories, getAncestorNames, renderCategoryLinks } from './home/categories.js';
 import { renderSiteCard, renderGroupedSites, renderDashboardSites, sortSitesForView, renderSortLinks } from './home/siteCard.js';
-import { announcementUnreadVersion, renderAnnouncementModal } from './home/announcement.js';
+import { announcementContentHashes, renderAnnouncementModal } from './home/announcement.js';
 import { renderFrontAdminModal, renderSubmitModal } from './home/modals.js';
 import { frontAdminScript, dragScript, myUsageScript } from './home/scripts.js';
 import { homeCssVersion } from './home/css.js';
@@ -121,13 +121,16 @@ export async function renderHomePage(request, env, ctx) {
           content: legacyAnnouncementContent,
         }]
       : []);
+  const announcementHashes = announcementContentHashes(effectiveAnnouncements, timelineEntries);
   const announcement = {
     enabled: systemSettings.announcementEnabled === 'true' && effectiveAnnouncements.length > 0,
     visible: effectiveAnnouncements.length > 0 || timelineEntries.length > 0,
     title: systemSettings.announcementTitle || '公告',
     entries: effectiveAnnouncements,
     timeline: timelineEntries,
-    version: announcementUnreadVersion(effectiveAnnouncements, timelineEntries),
+    version: announcementHashes.version,
+    announcementsHash: announcementHashes.announcementsHash,
+    timelineHash: announcementHashes.timelineHash,
     showOnce: systemSettings.announcementShowOnce !== 'false',
     buttonText: systemSettings.announcementButtonText || '我知道了',
     autoPopup: systemSettings.announcementEnabled === 'true',
@@ -573,15 +576,41 @@ document.addEventListener('DOMContentLoaded',function(){
   const announcementModal=document.getElementById('announcementModal');
   const announcementBell=document.getElementById('announcementBell');
   if(announcementModal){
-    const key='nav:announcement:'+announcementModal.dataset.version;
+    const version=announcementModal.dataset.version||'1';
+    const annHash=announcementModal.dataset.annHash||'';
+    const tlHash=announcementModal.dataset.tlHash||'';
+    const hasTimeline=!!document.getElementById('annPanelTimeline');
+    const hasAnnouncements=!!announcementModal.querySelector('.ann-item');
+    const key='nav:announcement:'+version;
     const todayKey=key+':today';
+    const annSeenKey='nav:announcement:seen-ann';
+    const tlSeenKey='nav:announcement:seen-tl';
     const today=new Date().toISOString().slice(0,10);
     const hiddenToday=localStorage.getItem(todayKey)===today;
-    const autoPopup=${announcement.autoPopup ? 'true' : 'false'}&&!hiddenToday;
+    const lastAnn=localStorage.getItem(annSeenKey);
+    const lastTl=localStorage.getItem(tlSeenKey);
+    const firstVisit=lastAnn===null&&lastTl===null;
+    const annChanged=lastAnn!==annHash;
+    const tlChanged=hasTimeline&&lastTl!==tlHash;
+    const unread=annChanged||tlChanged;
+    const autoPopup=${announcement.autoPopup ? 'true' : 'false'}&&unread&&!hiddenToday;
     const bellDot=document.getElementById('announcementBellDot');
-    const seenKey=key+':seen';
-    function markAnnouncementSeen(){try{localStorage.setItem(seenKey,'1')}catch(e){}bellDot&&bellDot.classList.add('hidden')}
-    function openAnnouncement(tab){announcementModal.classList.remove('hidden');markAnnouncementSeen();if(tab)switchAnnouncementTab(tab)}
+    function markAnnouncementSeen(){
+      try{localStorage.setItem(annSeenKey,annHash);localStorage.setItem(tlSeenKey,tlHash)}catch(e){}
+      bellDot&&bellDot.classList.add('hidden');
+    }
+    function resolveOpenTab(){
+      if(!hasTimeline)return 'announcements';
+      if(!hasAnnouncements)return 'timeline';
+      if(firstVisit)return 'announcements';
+      if(tlChanged&&!annChanged)return 'timeline';
+      return 'announcements';
+    }
+    function openAnnouncement(tab){
+      switchAnnouncementTab(tab||resolveOpenTab());
+      announcementModal.classList.remove('hidden');
+      markAnnouncementSeen();
+    }
     function closeAnnouncement(){
       announcementModal.classList.add('hidden');
     }
@@ -598,9 +627,10 @@ document.addEventListener('DOMContentLoaded',function(){
       if(panelT){panelT.hidden=!isTimeline;panelT.classList.toggle('active',isTimeline)}
     }
     announcementModal.querySelectorAll('.ann-tab').forEach(function(btn){btn.addEventListener('click',function(){switchAnnouncementTab(btn.dataset.annTab)})});
-    announcementBell&&announcementBell.addEventListener('click',function(){openAnnouncement('announcements')});
-    try{if(autoPopup||localStorage.getItem(seenKey)!=='1'){bellDot&&bellDot.classList.remove('hidden')}}catch(e){}
+    announcementBell&&announcementBell.addEventListener('click',function(){openAnnouncement()});
+    try{if(unread){bellDot&&bellDot.classList.remove('hidden')}}catch(e){}
     if(autoPopup){
+      switchAnnouncementTab(resolveOpenTab());
       announcementModal.classList.remove('hidden');
     }
     announcementModal.querySelectorAll('.announcement-close').forEach(function(btn){btn.addEventListener('click',closeAnnouncement)});

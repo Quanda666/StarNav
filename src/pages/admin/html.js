@@ -501,7 +501,7 @@ export const adminHtml = `<!DOCTYPE html>
               <summary>📢 通知列表<span class="ann-section-hint">点击展开 / 收起，按发布日期倒序展示</span></summary>
               <div id="announcementList" class="ann-edit-list"></div>
               <button type="button" id="addAnnouncement" class="secondary-btn">+ 添加通知</button>
-              <p class="category-hint">新增或修改通知、时间线后，访客会重新看到铃铛红点提醒。</p>
+              <p class="category-hint">新增或修改后访客会看到铃铛红点；更新通知则打开通知页，只更新时间线则打开时间线页。</p>
             </details>
             <details class="ann-section">
               <summary>🕒 更新时间线<span class="ann-section-hint">站点更新日志，显示在弹窗的「时间线」标签页</span></summary>

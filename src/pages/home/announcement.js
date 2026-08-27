@@ -80,14 +80,8 @@ function renderTimelineItem(entry) {
   </li>`;
 }
 
-/**
- * 未读红点 / “只显示一次”的版本号：通知或时间线任一内容变化都会更新。
- */
-export function announcementUnreadVersion(entries = [], timeline = []) {
-  const payload = JSON.stringify({
-    a: (entries || []).map((e) => [e.id, e.title, e.date, e.tag, e.content]),
-    t: (timeline || []).map((e) => [e.id, e.title, e.date, e.content]),
-  });
+function contentHash(value) {
+  const payload = typeof value === 'string' ? value : JSON.stringify(value);
   let hash = 2166136261;
   for (let i = 0; i < payload.length; i += 1) {
     hash ^= payload.charCodeAt(i);
@@ -97,12 +91,37 @@ export function announcementUnreadVersion(entries = [], timeline = []) {
 }
 
 /**
- * 渲染 New API 风格公告弹窗：左侧「通知」、右侧「时间线」两个标签页。
- * data-version 用于未读红点与“只显示一次”记录。
+ * 通知 / 时间线各自的内容指纹，以及合并后的未读版本号。
+ * 前台用分指纹判断该打开哪个标签：首次默认通知；只更新时间线则打开时间线。
  */
-export function renderAnnouncementModal({ title = '公告', entries = [], timeline = [], version = '1', showOnce = true, buttonText = '我知道了' }) {
+export function announcementContentHashes(entries = [], timeline = []) {
+  const announcementsHash = contentHash((entries || []).map((e) => [e.id, e.title, e.date, e.tag, e.content]));
+  const timelineHash = contentHash((timeline || []).map((e) => [e.id, e.title, e.date, e.content]));
+  return {
+    announcementsHash,
+    timelineHash,
+    version: contentHash(`${announcementsHash}:${timelineHash}`),
+  };
+}
+
+/**
+ * 渲染 New API 风格公告弹窗：左侧「通知」、右侧「时间线」两个标签页。
+ * data-version / data-ann-hash / data-tl-hash 用于未读红点与打开对应标签。
+ */
+export function renderAnnouncementModal({
+  title = '公告',
+  entries = [],
+  timeline = [],
+  version = '1',
+  announcementsHash = '',
+  timelineHash = '',
+  showOnce = true,
+  buttonText = '我知道了',
+}) {
   const showTimeline = timeline.length > 0;
   const versionAttr = escapeHTML(version || '1');
+  const annHashAttr = escapeHTML(announcementsHash || '');
+  const tlHashAttr = escapeHTML(timelineHash || '');
   const showOnceAttr = showOnce ? 'true' : 'false';
   const announcementsHtml = entries.length
     ? entries.map(renderAnnouncementItem).join('')
@@ -110,7 +129,7 @@ export function renderAnnouncementModal({ title = '公告', entries = [], timeli
   const timelineHtml = timeline.length
     ? `<ul class="ann-timeline">${timeline.map(renderTimelineItem).join('')}</ul>`
     : '<p class="ann-empty">暂无更新记录</p>';
-  return `<div id="announcementModal" class="announcement-modal hidden" data-version="${versionAttr}" data-show-once="${showOnceAttr}" role="dialog" aria-modal="true" aria-labelledby="announcementTitle">
+  return `<div id="announcementModal" class="announcement-modal hidden" data-version="${versionAttr}" data-ann-hash="${annHashAttr}" data-tl-hash="${tlHashAttr}" data-show-once="${showOnceAttr}" role="dialog" aria-modal="true" aria-labelledby="announcementTitle">
     <div class="announcement-card ann-modal-card">
       <div class="announcement-head">
         <div class="ann-head-title">
