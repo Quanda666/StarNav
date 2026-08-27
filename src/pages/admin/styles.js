@@ -131,6 +131,7 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .ann-section .secondary-btn{margin:0 14px}
 .ann-section .category-hint{padding:0 14px}
 .ann-edit-row select{margin:0;width:auto}
+.ann-publish-time{color:var(--admin-muted);font-size:.78rem;white-space:nowrap}
 .ann-edit-item textarea{margin:0;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.85rem}
 @media(max-width:640px){.system-settings-grid{grid-template-columns:1fr}}
 

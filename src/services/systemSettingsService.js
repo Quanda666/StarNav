@@ -51,8 +51,13 @@ const FIELD_LIMITS = {
 
 export const ANNOUNCEMENT_TAGS = ['更新', '维护', '活动', '提示', '重要'];
 
-// 允许 YYYY-MM-DD 或 YYYY-MM-DDTHH:mm（时间线按中国时区解释）
+// 允许 YYYY-MM-DD 或 YYYY-MM-DDTHH:mm（按中国时区解释）
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
+
+// 当前中国时区（UTC+8）时间，datetime-local 值格式
+function chinaNow() {
+  return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 16);
+}
 
 function safeJsonArray(value) {
   if (Array.isArray(value)) return value;
@@ -73,7 +78,7 @@ export function sanitizeAnnouncementEntries(value) {
     const title = cleanText(raw.title || '').slice(0, 80);
     const content = cleanText(raw.content || '').slice(0, 5000);
     if (!title && !content) continue;
-    const date = DATE_PATTERN.test(String(raw.date || '')) ? String(raw.date) : new Date().toISOString().slice(0, 10);
+    const date = DATE_PATTERN.test(String(raw.date || '')) ? String(raw.date) : chinaNow();
     const tag = ANNOUNCEMENT_TAGS.includes(raw.tag) ? raw.tag : '提示';
     entries.push({
       id: cleanText(raw.id || '').slice(0, 40) || `a_${Date.now().toString(36)}_${entries.length}`,
@@ -95,7 +100,7 @@ export function sanitizeTimelineEntries(value) {
     const title = cleanText(raw.title || '').slice(0, 120);
     const content = cleanText(raw.content || '').slice(0, 2000);
     if (!title && !content) continue;
-    const date = DATE_PATTERN.test(String(raw.date || '')) ? String(raw.date) : new Date().toISOString().slice(0, 10);
+    const date = DATE_PATTERN.test(String(raw.date || '')) ? String(raw.date) : chinaNow();
     entries.push({
       id: cleanText(raw.id || '').slice(0, 40) || `t_${Date.now().toString(36)}_${entries.length}`,
       date,

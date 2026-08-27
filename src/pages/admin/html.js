@@ -458,7 +458,6 @@ export const adminHtml = `<!DOCTYPE html>
             <label for="systemBackgroundImage">首页背景图片 URL</label>
             <input type="text" id="systemBackgroundImage" placeholder="可选，填写后作为访客默认背景图片">
             <div class="settings-toggles">
-              <label><input type="checkbox" id="systemHeroVisible"> 显示首页顶部横幅</label>
               <label><input type="checkbox" id="systemPublicSubmissionEnabled"> 显示前台公开提交入口</label>
               <label><input type="checkbox" id="systemBlogVisible"> 显示前台博客入口</label>
             </div>

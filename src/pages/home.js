@@ -614,7 +614,7 @@ document.addEventListener('DOMContentLoaded',function(){
       if(mo<12)return mo+' 个月前';
       return Math.floor(mo/12)+' 年前';
     }
-    announcementModal.querySelectorAll('.ann-timeline-date[data-ts]').forEach(function(t){
+    announcementModal.querySelectorAll('.ann-timeline-date[data-ts],.ann-item-date[data-ts]').forEach(function(t){
       const ts=Number(t.dataset.ts);
       if(!ts)return;
       const absolute=t.textContent;

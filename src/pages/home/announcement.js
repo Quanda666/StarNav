@@ -41,11 +41,15 @@ const TAG_META = {
 function renderAnnouncementItem(entry) {
   const tag = entry.tag || '提示';
   const tagClass = TAG_META[tag] || 'info';
+  const parsed = timelineTimestamp(entry.date);
+  const dateHtml = parsed
+    ? `<time class="ann-item-date" data-ts="${parsed.ts}" data-has-time="${parsed.hasTime ? '1' : '0'}">${escapeHTML(formatShanghai(parsed.ts, parsed.hasTime))}</time>`
+    : `<time class="ann-item-date">${escapeHTML(entry.date || '')}</time>`;
   return `<article class="ann-item">
     <header class="ann-item-head">
       <span class="ann-tag ann-tag-${tagClass}">${escapeHTML(tag)}</span>
       <h3 class="ann-item-title">${escapeHTML(entry.title || '公告')}</h3>
-      <time class="ann-item-date">${escapeHTML(entry.date || '')}</time>
+      ${dateHtml}
     </header>
     <div class="ann-item-body announcement-body">${renderMarkdownContent(entry.content || '')}</div>
   </article>`;
@@ -72,8 +76,8 @@ function renderTimelineItem(entry) {
     ? `<time class="ann-timeline-date" data-ts="${parsed.ts}" data-has-time="${parsed.hasTime ? '1' : '0'}">${escapeHTML(formatShanghai(parsed.ts, parsed.hasTime))}</time>`
     : `<time class="ann-timeline-date">${escapeHTML(entry.date || '')}</time>`;
   return `<li class="ann-timeline-item">
-    ${dateHtml}
     <h4 class="ann-timeline-title">${escapeHTML(entry.title || '')}</h4>
+    ${dateHtml}
     ${entry.content ? `<div class="ann-timeline-content announcement-body">${renderMarkdownContent(entry.content)}</div>` : ''}
   </li>`;
 }
