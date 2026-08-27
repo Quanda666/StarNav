@@ -215,7 +215,7 @@ export async function renderHomePage(request, env, ctx) {
       </div>
     </div>
     <div class="nav-top-actions">
-      ${submissionEnabled ? `<button type="button" id="addSiteBtnSidebar" class="nav-icon-btn nav-add-btn" title="${th('addBookmark')}" aria-label="${th('addBookmark')}">+</button>` : ''}
+      ${submissionEnabled ? `<button type="button" id="addSiteBtnSidebar" class="nav-icon-btn nav-top-add" title="${th('addBookmark')}" aria-label="${th('addBookmark')}">+</button>` : ''}
       ${announcement.visible ? `<button type="button" id="announcementBell" class="nav-icon-btn announcement-bell" title="公告" aria-label="查看公告" aria-haspopup="dialog" aria-controls="announcementModal">📢<span id="announcementBellDot" class="announcement-bell-dot hidden" aria-hidden="true"></span></button>` : ''}
       <button type="button" id="themeToggle" class="nav-icon-btn" title="切换深色/浅色" aria-label="切换深色/浅色模式">🌙</button>
       <button type="button" id="floatingAiToggle" class="nav-icon-btn" title="${th('aiAssistant')}" aria-expanded="false" aria-controls="floatingAiPanel">AI</button>
