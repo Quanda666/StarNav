@@ -492,32 +492,30 @@ export const adminHtml = `<!DOCTYPE html>
           <section class="settings-card">
             <div class="settings-card-head">
               <h3>系统公告</h3>
-              <small>支持 Markdown，以前台弹窗展示</small>
+              <small>多条公告，按发布日期倒序展示在首页公告弹窗（支持 Markdown）</small>
             </div>
-            <label><input type="checkbox" id="announcementEnabled"> 启用前台弹窗公告</label>
-            <label for="announcementTitle">公告标题</label>
-            <input type="text" id="announcementTitle" placeholder="系统公告">
-            <label for="announcementMarkdown">公告内容（Markdown）</label>
-            <textarea id="announcementMarkdown" rows="6" placeholder="支持标题、列表、链接、加粗、代码块等 Markdown 语法"></textarea>
-            <div class="system-settings-grid">
-              <div>
-                <label for="announcementVersion">公告版本</label>
-                <input type="text" id="announcementVersion" placeholder="修改版本号可让用户重新看到公告">
-              </div>
-              <div>
-                <label for="announcementButtonText">按钮文字</label>
-                <input type="text" id="announcementButtonText" placeholder="我知道了">
-              </div>
+            <label><input type="checkbox" id="announcementEnabled"> 有新公告时自动弹窗提醒访客</label>
+            <label><input type="checkbox" id="announcementShowOnce"> 当天关闭后不再自动弹出（铃铛仍可查看）</label>
+            <label for="announcementButtonText">确认按钮文字</label>
+            <input type="text" id="announcementButtonText" placeholder="我知道了">
+            <div id="announcementList" class="ann-edit-list"></div>
+            <button type="button" id="addAnnouncement" class="secondary-btn">+ 添加公告</button>
+            <p class="category-hint">最新一条公告会作为“未读”判断依据；修改置顶公告后访客会重新看到红点提醒。</p>
+          </section>
+
+          <section class="settings-card">
+            <div class="settings-card-head">
+              <h3>更新时间线</h3>
+              <small>站点更新日志，显示在公告弹窗的「时间线」标签页</small>
             </div>
-            <label><input type="checkbox" id="announcementShowOnce"> 同一版本每位访客只显示一次</label>
-            <p class="category-hint">建议更新公告后递增版本；开启“只显示一次”时，访客关闭后同版本不会重复弹出。</p>
+            <div id="timelineList" class="ann-edit-list"></div>
+            <button type="button" id="addTimelineEntry" class="secondary-btn">+ 添加时间线节点</button>
+            <p class="category-hint">留空时前台公告弹窗只显示「系统公告」一个标签页。</p>
           </section>
 
           <div class="settings-footer">
             <div class="ai-actions">
               <button type="button" id="saveSystemSettings">保存系统设置</button>
-              <button type="button" id="previewAnnouncement" class="check-btn">预览公告</button>
-              <button type="button" id="bumpAnnouncementVersion" class="secondary-btn">递增公告版本</button>
             </div>
             <div id="systemSettingsStatus" class="ai-status" style="display:none;"></div>
             <div id="announcementPreview" class="announcement-preview" style="display:none;"></div>

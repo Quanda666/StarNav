@@ -30,19 +30,69 @@ export function renderMarkdownContent(markdown = '') {
   return text;
 }
 
-export function renderAnnouncementModal(announcement) {
-  const version = escapeHTML(announcement.version || '1');
-  const showOnce = announcement.showOnce ? 'true' : 'false';
-  return `<div id="announcementModal" class="announcement-modal hidden" data-version="${version}" data-show-once="${showOnce}" role="dialog" aria-modal="true" aria-labelledby="announcementTitle">
-    <div class="announcement-card">
+const TAG_META = {
+  '重要': 'important',
+  '维护': 'maintenance',
+  '更新': 'update',
+  '活动': 'activity',
+  '提示': 'info',
+};
+
+function renderAnnouncementItem(entry) {
+  const tag = entry.tag || '提示';
+  const tagClass = TAG_META[tag] || 'info';
+  return `<article class="ann-item">
+    <header class="ann-item-head">
+      <span class="ann-tag ann-tag-${tagClass}">${escapeHTML(tag)}</span>
+      <h3 class="ann-item-title">${escapeHTML(entry.title || '公告')}</h3>
+      <time class="ann-item-date">${escapeHTML(entry.date || '')}</time>
+    </header>
+    <div class="ann-item-body announcement-body">${renderMarkdownContent(entry.content || '')}</div>
+  </article>`;
+}
+
+function renderTimelineItem(entry) {
+  return `<li class="ann-timeline-item">
+    <time class="ann-timeline-date">${escapeHTML(entry.date || '')}</time>
+    <h4 class="ann-timeline-title">${escapeHTML(entry.title || '')}</h4>
+    ${entry.content ? `<div class="ann-timeline-content announcement-body">${renderMarkdownContent(entry.content)}</div>` : ''}
+  </li>`;
+}
+
+/**
+ * 渲染 New API 风格公告弹窗：左侧「系统公告」、右侧「时间线」两个标签页。
+ * data-version 用于“只显示一次”记录（取最新公告 id）。
+ */
+export function renderAnnouncementModal({ title = '公告', entries = [], timeline = [], version = '1', showOnce = true, buttonText = '我知道了' }) {
+  const showTimeline = timeline.length > 0;
+  const versionAttr = escapeHTML(version || '1');
+  const showOnceAttr = showOnce ? 'true' : 'false';
+  const announcementsHtml = entries.length
+    ? entries.map(renderAnnouncementItem).join('')
+    : '<p class="ann-empty">暂无公告</p>';
+  const timelineHtml = timeline.length
+    ? `<ul class="ann-timeline">${timeline.map(renderTimelineItem).join('')}</ul>`
+    : '<p class="ann-empty">暂无更新记录</p>';
+  return `<div id="announcementModal" class="announcement-modal hidden" data-version="${versionAttr}" data-show-once="${showOnceAttr}" role="dialog" aria-modal="true" aria-labelledby="announcementTitle">
+    <div class="announcement-card ann-modal-card">
       <div class="announcement-head">
-        <h2 id="announcementTitle" class="text-lg font-semibold text-gray-900">${escapeHTML(announcement.title || '系统公告')}</h2>
+        <div class="ann-head-title">
+          <span class="ann-head-ico" aria-hidden="true">📢</span>
+          <h2 id="announcementTitle" class="text-lg font-semibold text-gray-900">${escapeHTML(title)}</h2>
+        </div>
         <button type="button" class="announcement-close rounded-full px-2 py-1 text-gray-500 hover:bg-primary-50" aria-label="关闭公告">×</button>
       </div>
-      <div class="announcement-body">${renderMarkdownContent(announcement.markdown || '')}</div>
+      ${showTimeline ? `<div class="ann-tabs" role="tablist">
+        <button type="button" class="ann-tab active" data-ann-tab="announcements" role="tab" aria-selected="true">系统公告</button>
+        <button type="button" class="ann-tab" data-ann-tab="timeline" role="tab" aria-selected="false">时间线</button>
+      </div>` : ''}
+      <div class="ann-modal-body">
+        <div id="annPanelAnnouncements" class="ann-panel active" role="tabpanel">${announcementsHtml}</div>
+        ${showTimeline ? `<div id="annPanelTimeline" class="ann-panel" role="tabpanel" hidden>${timelineHtml}</div>` : ''}
+      </div>
       <div class="announcement-actions">
         <button type="button" class="announcement-close-today rounded-xl border border-primary-100 bg-white px-5 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50">今日不再提示</button>
-        <button type="button" class="announcement-close rounded-xl bg-primary-600 px-5 py-2 text-sm font-medium text-white hover:bg-primary-700">${escapeHTML(announcement.buttonText || '我知道了')}</button>
+        <button type="button" class="announcement-close rounded-xl bg-primary-600 px-5 py-2 text-sm font-medium text-white hover:bg-primary-700">${escapeHTML(buttonText)}</button>
       </div>
     </div>
   </div>`;

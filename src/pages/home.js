@@ -106,13 +106,31 @@ export async function renderHomePage(request, env, ctx) {
   const blogUrl = sanitizeUrl(systemSettings.blogUrl) || 'https://blog.110995.xyz/';
   const blogLabel = systemSettings.blogLabel || th('visitBlog');
 
+  const announcementEntries = Array.isArray(systemSettings.announcementEntries) ? systemSettings.announcementEntries : [];
+  const timelineEntries = Array.isArray(systemSettings.timelineEntries) ? systemSettings.timelineEntries : [];
+  // 兼容旧版单条公告：没有公告列表但有旧 Markdown 字段时，合成一条
+  const legacyAnnouncementContent = systemSettings.announcementMarkdown || '';
+  const effectiveAnnouncements = announcementEntries.length
+    ? announcementEntries
+    : (legacyAnnouncementContent
+      ? [{
+          id: `legacy_${systemSettings.announcementVersion || '1'}`,
+          title: systemSettings.announcementTitle || '系统公告',
+          date: '',
+          tag: '提示',
+          content: legacyAnnouncementContent,
+        }]
+      : []);
   const announcement = {
-    enabled: systemSettings.announcementEnabled === 'true' && Boolean(systemSettings.announcementMarkdown),
-    title: systemSettings.announcementTitle || '系统公告',
-    markdown: systemSettings.announcementMarkdown || '',
-    version: systemSettings.announcementVersion || '1',
+    enabled: systemSettings.announcementEnabled === 'true' && effectiveAnnouncements.length > 0,
+    visible: effectiveAnnouncements.length > 0 || timelineEntries.length > 0,
+    title: systemSettings.announcementTitle || '公告',
+    entries: effectiveAnnouncements,
+    timeline: timelineEntries,
+    version: effectiveAnnouncements[0]?.id || systemSettings.announcementVersion || '1',
     showOnce: systemSettings.announcementShowOnce !== 'false',
     buttonText: systemSettings.announcementButtonText || '我知道了',
+    autoPopup: systemSettings.announcementEnabled === 'true',
   };
 
   const allLinkHref = '?';
@@ -195,6 +213,7 @@ export async function renderHomePage(request, env, ctx) {
     </div>
     <div class="nav-top-actions">
       ${submissionEnabled ? `<button type="button" id="addSiteBtnSidebar" class="nav-add-btn" title="${th('addBookmark')}" aria-label="${th('addBookmark')}">+</button>` : ''}
+      ${announcement.visible ? `<button type="button" id="announcementBell" class="nav-icon-btn announcement-bell" title="公告" aria-label="查看公告" aria-haspopup="dialog" aria-controls="announcementModal">📢<span id="announcementBellDot" class="announcement-bell-dot hidden" aria-hidden="true"></span></button>` : ''}
       <button type="button" id="themeToggle" class="nav-icon-btn" title="切换深色/浅色" aria-label="切换深色/浅色模式">🌙</button>
       <button type="button" id="floatingAiToggle" class="nav-icon-btn" title="${th('aiAssistant')}" aria-expanded="false" aria-controls="floatingAiPanel">AI</button>
       <div class="nav-more">
@@ -395,7 +414,7 @@ export async function renderHomePage(request, env, ctx) {
 
   ${submissionEnabled ? renderSubmitModal(datalistOptions) : ''}
   ${adminAuthed ? renderFrontAdminModal(datalistOptions, i18n) : ''}
-  ${announcement.enabled ? renderAnnouncementModal(announcement) : ''}
+  ${announcement.visible ? renderAnnouncementModal(announcement) : ''}
 
 <script>
 window.__SITE_INDEX__ = ${siteIndexJson};
@@ -552,14 +571,17 @@ document.addEventListener('DOMContentLoaded',function(){
   }
 
   const announcementModal=document.getElementById('announcementModal');
+  const announcementBell=document.getElementById('announcementBell');
   if(announcementModal){
     const key='nav:announcement:'+announcementModal.dataset.version;
     const todayKey=key+':today';
     const today=new Date().toISOString().slice(0,10);
     const hiddenToday=localStorage.getItem(todayKey)===today;
-    if(!hiddenToday){
-      announcementModal.classList.remove('hidden');
-    }
+    const autoPopup=${announcement.autoPopup ? 'true' : 'false'}&&!hiddenToday;
+    const bellDot=document.getElementById('announcementBellDot');
+    const seenKey=key+':seen';
+    function markAnnouncementSeen(){try{localStorage.setItem(seenKey,'1')}catch(e){}bellDot&&bellDot.classList.add('hidden')}
+    function openAnnouncement(tab){announcementModal.classList.remove('hidden');markAnnouncementSeen();if(tab)switchAnnouncementTab(tab)}
     function closeAnnouncement(){
       announcementModal.classList.add('hidden');
     }
@@ -567,9 +589,24 @@ document.addEventListener('DOMContentLoaded',function(){
       announcementModal.classList.add('hidden');
       localStorage.setItem(todayKey,today);
     }
+    function switchAnnouncementTab(tab){
+      const isTimeline=tab==='timeline';
+      announcementModal.querySelectorAll('.ann-tab').forEach(function(btn){const active=btn.dataset.annTab===tab;btn.classList.toggle('active',active);btn.setAttribute('aria-selected',String(active))});
+      const panelA=document.getElementById('annPanelAnnouncements');
+      const panelT=document.getElementById('annPanelTimeline');
+      if(panelA){panelA.hidden=isTimeline;panelA.classList.toggle('active',!isTimeline)}
+      if(panelT){panelT.hidden=!isTimeline;panelT.classList.toggle('active',isTimeline)}
+    }
+    announcementModal.querySelectorAll('.ann-tab').forEach(function(btn){btn.addEventListener('click',function(){switchAnnouncementTab(btn.dataset.annTab)})});
+    announcementBell&&announcementBell.addEventListener('click',function(){openAnnouncement('announcements')});
+    try{if(autoPopup||localStorage.getItem(seenKey)!=='1'){bellDot&&bellDot.classList.remove('hidden')}}catch(e){}
+    if(autoPopup){
+      announcementModal.classList.remove('hidden');
+    }
     announcementModal.querySelectorAll('.announcement-close').forEach(function(btn){btn.addEventListener('click',closeAnnouncement)});
     announcementModal.querySelectorAll('.announcement-close-today').forEach(function(btn){btn.addEventListener('click',closeAnnouncementToday)});
     announcementModal.addEventListener('click',function(e){if(e.target===announcementModal)closeAnnouncement()});
+    announcementModal.querySelectorAll('.announcement-close').forEach(function(btn){btn.addEventListener('click',markAnnouncementSeen)});
   }
   const sidebar=document.getElementById('sidebar'),overlay=document.getElementById('mobileOverlay');
   const themeToggle=document.getElementById('themeToggle');

@@ -134,6 +134,57 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     html.dark .announcement-body{color:#cbd5e1}
     html.dark .announcement-body h1,html.dark .announcement-body h2,html.dark .announcement-body h3{color:#93c5fd}
 
+    /* 公告铃铛入口与红点 */
+    .announcement-bell{position:relative}
+    .announcement-bell-dot{position:absolute;top:4px;right:5px;width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
+    .announcement-bell-dot.hidden{display:none}
+    html.dark .announcement-bell-dot{box-shadow:0 0 0 2px rgba(15,23,42,.9)}
+
+    /* 双标签公告弹窗 */
+    .ann-modal-card{display:flex;flex-direction:column;max-height:min(82vh,44rem)}
+    .ann-head-title{display:flex;align-items:center;gap:.6rem}
+    .ann-head-ico{display:inline-flex;align-items:center;justify-content:center;width:2.25rem;height:2.25rem;border-radius:.75rem;background:var(--nav-primary-50);font-size:1.1rem}
+    html.dark .ann-head-title h2{color:#f1f5f9}
+    .ann-tabs{display:flex;gap:.25rem;padding:0 .9rem;border-bottom:1px solid color-mix(in srgb,var(--nav-primary) 14%,transparent)}
+    .ann-tab{padding:.7rem 1.1rem;font-size:.875rem;font-weight:500;color:#64748b;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s ease,border-color .15s ease}
+    .ann-tab:hover{color:var(--nav-primary)}
+    .ann-tab.active{color:var(--nav-primary);border-bottom-color:var(--nav-primary);font-weight:700}
+    html.dark .ann-tab{color:#94a3b8}
+    .ann-modal-body{flex:1;min-height:0;overflow:auto;padding:1rem 1.25rem}
+    .ann-panel[hidden]{display:none}
+    html.dark .ann-item-body,html.dark .ann-timeline-content{color:#cbd5e1}
+
+    /* 公告列表条目 */
+    .ann-item{padding:.9rem 0;border-bottom:1px dashed color-mix(in srgb,var(--nav-primary) 18%,transparent)}
+    .ann-item:last-child{border-bottom:none;padding-bottom:.25rem}
+    .ann-item:first-child{padding-top:.25rem}
+    .ann-item-head{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-bottom:.35rem}
+    .ann-item-title{margin:0;font-size:1rem;font-weight:700;color:#1e293b;flex:1;min-width:8rem}
+    html.dark .ann-item-title{color:#e2e8f0}
+    .ann-item-date{font-size:.75rem;color:#94a3b8;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .ann-tag{display:inline-flex;align-items:center;padding:.12rem .55rem;border-radius:999px;font-size:.72rem;font-weight:600;line-height:1.4;white-space:nowrap}
+    .ann-tag-important{background:#fee2e2;color:#b91c1c}
+    .ann-tag-maintenance{background:#fef3c7;color:#92400e}
+    .ann-tag-update{background:#dbeafe;color:#1d4ed8}
+    .ann-tag-activity{background:#fae8ff;color:#a21caf}
+    .ann-tag-info{background:#e0f2fe;color:#0369a1}
+    html.dark .ann-tag-important{background:rgba(239,68,68,.18);color:#fca5a5}
+    html.dark .ann-tag-maintenance{background:rgba(245,158,11,.18);color:#fcd34d}
+    html.dark .ann-tag-update{background:rgba(59,130,246,.18);color:#93c5fd}
+    html.dark .ann-tag-activity{background:rgba(217,70,239,.18);color:#f0abfc}
+    html.dark .ann-tag-info{background:rgba(14,165,233,.18);color:#7dd3fc}
+    .ann-empty{padding:2rem 0;text-align:center;color:#94a3b8;font-size:.875rem}
+
+    /* 时间线 */
+    .ann-timeline{list-style:none;margin:.25rem 0 .25rem .45rem;padding:0 0 0 1.1rem;border-left:2px solid color-mix(in srgb,var(--nav-primary) 22%,transparent)}
+    .ann-timeline-item{position:relative;padding:0 0 1.15rem 0}
+    .ann-timeline-item:last-child{padding-bottom:.25rem}
+    .ann-timeline-item::before{content:"";position:absolute;left:calc(-1.1rem - 6px);top:.32rem;width:10px;height:10px;border-radius:50%;background:var(--nav-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--nav-primary) 18%,transparent)}
+    .ann-timeline-date{font-size:.72rem;font-weight:600;color:var(--nav-primary);letter-spacing:.03em;font-variant-numeric:tabular-nums}
+    .ann-timeline-title{margin:.15rem 0 0;font-size:.95rem;font-weight:600;color:#1e293b}
+    html.dark .ann-timeline-title{color:#e2e8f0}
+    .ann-timeline-content{margin-top:.2rem;font-size:.85rem;line-height:1.65;color:#475569}
+
     html[data-festival="newyear"] header{background:linear-gradient(135deg,#b91c1c,#dc2626,#f59e0b)!important}
     html[data-festival="newyear"] .floating-action-stack{box-shadow:0 18px 48px rgba(220,38,38,.22),inset 0 1px 0 rgba(255,255,255,.75)}
     html[data-festival="newyear"] .floating-action-btn:hover,html[data-festival="newyear"] .floating-action-btn[aria-expanded="true"]{background:#dc2626!important}

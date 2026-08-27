@@ -25,6 +25,8 @@ export const DEFAULT_SYSTEM_SETTINGS = {
   announcementVersion: '1',
   announcementShowOnce: 'true',
   announcementButtonText: '我知道了',
+  announcementEntries: '[]',
+  timelineEntries: '[]',
 };
 
 const FIELD_LIMITS = {
@@ -43,7 +45,66 @@ const FIELD_LIMITS = {
   announcementMarkdown: 5000,
   announcementVersion: 40,
   announcementButtonText: 40,
+  announcementEntries: 30000,
+  timelineEntries: 30000,
 };
+
+export const ANNOUNCEMENT_TAGS = ['更新', '维护', '活动', '提示', '重要'];
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function safeJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function sanitizeAnnouncementEntries(value) {
+  const items = safeJsonArray(value);
+  const entries = [];
+  for (const raw of items) {
+    if (!raw || typeof raw !== 'object') continue;
+    const title = cleanText(raw.title || '').slice(0, 80);
+    const content = cleanText(raw.content || '').slice(0, 5000);
+    if (!title && !content) continue;
+    const date = DATE_PATTERN.test(String(raw.date || '')) ? String(raw.date) : new Date().toISOString().slice(0, 10);
+    const tag = ANNOUNCEMENT_TAGS.includes(raw.tag) ? raw.tag : '提示';
+    entries.push({
+      id: cleanText(raw.id || '').slice(0, 40) || `a_${Date.now().toString(36)}_${entries.length}`,
+      title: title || '公告',
+      date,
+      tag,
+      content,
+    });
+  }
+  entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return entries.slice(0, 100);
+}
+
+export function sanitizeTimelineEntries(value) {
+  const items = safeJsonArray(value);
+  const entries = [];
+  for (const raw of items) {
+    if (!raw || typeof raw !== 'object') continue;
+    const title = cleanText(raw.title || '').slice(0, 120);
+    const content = cleanText(raw.content || '').slice(0, 2000);
+    if (!title && !content) continue;
+    const date = DATE_PATTERN.test(String(raw.date || '')) ? String(raw.date) : new Date().toISOString().slice(0, 10);
+    entries.push({
+      id: cleanText(raw.id || '').slice(0, 40) || `t_${Date.now().toString(36)}_${entries.length}`,
+      date,
+      title: title || '更新',
+      content,
+    });
+  }
+  entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return entries.slice(0, 200);
+}
 
 function boolString(value, fallback = 'false') {
   if (value === undefined || value === null || value === '') return fallback;
@@ -94,6 +155,8 @@ export async function getSystemSettings(env) {
   settings.announcementVersion = limitText(settings.announcementVersion, 'announcementVersion') || DEFAULT_SYSTEM_SETTINGS.announcementVersion;
   settings.announcementShowOnce = boolString(settings.announcementShowOnce, 'true');
   settings.announcementButtonText = limitText(settings.announcementButtonText, 'announcementButtonText') || DEFAULT_SYSTEM_SETTINGS.announcementButtonText;
+  settings.announcementEntries = sanitizeAnnouncementEntries(settings.announcementEntries);
+  settings.timelineEntries = sanitizeTimelineEntries(settings.timelineEntries);
 
   return settings;
 }
@@ -122,10 +185,16 @@ export async function updateSystemSettings(env, payload = {}) {
     announcementVersion: limitText(payload.announcementVersion, 'announcementVersion') || String(Number(current.announcementVersion || 0) + 1),
     announcementShowOnce: boolString(payload.announcementShowOnce, 'true'),
     announcementButtonText: limitText(payload.announcementButtonText, 'announcementButtonText') || DEFAULT_SYSTEM_SETTINGS.announcementButtonText,
+    announcementEntries: sanitizeAnnouncementEntries(
+      payload.announcementEntries !== undefined ? payload.announcementEntries : current.announcementEntries,
+    ),
+    timelineEntries: sanitizeTimelineEntries(
+      payload.timelineEntries !== undefined ? payload.timelineEntries : current.timelineEntries,
+    ),
   };
 
   for (const [key, value] of Object.entries(next)) {
-    await setSetting(env, `${SYSTEM_SETTING_PREFIX}${key}`, value);
+    await setSetting(env, `${SYSTEM_SETTING_PREFIX}${key}`, Array.isArray(value) ? JSON.stringify(value) : value);
   }
 
   return next;
