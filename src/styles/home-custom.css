@@ -521,7 +521,15 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     html[data-skin] .announcement-body{color:var(--nav-ink)!important}
     html[data-skin] .announcement-body h1,html[data-skin] .announcement-body h2,html[data-skin] .announcement-body h3{color:var(--nav-accent)!important}
     html[data-skin] .theme-studio,html[data-skin] .theme-studio-head,html[data-skin] .nav-more-menu,html[data-skin] .nav-search-history{background:var(--nav-surface)!important;border-color:var(--nav-line)!important;color:var(--nav-ink)!important}
+    /* chip 默认态(未选中)用令牌;选中态高亮——active 特异性更高且也 !important,确保选中可见 */
     html[data-skin] .theme-chip{background:var(--nav-chip)!important;border-color:var(--nav-input-border)!important;color:var(--nav-muted)!important}
+    html[data-skin] .theme-chip.active{background:var(--nav-ink)!important;border-color:var(--nav-ink)!important;color:var(--nav-page-bg)!important}
+    html[data-skin] .layout-toggle.active{background:var(--nav-ink)!important;border-color:var(--nav-ink)!important;color:var(--nav-page-bg)!important}
+    /* 皮肤预览:未选中名 muted、选中名 ink + 选中描边 ink(由基线 active 提供) */
+    html[data-skin] .theme-skin-name{color:var(--nav-muted)!important}
+    html[data-skin] .theme-skin.active .theme-skin-name{color:var(--nav-ink)!important}
+    html[data-skin] .theme-skin.active .theme-skin-preview{outline-color:var(--nav-ink)!important}
+    html[data-skin] .theme-swatch.active{box-shadow:0 0 0 2px var(--nav-ink)!important}
     html[data-skin] .theme-bg-url input{background:var(--nav-input)!important;border-color:var(--nav-input-border)!important;color:var(--nav-ink)!important}
     html[data-skin] .nav-search kbd{background:var(--nav-chip)!important;border-color:var(--nav-input-border)!important;color:var(--nav-muted)!important}
 
