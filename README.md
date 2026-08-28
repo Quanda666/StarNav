@@ -57,56 +57,40 @@ Fork 本仓库后点击下方按钮，Cloudflare 会自动创建并绑定 D1、K
 
 ### 手动部署
 
-你也可以选择两种手动部署路径（适合需要固定到自有资源或本地调试的场景；全新部署时下面的 D1/KV/管理员步骤均可跳过，由一键流程自动完成）：
+适合需要本地调试、固定到已有资源，或不想用一键流程的场景。**全新手动部署**只需「安装 → 检查 → 部署 → /admin 设管理员」四步；下表里的「创建 D1/KV」「初始化数据库」「写管理员到 KV」对全新部署均已不再需要（由 auto-provision + `ensureSchema` + `/admin` 自助设置自动完成），只在「想固定到你自己已有的资源」时才用。
 
-- **网页版全流程部署**：适合不熟悉命令行和 Wrangler 的用户，见 [Cloudflare 网页版全流程部署教程](docs/web-deployment-guide.md)。
-- **Wrangler 部署**：适合开发者和需要本地调试、自动化发布的场景，按下方步骤执行。
+- **网页版全流程**：不熟悉命令行的用户见 [Cloudflare 网页版全流程部署教程](docs/web-deployment-guide.md)。
+- **Wrangler 部署**：按下方步骤执行。
 
-### 1. 安装依赖
+#### 1. 安装依赖
 
 ```bash
 npm install
 ```
 
-### 2. 创建 D1 数据库
+#### 2.（可选）固定到你已有的 D1 / KV
+
+全新部署可跳过本步——`npx wrangler deploy` 会按 `wrangler.toml` 自动创建并绑定资源。仅当你想**复用自己已有的** D1 / KV 时，先创建好资源，再把 id 填进 `wrangler.toml`（取消对应注释行）：
 
 ```bash
-npx wrangler d1 create book
+npx wrangler d1 create book             # 取返回的 database_id 填到 wrangler.toml
+npx wrangler kv namespace create NAV_AUTH # 取返回的 id 填到 wrangler.toml
 ```
 
-将生成的数据库 ID 写入 `wrangler.toml` 中的 D1 绑定。
+```toml
+[[d1_databases]]
+binding = "NAV_DB"
+database_name = "book"
+database_id = "你的-d1-id"   # 取消注释并填写
 
-### 3. 初始化数据库
-
-```bash
-npx wrangler d1 execute book --file=schema.sql --remote
+[[kv_namespaces]]
+binding = "NAV_AUTH"
+id = "你的-kv-id"            # 取消注释并填写
 ```
 
-### 4. 创建 KV 命名空间
+> 数据库表无需手动初始化：Worker 首次请求时 `ensureSchema` 会自动建表（幂等，见 `src/services/migrationService.js`）。管理员账号也无需手动写入 KV——部署后访问 `/admin` 首次会自助设置。
 
-```bash
-npx wrangler kv namespace create NAV_AUTH
-```
-
-将生成的 namespace id 写入 `wrangler.toml` 中的 KV 绑定。
-
-### 5. 设置管理员账号密码
-
-在 Cloudflare KV `NAV_AUTH` 中添加：
-
-```text
-admin_username = 你的管理员用户名
-admin_password = 你的管理员密码
-```
-
-也可以用 Wrangler 写入：
-
-```bash
-npx wrangler kv key put admin_username admin --binding=NAV_AUTH --remote
-npx wrangler kv key put admin_password your-password --binding=NAV_AUTH --remote
-```
-
-### 6. 本地检查
+#### 3. 本地检查
 
 ```bash
 npm run quality
@@ -114,17 +98,16 @@ npm run quality
 
 部署前建议同时查看 [docs/deployment-checklist.md](docs/deployment-checklist.md)，逐项确认 D1、KV、管理员账号、API Token、WebHook、Cron Trigger 和备份策略。
 
-### 7. 部署
+#### 4. 部署
 
 ```bash
 npx wrangler deploy
 ```
 
-部署完成后先访问：
+部署完成后：
 
-- 后台管理：`https://你的域名/admin`
-- 然后登录管理员账户在后台添加一个书签，再访问前台
-- 如果不然直接打开前台会打不开
+- 访问 `https://你的域名/admin`，首次进入会引导你设置管理员账号（无需命令行写 KV）。
+- 设置好管理员后，在后台添加一个书签，再访问前台（前台为空时首页会显示空状态，属正常现象）。
 
 ## 常用命令
 
