@@ -47,7 +47,7 @@
 
 ### 一键部署（推荐）
 
-Fork 本仓库后点击下方按钮，Cloudflare 会自动创建并绑定 D1、KV，部署 Worker，无需手动建库、建表或写入管理员到 KV。部署完成后访问 `你的域名/admin`，首次进入会自动引导你设置管理员账号。
+点击下方按钮，Cloudflare 会自动创建并绑定 D1、KV，部署 Worker，无需手动建库、建表或写入管理员到 KV。部署完成后访问 `你的域名/admin`，首次进入会自动引导你设置管理员账号。
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Quanda666/StarNav)
 
