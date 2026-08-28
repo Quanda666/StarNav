@@ -443,6 +443,51 @@ export async function verifyAdminCredentials(env, name, password) {
   return constantTimeCompare(computedHash, storedHash);
 }
 
+/**
+ * 判断管理员账号是否已完成首次初始化（NAV_AUTH 中存在 admin_username）。
+ *
+ * 用于首次部署时在 /admin 展示「初始化管理员」页面，而非登录页。
+ *
+ * @param {object} env Cloudflare Workers 环境绑定，需包含 `NAV_AUTH`。
+ * @returns {Promise<boolean>}
+ */
+export async function isAdminInitialized(env) {
+  if (!env?.NAV_AUTH) return false;
+  return Boolean(await env.NAV_AUTH.get('admin_username'));
+}
+
+/**
+ * 首次初始化管理员账号：写入用户名与 PBKDF2 哈希密码。
+ *
+ * 防抢注：仅当当前不存在管理员时才写入，已存在则抛错，避免被覆盖或重复初始化。
+ * 与 verifyAdminCredentials 中「明文自动升级为哈希」的存储格式保持一致
+ * （`pbkdf2$<salt>$<hash>`），初始化后即可正常登录。
+ *
+ * @param {object} env Cloudflare Workers 环境绑定，需包含 `NAV_AUTH`。
+ * @param {string} name 管理员用户名。
+ * @param {string} password 管理员明文密码（写入前会哈希）。
+ * @returns {Promise<void>}
+ * @throws {Error} 用户名/密码不合规，或管理员已存在时抛出。
+ */
+export async function initializeAdmin(env, name, password) {
+  if (!env?.NAV_AUTH) throw new Error('NAV_AUTH KV 未绑定');
+  const trimmedName = String(name || '').trim();
+  const trimmedPassword = String(password || '');
+  if (trimmedName.length < 2 || trimmedName.length > 32) {
+    throw new Error('用户名长度需在 2-32 之间');
+  }
+  if (trimmedPassword.length < 8 || trimmedPassword.length > 128) {
+    throw new Error('密码长度需在 8-128 之间');
+  }
+  if (await env.NAV_AUTH.get('admin_username')) {
+    throw new Error('管理员账号已存在，拒绝重复初始化');
+  }
+  const salt = generateSalt();
+  const hash = await hashPassword(trimmedPassword, salt);
+  await env.NAV_AUTH.put('admin_username', trimmedName);
+  await env.NAV_AUTH.put('admin_password', `${PASSWORD_HASH_PREFIX}${salt}$${hash}`);
+}
+
 // ── 登录失败限速（缓解后台登录在线爆破，#1）────────────────────────────
 const LOGIN_FAIL_PREFIX = 'login_fail:';
 const LOGIN_MAX_ATTEMPTS = 5;

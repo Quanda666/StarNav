@@ -45,7 +45,17 @@
 
 ## 🚀 快速部署
 
-你可以选择两种部署路径：
+### 一键部署（推荐）
+
+Fork 本仓库后点击下方按钮，Cloudflare 会自动创建并绑定 D1、KV，部署 Worker，无需手动建库、建表或写入管理员到 KV。部署完成后访问 `你的域名/admin`，首次进入会自动引导你设置管理员账号。
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Quanda666/StarNav)
+
+> Fork 本仓库后，请把按钮 URL 里的 `Quanda666/StarNav` 换成你自己的仓库地址再点击。数据库表会在 Worker 首次请求时由 `ensureSchema` 自动创建，管理员账号在 `/admin` 首次访问时自助设置——全程零命令行。
+
+### 手动部署
+
+你也可以选择两种手动部署路径（适合需要固定到自有资源或本地调试的场景；全新部署时下面的 D1/KV/管理员步骤均可跳过，由一键流程自动完成）：
 
 - **网页版全流程部署**：适合不熟悉命令行和 Wrangler 的用户，见 [Cloudflare 网页版全流程部署教程](docs/web-deployment-guide.md)。
 - **Wrangler 部署**：适合开发者和需要本地调试、自动化发布的场景，按下方步骤执行。

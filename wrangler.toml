@@ -2,11 +2,22 @@ name = "nav"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
+# ── 资源绑定（auto-provision）──────────────────────────────
+# 省略 id 时，`wrangler deploy` 会自动创建资源并绑定：
+#   - D1：按 database_name 在账号内复用，不存在则新建；
+#   - KV：按 binding 名称复用，不存在则新建。
+# 因此全新 fork 部署无需手动创建任何资源；Worker 首次请求会自动建表
+# （见 src/services/migrationService.js 的 ensureSchema），/admin 首次访问
+# 可自助设置管理员。
+#
+# 已有自己资源的部署者：把对应注释行的 id 填上，即可固定到你的资源、
+# 避免 auto-provision 重建（D1 会按 book 名称复用，通常无需填写）。
+
 [[d1_databases]]
 binding = "NAV_DB"
 database_name = "book"
-database_id = "c71211ff-2219-4cbb-8335-62e7455bd936"
+# database_id = "your-d1-database-id"   # 留空 = 自动创建/复用名为 book 的 D1
 
 [[kv_namespaces]]
 binding = "NAV_AUTH"
-id = "3351cfb3a77949b5952f9bc43b4d1d98"
+# id = "your-kv-namespace-id"           # 留空 = 自动创建/复用名为 NAV_AUTH 的 KV
