@@ -108,7 +108,7 @@ export async function renderHomePage(request, env, ctx) {
 
   const announcementEntries = Array.isArray(systemSettings.announcementEntries) ? systemSettings.announcementEntries : [];
   const timelineEntries = Array.isArray(systemSettings.timelineEntries) ? systemSettings.timelineEntries : [];
-  // 兼容旧版单条公告：没有公告列表但有旧 Markdown 字段时，合成一条
+  // 兼容旧版单条公告：没有公告列表但有旧 Markdown 字段时，合成一条.
   const legacyAnnouncementContent = systemSettings.announcementMarkdown || '';
   const effectiveAnnouncements = announcementEntries.length
     ? announcementEntries
