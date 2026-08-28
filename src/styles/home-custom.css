@@ -468,7 +468,15 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
       .floating-ai-panel{width:auto!important}
       .nav-footer{padding:14px 10px calc(14px + env(safe-area-inset-bottom,0px))}
     }
-    html.dark{--nav-ink:#f4ece3;--nav-muted:#cbbba8;--nav-line:rgba(230,217,200,.18);--nav-page-bg:#161310}
+    html.dark{--nav-ink:#f4ece3;--nav-muted:#cbbba8;--nav-line:rgba(230,217,200,.18);--nav-page-bg:#161310;
+      --nav-surface:#1d1915;--nav-surface-2:#1d1915;
+      --nav-input:#241f1a;--nav-input-border:rgba(230,217,200,.18);
+      --nav-chip:#241f1a;--nav-chip-ink:#cbbba8;
+      --nav-tag-bg:color-mix(in srgb,var(--nav-accent) 18%,transparent);--nav-tag-ink:color-mix(in srgb,var(--nav-accent) 45%,#f4ece3);
+      --nav-fav:#241f1a;--nav-fav-ink:#cbbba8;--nav-fav-active:#fbbf24;
+      --nav-shadow:none;--nav-shadow-hover:0 10px 24px rgba(0,0,0,.4);
+      --nav-topbar-bg:#1d1915;--nav-blur:none;
+      --nav-border-accent:rgba(230,217,200,.3);--nav-elev:rgba(0,0,0,.5)}
     html.dark body.nav-shell{background:#161310;color:#f4ece3}
     html.dark .nav-brand,html.dark .nav-side-link,html.dark .site-card-title,html.dark .nav-toolbar h2,html.dark .site-group-head h3{color:#f4ece3!important}
     html.dark .nav-topbar,html.dark .nav-sidebar,html.dark .usage-card,html.dark .site-card,html.dark .layout-section,html.dark .nav-search-history{background:#1d1915!important;border-color:rgba(230,217,200,.16)!important;color:#f4ece3!important}
@@ -599,6 +607,13 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     html[data-skin="dark"] .usage-card-head h3{color:#f5f5f5!important}
     html[data-skin="dark"] .usage-card-head button,html[data-skin="dark"] .usage-empty{color:#a3a3a3!important}
     html[data-skin="dark"] .usage-chip .chip-remove:hover{color:#f87171!important}
+    /* dark 主题:排序按钮(默认/热门/最近访问)用灰调,避免 tailwind 蓝/白突兀 */
+    html[data-skin="dark"] .nav-toolbar-actions a{border-color:#2a2a2a!important;color:#a3a3a3!important}
+    html[data-skin="dark"] .nav-toolbar-actions a.bg-white{background:#1a1a1a!important;color:#a3a3a3!important}
+    html[data-skin="dark"] .nav-toolbar-actions a.bg-white:hover{background:#262626!important;color:#f5f5f5!important}
+    html[data-skin="dark"] .nav-toolbar-actions a.bg-primary-600{background:#e5e5e5!important;color:#0a0a0a!important;border-color:#e5e5e5!important}
+    /* dark 主题:保存排序按钮 */
+    html[data-skin="dark"] .nav-save-order{background:#262626!important;color:#d4d4d4!important}
     /* dark 皮肤选中即深色:确保用纯灰暗调而非通用暖暗 */
     html.dark[data-skin="dark"]{--nav-ink:#f5f5f5;--nav-muted:#a3a3a3;--nav-line:#2a2a2a;--nav-page-bg:#0a0a0a;
       --nav-surface:#141414;--nav-surface-2:#141414;
