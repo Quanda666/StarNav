@@ -32,6 +32,7 @@ Thumbs.db
 # Cloudflare
 .wrangler/
 dist/
+wrangler.prod.toml
 
 # Temporary files
 tmp/

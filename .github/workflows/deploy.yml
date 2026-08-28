@@ -1,0 +1,54 @@
+name: Deploy to existing worker
+
+# 把最新代码自动部署到你【已有】的 nav Worker（绑定现有 D1/KV，数据不丢）。
+# 仅在主仓库运行；fork 者请用 README 的 Deploy to Cloudflare 按钮一键部署全新资源。
+#
+# 需在仓库 Settings → Secrets and variables → Actions 配置以下 Secrets：
+#   CLOUDFLARE_API_TOKEN  具备 Workers 部署权限的 Cloudflare API Token（模板：Edit Cloudflare Workers）
+#   CLOUDFLARE_ACCOUNT_ID 你的 Cloudflare 账户 ID（控制台右侧栏可见）
+#   NAV_D1_ID            现有 D1 database id（book）
+#   NAV_KV_ID            现有 KV namespace id（NAV_AUTH）
+#   NAV_WORKER_NAME      （可选）默认 nav；填则覆盖
+#
+# 配好 Secrets 后，push 到 main 即自动部署到旧部署；未配 Secrets 时部署步骤自动跳过，不影响仓库。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    # 仅主仓库运行，fork 不触发（fork 走一键按钮）
+    if: github.repository == 'Quanda666/StarNav'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Syntax check
+        run: npm run check
+
+      - name: Build CSS
+        run: npm run build:css
+
+      - name: Generate prod config
+        id: gen
+        env:
+          NAV_D1_ID: ${{ secrets.NAV_D1_ID }}
+          NAV_KV_ID: ${{ secrets.NAV_KV_ID }}
+          NAV_WORKER_NAME: ${{ secrets.NAV_WORKER_NAME }}
+        run: node scripts/gen-prod-config.mjs
+
+      - name: Deploy to existing worker
+        if: steps.gen.outputs.generated == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy -c wrangler.prod.toml
