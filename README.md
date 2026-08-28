@@ -51,7 +51,9 @@ Fork 本仓库后点击下方按钮，Cloudflare 会自动创建并绑定 D1、K
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Quanda666/StarNav)
 
-> Fork 本仓库后，请把按钮 URL 里的 `Quanda666/StarNav` 换成你自己的仓库地址再点击。数据库表会在 Worker 首次请求时由 `ensureSchema` 自动创建，管理员账号在 `/admin` 首次访问时自助设置——全程零命令行。
+> **建议流程**：先把本项目 Fork 到你自己的 GitHub 账号，再到 Cloudflare 的 Workers 里「连接 GitHub」导入你 Fork 后的仓库进行部署。这样后续本项目有更新时，你可以用 GitHub 的 **Sync fork** 把上游更新同步到你的仓库，已连接的 Worker 会随之自动更新。
+>
+> 部署完成后：数据库表会在 Worker 首次请求时由 `ensureSchema` 自动创建，管理员账号在 `/admin` 首次访问时自助设置——全程零命令行。
 
 ### 手动部署
 
