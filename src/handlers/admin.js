@@ -176,6 +176,7 @@ function renderLoginPage(message = '', { status = 200 } = {}) {
     .back-link:hover{color:#2c2416;text-decoration:underline}
     .back-link::before{content:'← '}
     @media(max-width:860px){
+      body{align-items:safe center;overflow-x:hidden;overflow-y:auto;padding:1rem 1rem 2rem}
       .login-shell{grid-template-columns:1fr;max-width:440px;padding:3rem 2.5rem;margin:0 auto}
       .brand-panel{display:none}
       .form-panel{padding:0}
@@ -331,6 +332,14 @@ function renderSetupPage(message = '', { status = 200 } = {}) {
     .back-link{display:block;text-align:center;margin-top:1.4rem;color:#654321;text-decoration:none;font-size:.813rem;font-style:italic;border-top:1px solid rgba(44,36,22,.2);padding-top:1.2rem}
     .back-link:hover{color:#2c2416;text-decoration:underline}
     .back-link::before{content:'← '}
+    @media(max-width:600px){
+      html,body{height:auto;min-height:100%}
+      body{align-items:safe center;overflow-x:hidden;overflow-y:auto;padding:1.25rem 1rem 2rem}
+      .shell{max-width:100%}
+      .header{padding:1.4rem 1.5rem 1.1rem}
+      .body{padding:1.5rem 1.5rem 1.75rem}
+      .title{font-size:1.3rem}
+    }
   </style>
 </head>
 <body>
