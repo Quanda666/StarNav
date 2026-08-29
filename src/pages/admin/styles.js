@@ -364,6 +364,8 @@ body{padding:0!important}
   #pendingTable td:nth-child(6)::before{content:'分类'}
   #pendingTable td:nth-child(7)::before{content:'标签'}
   #pendingTable .actions{grid-template-columns:1fr 1fr}
+  #pendingTable td{overflow-wrap:anywhere}
+  #pendingTable td:nth-child(3),#pendingTable td:nth-child(3) a{word-break:break-all}
   .analytics-summary,.analytics-grid,.analytics-ops-strip,.quality-grid{grid-template-columns:1fr!important}
   .analytics-card{min-width:0}
   #categoryTable,#tagTable,#tagReviewTable,#apiTokenTable,#backupTable,#operationLogTable,#spaceTable{min-width:0!important;width:100%}

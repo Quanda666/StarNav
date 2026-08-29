@@ -124,7 +124,7 @@ function renderLoginPage(message = '', { status = 200 } = {}) {
     body{display:flex;justify-content:center;align-items:center;background:#f4f1e8;padding:1rem;position:relative;overflow:hidden}
     body::before{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 1px,rgba(0,0,0,.02) 1px,rgba(0,0,0,.02) 2px),repeating-linear-gradient(90deg,transparent,transparent 1px,rgba(0,0,0,.02) 1px,rgba(0,0,0,.02) 2px);background-size:20px 20px;opacity:.5}
     body::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 50%,rgba(139,69,19,.03),transparent 50%),radial-gradient(circle at 80% 50%,rgba(101,67,33,.03),transparent 50%);pointer-events:none}
-    .login-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;max-width:920px;background:#fefdfb;border:3px solid #2c2416;box-shadow:0 8px 0 rgba(44,36,22,.15),0 20px 44px rgba(0,0,0,.1);position:relative;z-index:1;animation:slideIn .6s cubic-bezier(.16,1,.3,1);overflow:hidden}
+    .login-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;max-width:920px;min-width:0;background:#fefdfb;border:3px solid #2c2416;box-shadow:0 8px 0 rgba(44,36,22,.15),0 20px 44px rgba(0,0,0,.1);position:relative;z-index:1;animation:slideIn .6s cubic-bezier(.16,1,.3,1);overflow:hidden}
     @keyframes slideIn{from{opacity:0;transform:translateY(30px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
     @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-8px)}20%,40%,60%,80%{transform:translateX(8px)}}
     .shake{animation:shake .5s}
@@ -176,12 +176,13 @@ function renderLoginPage(message = '', { status = 200 } = {}) {
     .back-link:hover{color:#2c2416;text-decoration:underline}
     .back-link::before{content:'← '}
     @media(max-width:860px){
-      body{align-items:safe center;overflow-x:hidden;overflow-y:auto;padding:1rem 1rem 2rem}
-      .login-shell{grid-template-columns:1fr;max-width:440px;padding:3rem 2.5rem;margin:0 auto}
+      html,body{height:auto;min-height:100%;width:100%;max-width:100%;overflow-x:hidden}
+      body{flex-direction:column;justify-content:safe center;align-items:center;overflow-x:hidden;overflow-y:auto;padding:1rem 1rem 2rem}
+      .login-shell{grid-template-columns:minmax(0,1fr);width:100%;max-width:min(100%,440px);min-width:0;padding:2rem 1.25rem;margin:0 auto}
       .brand-panel{display:none}
-      .form-panel{padding:0}
-      .form-inner{max-width:none}
-      .login-title{font-size:2rem}
+      .form-panel{padding:0;min-width:0}
+      .form-inner{max-width:none;min-width:0}
+      .login-title{font-size:clamp(1.15rem,5vw,1.55rem);letter-spacing:.02em;overflow-wrap:anywhere;max-width:100%}
     }
   </style>
 </head>
