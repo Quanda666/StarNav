@@ -263,7 +263,9 @@ h1,.analytics-panel-title h3{color:var(--admin-text)}.admin-subtitle,.category-h
 .config-list-toolbar #openAddSiteBtn{flex:0 0 auto;white-space:nowrap;margin:0;padding:10px 16px}
 #bulkToolbar[hidden]{display:none!important}
 #configTable{min-width:0;width:100%}
+#pendingTable{min-width:0!important;width:100%;max-width:100%;table-layout:fixed}
 #configTable td,#configTable th{vertical-align:middle}
+#pendingTable td,#pendingTable th{vertical-align:middle;overflow-wrap:anywhere;word-break:break-word}
 .site-cell{display:flex;align-items:center;gap:10px;min-width:220px}
 .site-logo{width:32px;height:32px;border-radius:10px;object-fit:contain;background:#fffdf8;border:1px solid var(--admin-line);flex:0 0 auto}
 .site-logo.is-empty{display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;color:var(--admin-muted);background:#f3eadf}
@@ -345,10 +347,11 @@ body{padding:0!important}
   .config-list-toolbar select,.config-list-toolbar #openAddSiteBtn,.config-list-toolbar #searchInput{width:100%;min-width:0}
   #configDensityMode{display:none}
   .table-wrapper{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
-  #config .table-wrapper,#pending .table-wrapper{overflow:visible!important}
-  #configTable,#pendingTable,#configTable thead,#pendingTable thead,#configTable tbody,#pendingTable tbody,#configTable tr,#pendingTable tr,#configTable td,#pendingTable td{display:block;width:100%;box-sizing:border-box}
+  #config .table-wrapper{overflow:visible!important}#pending .table-wrapper{overflow:hidden!important;max-width:100%;min-width:0}
+  #pending,#pendingTable{max-width:100%;min-width:0!important;width:100%;box-sizing:border-box}
+  #configTable,#pendingTable,#configTable thead,#pendingTable thead,#configTable tbody,#pendingTable tbody,#configTable tr,#pendingTable tr,#configTable td,#pendingTable td{display:block;width:100%;box-sizing:border-box}#pendingTable,#pendingTable thead,#pendingTable tbody,#pendingTable tr,#pendingTable td{max-width:100%;min-width:0!important}
   #configTable thead,#pendingTable thead{display:none}
-  #configTable tr,#pendingTable tr{margin:0 0 12px;padding:12px;border:1px solid var(--admin-line);border-radius:16px;background:#fffdf8}
+  #configTable tr,#pendingTable tr{margin:0 0 12px;padding:12px;border:1px solid var(--admin-line);border-radius:16px;background:#fffdf8}#pendingTable tr{overflow:hidden}
   #configTable td,#pendingTable td{padding:6px 0;border:0;min-width:0!important}
   #configTable td:nth-child(1){display:flex;justify-content:flex-end;padding-top:0}
   #configTable td:nth-child(3)::before,#configTable td:nth-child(4)::before{display:block;margin-bottom:4px;color:var(--admin-muted);font-size:.72rem;font-weight:700}
@@ -366,10 +369,12 @@ body{padding:0!important}
   #pendingTable td:nth-child(6)::before{content:'分类'}
   #pendingTable td:nth-child(7)::before{content:'标签'}
   #pendingTable td:nth-child(4) img{width:42px!important;height:42px!important;object-fit:contain;border-radius:12px;border:1px solid var(--admin-line);background:#fff;box-shadow:0 4px 10px rgba(71,52,35,.08)}
-  #pendingTable td,#pendingTable a{overflow-wrap:anywhere;word-break:break-all}
-  #pendingTable tr,#pendingTable td{max-width:100%;min-width:0;box-sizing:border-box}
+  #pendingTable td,#pendingTable a{overflow-wrap:anywhere;word-break:break-word;max-width:100%}
+  #pendingTable tr,#pendingTable td,#pendingTable a,#pendingTable img{max-width:100%;min-width:0;box-sizing:border-box}
   #pendingTable .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;padding-top:10px;border-top:1px dashed var(--admin-line)}
-  #pending .page-head .operation-log-controls select{flex:1 1 140px;min-width:0}
+  #pending .page-head .operation-log-controls{width:100%;min-width:0}
+  #pending .page-head .operation-log-controls select{flex:1 1 140px;min-width:0;max-width:100%}
+  #pending .page-head .tag-total-badge{white-space:normal;max-width:100%;box-sizing:border-box}
   .analytics-summary,.analytics-grid,.analytics-ops-strip,.quality-grid{grid-template-columns:1fr!important}
   .analytics-card{min-width:0}
   #categoryTable,#tagTable,#tagReviewTable,#apiTokenTable,#backupTable,#operationLogTable,#spaceTable{min-width:0!important;width:100%}
