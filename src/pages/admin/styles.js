@@ -345,7 +345,7 @@ body{padding:0!important}
   .config-list-toolbar select,.config-list-toolbar #openAddSiteBtn,.config-list-toolbar #searchInput{width:100%;min-width:0}
   #configDensityMode{display:none}
   .table-wrapper{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
-  #config .table-wrapper,#pending .table-wrapper{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+  #config .table-wrapper,#pending .table-wrapper{overflow:visible!important}
   #configTable,#pendingTable,#configTable thead,#pendingTable thead,#configTable tbody,#pendingTable tbody,#configTable tr,#pendingTable tr,#configTable td,#pendingTable td{display:block;width:100%;box-sizing:border-box}
   #configTable thead,#pendingTable thead{display:none}
   #configTable tr,#pendingTable tr{margin:0 0 12px;padding:12px;border:1px solid var(--admin-line);border-radius:16px;background:#fffdf8}
