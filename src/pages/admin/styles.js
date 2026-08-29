@@ -356,29 +356,19 @@ body{padding:0!important}
   #configTable td:nth-child(4)::before{content:'标签'}
   #configTable .actions,#pendingTable .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
   #configTable .actions button,#pendingTable .actions button{width:100%;margin:0;padding:8px 6px}
-  /* 待审卡片：名称+编号+图标组成卡片头，元数据成行，操作置底 */
-  #pendingTable tr{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name icon" "id icon" "url url" "desc desc" "cat cat" "tags tags" "actions actions";gap:2px 12px;align-items:start}
-  #pendingTable tr td[colspan]{grid-column:1 / -1}
-  #pendingTable td:nth-child(1){grid-area:id;color:var(--admin-muted);font-size:.74rem;line-height:1.3}
-  #pendingTable td:nth-child(2){grid-area:name;font-weight:700;font-size:1.04rem;color:var(--admin-text);line-height:1.3}
-  #pendingTable td:nth-child(3){grid-area:url}
-  #pendingTable td:nth-child(4){grid-area:icon;display:flex;justify-content:flex-end;align-items:flex-start}
-  #pendingTable td:nth-child(5){grid-area:desc}
-  #pendingTable td:nth-child(6){grid-area:cat}
-  #pendingTable td:nth-child(7){grid-area:tags}
-  #pendingTable td:nth-child(8){grid-area:actions}
-  #pendingTable td:nth-child(3)::before,#pendingTable td:nth-child(5)::before,#pendingTable td:nth-child(6)::before,#pendingTable td:nth-child(7)::before{display:block;margin-bottom:4px;color:var(--admin-muted);font-size:.72rem;font-weight:700}
+  /* 待审卡片：与书签列表(#configTable)一致的纵向堆叠卡片，弃用网格（网格项 width:100% 会让 auto 图标列膨胀至容器宽度并横向溢出页面）。tr/td 的 display:block 与卡片样式复用上方通用规则，此处只管字段排版。 */
+  #pendingTable td:nth-child(1){display:flex;justify-content:flex-end;padding-top:0;color:var(--admin-muted);font-size:.74rem;line-height:1.3}
+  #pendingTable td:nth-child(2){font-weight:700;font-size:1.04rem;color:var(--admin-text);line-height:1.3}
+  #pendingTable td:nth-child(3)::before,#pendingTable td:nth-child(4)::before,#pendingTable td:nth-child(5)::before,#pendingTable td:nth-child(6)::before,#pendingTable td:nth-child(7)::before{display:block;margin-bottom:4px;color:var(--admin-muted);font-size:.72rem;font-weight:700}
   #pendingTable td:nth-child(3)::before{content:'网址'}
+  #pendingTable td:nth-child(4)::before{content:'图标'}
   #pendingTable td:nth-child(5)::before{content:'描述'}
   #pendingTable td:nth-child(6)::before{content:'分类'}
   #pendingTable td:nth-child(7)::before{content:'标签'}
-  #pendingTable .actions{grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;padding-top:10px;border-top:1px dashed var(--admin-line)}
-  #pendingTable tr,#pendingTable td{max-width:100%;min-width:0;box-sizing:border-box}
-  #pendingTable td,#pendingTable a{overflow-wrap:anywhere;word-break:break-all}
-  /* 卡片网格项不能沿用 width:100%（会让 auto 图标列膨胀至容器宽度，1fr 名称列塌缩为 0 并横向溢出页面）。重置为 auto，配合 min-width:0 与换行规则即可自适应。 */
-  #pendingTable td{width:auto}
   #pendingTable td:nth-child(4) img{width:42px!important;height:42px!important;object-fit:contain;border-radius:12px;border:1px solid var(--admin-line);background:#fff;box-shadow:0 4px 10px rgba(71,52,35,.08)}
-  #pendingTable .actions button{max-width:100%;min-width:0;padding:9px 6px}
+  #pendingTable td,#pendingTable a{overflow-wrap:anywhere;word-break:break-all}
+  #pendingTable tr,#pendingTable td{max-width:100%;min-width:0;box-sizing:border-box}
+  #pendingTable .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;padding-top:10px;border-top:1px dashed var(--admin-line)}
   #pending .page-head .operation-log-controls select{flex:1 1 140px;min-width:0}
   .analytics-summary,.analytics-grid,.analytics-ops-strip,.quality-grid{grid-template-columns:1fr!important}
   .analytics-card{min-width:0}
