@@ -375,6 +375,8 @@ body{padding:0!important}
   #pendingTable .actions{grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;padding-top:10px;border-top:1px dashed var(--admin-line)}
   #pendingTable tr,#pendingTable td{max-width:100%;min-width:0;box-sizing:border-box}
   #pendingTable td,#pendingTable a{overflow-wrap:anywhere;word-break:break-all}
+  /* 卡片网格项不能沿用 width:100%（会让 auto 图标列膨胀至容器宽度，1fr 名称列塌缩为 0 并横向溢出页面）。重置为 auto，配合 min-width:0 与换行规则即可自适应。 */
+  #pendingTable td{width:auto}
   #pendingTable td:nth-child(4) img{width:42px!important;height:42px!important;object-fit:contain;border-radius:12px;border:1px solid var(--admin-line);background:#fff;box-shadow:0 4px 10px rgba(71,52,35,.08)}
   #pendingTable .actions button{max-width:100%;min-width:0;padding:9px 6px}
   #pending .page-head .operation-log-controls select{flex:1 1 140px;min-width:0}
