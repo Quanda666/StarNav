@@ -11,8 +11,8 @@ const SESSION_COOKIE_NAME = 'nav_admin_session';
 const PRIVATE_ACCESS_COOKIE_NAME = 'nav_private_bookmarks_access';
 const LANGUAGE_COOKIE = 'nav_lang';
 
-// 边缘缓存 60s，浏览器不缓存（max-age=0）以便始终回源命中最新的边缘副本。
-const HOME_CACHE_CONTROL = 'public, max-age=0, s-maxage=60';
+// 边缘缓存 300s（5分钟），浏览器不缓存（max-age=0）以便始终回源命中最新的边缘副本。
+const HOME_CACHE_CONTROL = 'public, max-age=0, s-maxage=300';
 
 function parseCookieHeader(cookieHeader = '') {
   return Object.fromEntries(
