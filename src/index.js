@@ -10,8 +10,6 @@ import { errorResponse, withSecurityHeaders } from './lib/utils.js';
 import { withHomeEdgeCache } from './lib/edgeCache.js';
 
 async function routeRequest(request, env, ctx) {
-  await ensureSchema(env);
-
   const pwaResponse = await handlePwaRequest(request, env);
   if (pwaResponse) return pwaResponse;
 
@@ -26,6 +24,9 @@ async function routeRequest(request, env, ctx) {
   }
 
   if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/static')) {
+    if (url.pathname === '/admin' || url.pathname === '/admin/setup') {
+      await ensureSchema(env);
+    }
     return handleAdminRequest(request, env, ctx);
   }
 
