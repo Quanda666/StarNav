@@ -75,8 +75,6 @@ async function ensurePrivateBookmarkCategory(env) {
 }
 
 export async function listCategories(env, { space = '' } = {}) {
-  await ensurePrivateBookmarkCategory(env);
-
   const where = [];
   const binds = [];
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';

@@ -85,20 +85,12 @@ export async function handlePwaRequest(request, env) {
     return null;
   }
 
-  let systemSettings = null;
-  if (env) {
-    try {
-      systemSettings = await getSystemSettings(env);
-    } catch (e) {
-      console.warn('[pwa] failed to get system settings', e);
-    }
-  }
-
-  const appName = systemSettings?.siteName || APP_NAME;
-  const appShortName = systemSettings?.siteName || APP_SHORT_NAME;
-  const appDesc = systemSettings?.siteSubtitle || '轻量、私密、可管理的个人书签导航站';
-  const siteIcon = systemSettings?.siteIcon || '/pwa-icon.svg';
-  const accent = systemSettings?.defaultAccent || 'blue';
+  // PWA 静态资源（图标/manifest/sw.js）不查询 D1，直接使用默认配置以避免消耗读额度
+  const appName = APP_NAME;
+  const appShortName = APP_SHORT_NAME;
+  const appDesc = '轻量、私密、可管理的个人书签导航站';
+  const siteIcon = '/pwa-icon.svg';
+  const accent = 'blue';
 
   let themeColor = THEME_COLOR;
   if (accent === 'green') themeColor = '#265c44';
