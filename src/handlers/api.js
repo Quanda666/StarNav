@@ -549,7 +549,7 @@ export async function handleApiRequest(request, env, ctx) {
     }
 
     if (path === '/categories' && method === 'GET') {
-      const data = await listCategories(env);
+      const data = await listCategories(env, { withCounts: true });
       return jsonResponse({ code: 200, data });
     }
 

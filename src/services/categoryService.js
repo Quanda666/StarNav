@@ -74,23 +74,73 @@ async function ensurePrivateBookmarkCategory(env) {
   }
 }
 
-export async function listCategories(env, { space = '' } = {}) {
+// 统计数只有后台分类管理表格用得到；前台侧栏渲染不读 site_count / child_count。
+// 关联子查询 `s.category_id = c.id OR (... s.catelog = c.name)` 里的 OR 会让 SQLite 放弃索引，
+// 退化成「每个分类全表扫一遍 sites」——40 个分类 × 419 个站点 ≈ 1.7 万行读取/次。
+// 因此默认不带统计（只读 categories 本表），需要时用两条按 key 聚合的 GROUP BY 单遍扫描补齐。
+async function fetchCategoryCounts(env, categories) {
+  const siteCountByCategoryId = new Map();
+  const siteCountByName = new Map();
+  const childCountByParentId = new Map();
+
+  const [siteRows, childRows] = await Promise.all([
+    env.NAV_DB.prepare(`
+      SELECT category_id, catelog, COUNT(*) AS total
+      FROM sites
+      GROUP BY category_id, catelog
+    `).all(),
+    env.NAV_DB.prepare(`
+      SELECT parent_id, COUNT(*) AS total
+      FROM categories
+      WHERE parent_id IS NOT NULL
+      GROUP BY parent_id
+    `).all(),
+  ]);
+
+  for (const row of siteRows.results || []) {
+    const total = Number(row.total) || 0;
+    const categoryId = row.category_id === null || row.category_id === undefined ? null : Number(row.category_id);
+    if (categoryId) {
+      siteCountByCategoryId.set(categoryId, (siteCountByCategoryId.get(categoryId) || 0) + total);
+    } else {
+      const name = cleanText(row.catelog);
+      if (name) siteCountByName.set(name, (siteCountByName.get(name) || 0) + total);
+    }
+  }
+
+  for (const row of childRows.results || []) {
+    childCountByParentId.set(Number(row.parent_id), Number(row.total) || 0);
+  }
+
+  return categories.map((category) => ({
+    ...category,
+    site_count: (siteCountByCategoryId.get(Number(category.id)) || 0) + (siteCountByName.get(cleanText(category.name)) || 0),
+    child_count: childCountByParentId.get(Number(category.id)) || 0,
+  }));
+}
+
+export async function listCategories(env, { space = '', withCounts = false } = {}) {
   const where = [];
   const binds = [];
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   try {
     const { results } = await env.NAV_DB.prepare(`
-      SELECT
-        c.*,
-        (SELECT COUNT(*) FROM sites s WHERE s.category_id = c.id OR (s.category_id IS NULL AND s.catelog = c.name)) AS site_count,
-        (SELECT COUNT(*) FROM categories child WHERE child.parent_id = c.id) AS child_count
+      SELECT c.*
       FROM categories c
       ${whereSql}
       ORDER BY c.sort_order ASC, c.name ASC
     `).bind(...binds).all();
 
-    return results || [];
+    const categories = results || [];
+    if (!withCounts) return categories.map((category) => ({ ...category, site_count: 0, child_count: 0 }));
+
+    try {
+      return await fetchCategoryCounts(env, categories);
+    } catch (countError) {
+      console.warn(`[categories] counts skipped: ${countError?.message || countError}`);
+      return categories.map((category) => ({ ...category, site_count: 0, child_count: 0 }));
+    }
   } catch (error) {
     console.warn(`[categories] list fallback: ${error?.message || error}`);
   }
@@ -143,8 +193,8 @@ export async function listCategories(env, { space = '' } = {}) {
   }
 }
 
-export async function getCategoryTree(env, { space = '' } = {}) {
-  const categories = await listCategories(env, { space });
+export async function getCategoryTree(env, { space = '', withCounts = false } = {}) {
+  const categories = await listCategories(env, { space, withCounts });
   const tree = buildTree(categories);
   const existingPrivateNode = removePrivateCategoryNode(tree);
 
