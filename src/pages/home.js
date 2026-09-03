@@ -1,9 +1,8 @@
 import { isAdminAuthenticated } from '../lib/auth.js';
 import { escapeHTML, htmlResponse, isSubmissionEnabled, sanitizeImageUrl, sanitizeUrl } from '../lib/utils.js';
 import { resolveI18n } from '../lib/i18n.js';
-import { canListSite, getAllSites } from '../services/siteService.js';
-import { getCategoryTree } from '../services/categoryService.js';
-import { getSystemSettings } from '../services/systemSettingsService.js';
+import { canListSite } from '../services/siteService.js';
+import { getHomeSnapshot, loadHomeDataFromDb } from '../services/homeSnapshotService.js';
 import {
   PRIVATE_BOOKMARK_CATEGORY,
   buildClearPrivateBookmarkAccessCookie,
@@ -32,16 +31,15 @@ export async function renderHomePage(request, env, ctx) {
   const sortMode = ['hot', 'recent'].includes(requestedSort) ? requestedSort : '';
   const tagFilter = (url.searchParams.get('tag') || '').trim();
   const isPrivateCatalog = isPrivateBookmarkCategory(catalog);
-  const [adminAuthed, visitorPrivateAccess, systemSettings] = await Promise.all([
+  const [adminAuthed, visitorPrivateAccess] = await Promise.all([
     isAdminAuthenticated(request, env),
     hasPrivateBookmarkAccess(request, env),
-    getSystemSettings(env),
   ]);
   const currentSpaceSlug = '';
-  const [sites, categoryTree] = await Promise.all([
-    getAllSites(env),
-    getCategoryTree(env),
-  ]);
+  // 管理员直读 D1，保证后台改完立即可见；匿名访客读 KV 快照，避免每次回源都打满 D1 读额度。
+  const { sites, categoryTree, systemSettings } = adminAuthed
+    ? await loadHomeDataFromDb(env)
+    : await getHomeSnapshot(env, ctx);
 
   if (request.method === 'POST') {
     const clonedRequest = request.clone();

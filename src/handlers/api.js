@@ -49,6 +49,7 @@ import { OPERATION_LOG_ACTIONS, listOperationLogs, logOperation } from '../servi
 import { createBackup, deleteBackup, getBackupPayload, getWebDavBackupSettings, listBackups, restoreBackup, testWebDavBackupSettings, updateWebDavBackupSettings } from '../services/backupService.js';
 import { createWebhook, deleteWebhook, listWebhooks, testWebhook, updateWebhook } from '../services/webhookService.js';
 import { getSystemHealth } from '../services/systemHealthService.js';
+import { invalidateHomeSnapshot } from '../services/homeSnapshotService.js';
 import { getPublicApiDiscovery, getPublicOpenApiDocument } from './api/discovery.js';
 import { handleApiError, requireAdmin } from './api/errors.js';
 import { getSiteRouteFlags, sitesToBookmarkHtml, sitesToCsv } from './api/sites.js';
@@ -60,7 +61,25 @@ function safeLog(ctx, promise) {
   }
 }
 
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * API 入口：分发请求，并在任意写操作成功后失效首页 KV 快照。
+ *
+ * 失效钩子收口在这里而不是逐个路由，避免 40+ 处写路径遗漏。写操作频率极低，
+ * 同步 await 一次 KV delete 的开销可忽，但能保证响应返回时快照已确定失效。
+ */
 export async function handleApiRequest(request, env, ctx) {
+  const response = await dispatchApiRequest(request, env, ctx);
+
+  if (WRITE_METHODS.has(request.method) && response.status >= 200 && response.status < 400) {
+    await invalidateHomeSnapshot(env);
+  }
+
+  return response;
+}
+
+async function dispatchApiRequest(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/api/, '') || '/';
   const method = request.method;
