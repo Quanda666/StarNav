@@ -442,9 +442,11 @@ body{padding:0!important}
 .status-cell{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px}
 .status-cell .health{font-size:.72rem;padding:2px 8px}
 
-/* 操作列按钮：胶囊化、等宽 */
-#configTable .actions{display:flex;gap:6px;flex-wrap:nowrap;justify-content:flex-end;min-width:160px}
-#configTable .actions button{padding:6px 12px;font-size:.78rem;font-weight:600;border-radius:999px;white-space:nowrap;flex:0 0 auto}
+/* 操作列按钮：胶囊化、等宽（仅桌面端；移动端卡片式布局见上方 <=980px 媒体查询） */
+@media(min-width:981px){
+  #configTable .actions{display:flex;gap:6px;flex-wrap:nowrap;justify-content:flex-end;min-width:160px}
+  #configTable .actions button{padding:6px 12px;font-size:.78rem;font-weight:600;border-radius:999px;white-space:nowrap;flex:0 0 auto}
+}
 
 /* 紧凑密度模式 */
 #configTable[data-density="compact"] th,#configTable[data-density="compact"] td{padding:7px 10px}
