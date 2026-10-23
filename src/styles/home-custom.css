@@ -351,11 +351,11 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     .site-card-title{display:flex;align-items:center;gap:6px;font-size:.92rem;font-weight:700;line-height:1.3;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .site-card-desc{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px;color:var(--nav-muted);font-size:.75rem;word-break:break-word}
     .site-card-meta{display:none;min-width:0;max-width:100%;overflow:hidden}
-    .site-card-tags{display:none;min-width:0}
+    .site-card-tags{display:none;min-width:0;max-height:2.4rem;overflow:hidden}
     .site-card-foot{display:none;align-items:center;gap:8px;min-width:0;max-width:100%;margin-top:8px}
     .site-card:hover .site-card-meta,.site-card:focus-within .site-card-meta{display:block}
     .site-card:hover .site-card-foot,.site-card:focus-within .site-card-foot{display:flex}
-    .site-card:hover .site-card-tags,.site-card:focus-within .site-card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+    .site-card:hover .site-card-tags,.site-card:focus-within .site-card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 10px),transparent 100%);mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 10px),transparent 100%)}
     /* 触摸设备没有 hover：常驻展开，避免首次轻触撑开布局导致点错目标 */
     @media(hover:none){
       .site-card-meta{display:block}
