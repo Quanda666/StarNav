@@ -391,5 +391,80 @@ body{padding:0!important}
   .ai-actions button{width:100%}
   .pagination{justify-content:space-between}
   .modal-content{width:94%;max-width:none;margin:5% auto;padding:16px}
+/* —— 后台侧边栏与列表排版优化 —— */
+
+/* 侧边栏分组：加强层次 */
+.sidebar-group{margin:2px 0 10px;padding:0 2px}.sidebar-group+.sidebar-group{margin-top:4px;padding-top:10px;border-top:1px dashed rgba(230,217,200,.9)}
+.sidebar-group-label{font-size:.68rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--admin-muted);padding:2px 10px 6px;white-space:nowrap;transition:opacity .2s,transform .2s}
+.sidebar-collapsed .sidebar-group-label{opacity:0;height:0;padding:0;margin:0;overflow:hidden;pointer-events:none}
+.sidebar-collapsed .sidebar-group{margin:2px 0 6px;padding-top:0;border-top:0}
+
+/* 侧边栏按钮：更精致的激活态与角标 */
+.tab-button{padding:9px 11px;font-size:.88rem;border-radius:12px;position:relative;overflow:hidden}
+.tab-button .tab-icon{font-size:17px;width:22px}
+.tab-button .tab-text{font-weight:600}
+.tab-button.active{background:linear-gradient(135deg,var(--admin-accent),#9c5a3d);box-shadow:0 8px 18px rgba(184,107,75,.28),inset 0 1px 0 rgba(255,255,255,.18)}
+.tab-button.active .tab-text{font-weight:700}
+.tab-button .nav-badge{margin-left:auto;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:999px;background:rgba(71,52,35,.08);color:var(--admin-muted);transition:all .2s}
+.tab-button.active .nav-badge{background:rgba(255,255,255,.22);color:#fff}
+.sidebar-collapsed .tab-button .nav-badge{position:absolute;top:5px;right:5px;min-width:16px;height:16px;line-height:16px;padding:0 4px;font-size:.62rem;text-align:center;transform:none;opacity:1;pointer-events:none}
+
+/* 折叠态侧栏宽度 */
+.tab-wrapper.sidebar-collapsed{grid-template-columns:60px minmax(0,1fr)}
+.sidebar-collapsed.tab-buttons{padding:10px 8px}
+.sidebar-collapsed .tab-button{justify-content:center;padding:10px 0}
+
+/* 书签列表工具栏：搜索与筛选更紧凑 */
+.config-list-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.config-list-toolbar #searchInput{flex:1 1 260px;min-width:200px;margin:0;padding:10px 14px;height:40px;font-size:.9rem;border-radius:12px}
+.config-list-toolbar select{margin:0;height:40px;padding:0 10px;font-size:.88rem;min-width:120px}
+.config-list-toolbar #openAddSiteBtn{height:40px;padding:0 16px;font-size:.9rem;white-space:nowrap}
+
+/* 书签列表行：精致化 */
+#configTable tbody tr{transition:background .15s}
+#configTable tbody tr:hover{background:#faf6f0}
+#configTable th,#configTable td{padding:10px 12px;vertical-align:middle}
+#configTable thead th{font-size:.78rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:10px 12px}
+
+/* 书签单元格：logo+名称+URL */
+.site-cell{display:flex;align-items:center;gap:10px;min-width:240px}
+.site-logo{width:32px;height:32px;border-radius:10px;object-fit:contain;background:#fffdf8;border:1px solid var(--admin-line);box-shadow:0 4px 10px rgba(71,52,35,.06);flex:0 0 auto}
+.site-logo.is-empty{display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;color:var(--admin-muted);background:#f3eadf;border:1px dashed var(--admin-line)}
+.site-meta{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.site-meta .inline-name{font-weight:600;color:var(--admin-text);font-size:.92rem;padding:4px 8px;border-radius:8px;border:1px solid transparent;background:transparent;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.site-meta .inline-name:hover{background:#fffaf3;border-color:var(--admin-line)}
+.site-meta .inline-url{font-size:.78rem;color:var(--admin-muted);padding:2px 8px;border-radius:8px;border:1px solid transparent;background:transparent;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.site-meta .inline-url:hover{background:#fffaf3;border-color:var(--admin-line)}
+
+/* 状态列：紧凑纵向堆叠 */
+.status-cell{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.status-cell .health{font-size:.72rem;padding:2px 8px}
+
+/* 操作列按钮：胶囊化、等宽 */
+#configTable .actions{display:flex;gap:6px;flex-wrap:nowrap;justify-content:flex-end;min-width:160px}
+#configTable .actions button{padding:6px 12px;font-size:.78rem;font-weight:600;border-radius:999px;white-space:nowrap;flex:0 0 auto}
+
+/* 紧凑密度模式 */
+#configTable[data-density="compact"] th,#configTable[data-density="compact"] td{padding:7px 10px}
+#configTable[data-density="compact"] .site-logo{width:26px;height:26px;border-radius:8px}
+#configTable[data-density="compact"] .site-meta .inline-name{font-size:.88rem;padding:3px 6px}
+#configTable[data-density="compact"] .site-meta .inline-url{font-size:.74rem;padding:2px 6px}
+#configTable[data-density="compact"] .tag-pill{font-size:.7rem;padding:1px 6px}
+#configTable[data-density="compact"] .actions button{padding:5px 10px;font-size:.74rem}
+
+/* 斑马纹更柔和 */
+#configTable tbody tr:nth-child(even){background:linear-gradient(180deg,transparent,rgba(243,234,223,.4))}
+#configTable tbody tr:nth-child(even):hover{background:#faf6f0}
+
+/* 标签 pill 统一风格 */
+.tag-pill{font-weight:600;letter-spacing:.01em;padding:3px 8px;font-size:.74rem;border-radius:999px}
+
+/* 响应式：平板端侧栏略窄 */
+@media(max-width:1180px){
+  .tab-wrapper{grid-template-columns:190px minmax(0,1fr);gap:14px}
+  .tab-button{font-size:.84rem;padding:8px 10px}
+  .sidebar-group-label{font-size:.64rem}
+}
+
 }
 `;
