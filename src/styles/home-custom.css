@@ -691,12 +691,13 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
       --nav-shadow:0 8px 22px rgba(35,90,70,.10);--nav-shadow-hover:0 16px 36px rgba(35,90,70,.18);
       --nav-topbar-bg:rgba(243,250,246,.9);--nav-blur:none;
       --nav-border-accent:rgba(47,111,94,.4);--nav-elev:rgba(35,90,70,.18);--nav-card-padding:16px 10px;--nav-grid-gap:.6rem}
-    html[data-skin="dock"] .site-tile-grid,html[data-skin="dock"] .site-group-grid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}
-    html[data-skin="dock"] .site-card{align-items:center;text-align:center}
-    html[data-skin="dock"] .site-card-main{flex-direction:column;align-items:center}
-    html[data-skin="dock"] .site-card-logo{width:48px;height:48px;flex-basis:48px;border-radius:16px}
-    html[data-skin="dock"] .site-card-desc,html[data-skin="dock"] .site-card-meta,html[data-skin="dock"] .site-card-admin{display:none!important}
-    html[data-skin="dock"] .site-card-title{justify-content:center;font-size:.8rem;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-height:2em}
+    html[data-skin="dock"] .site-tile-grid,html[data-skin="dock"] .site-group-grid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))!important}
+    html[data-skin="dock"] .site-card{align-items:center!important;text-align:center!important;overflow:hidden!important}
+    html[data-skin="dock"] .site-card-main{flex-direction:column!important;align-items:center!important;gap:8px!important}
+    html[data-skin="dock"] .site-card-logo{width:48px!important;height:48px!important;flex-basis:48px!important;border-radius:16px!important}
+    html[data-skin="dock"] .site-card-desc,html[data-skin="dock"] .site-card-meta,html[data-skin="dock"] .site-card-tags,html[data-skin="dock"] .site-card-foot,html[data-skin="dock"] .site-card-admin{display:none!important}
+    html[data-skin="dock"] .site-card-copy{min-width:0!important;flex:none!important;width:100%!important}
+    html[data-skin="dock"] .site-card-title{justify-content:center!important;text-align:center!important;font-size:.78rem!important;font-weight:600!important;line-height:1.25!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;white-space:normal!important;text-overflow:clip!important;max-height:2.5em!important}
     html[data-skin="dock"] .nav-cat-list .category-link:hover,html[data-skin="dock"] .nav-cat-list .category-active{background:#e0f0e8!important;color:#163528!important}
     /* dock 签名:磁贴卡片悬浮上浮、绿色描边 */
     html[data-skin="dock"] .site-card:hover{transform:translateY(-3px);border-color:var(--nav-border-accent)}
