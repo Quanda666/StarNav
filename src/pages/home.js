@@ -375,7 +375,7 @@ export async function renderHomePage(request, env, ctx) {
         <h2 id="listHeading">${escapeHTML(heading)}</h2>
         <div class="nav-toolbar-actions">
           ${sortLinks}
-          ${canDragSort ? `<button id="saveOrderBtn" class="nav-save-order" disabled>${th('saveDragSort')}</button>` : ''}
+          ${canDragSort ? `<button id="saveOrderBtn" class="nav-save-order" disabled title="${th('adminSortMode')}">${th('saveDragSort')}</button>` : ''}
         </div>
       </div>
       <div id="sitesPanel" class="nav-sites">

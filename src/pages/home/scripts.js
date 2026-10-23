@@ -92,8 +92,21 @@ export function frontAdminScript() {
 
 export function dragScript(i18n = null) {
   const saveDragSortText = escapeHTML(i18n?.t?.('saveDragSort') || '保存拖拽排序');
+  const sortHintText = escapeHTML(i18n?.t?.('adminSortMode') || '管理员模式：可拖拽当前列表排序');
   return `
-  const saveBtn=document.getElementById('saveOrderBtn');let dragged=null,dirty=false,lastDragY=0,autoScrollTimer=null;
+  const saveBtn=document.getElementById('saveOrderBtn');let dragged=null,dirty=false,lastDragY=0,autoScrollTimer=null,suppressClickUntil=0;
+  const pureTouch=!!(window.matchMedia&&window.matchMedia('(hover:none)').matches);
+  function markDirty(){dirty=true;if(saveBtn)saveBtn.disabled=false}
+  function activeScope(){return document.querySelector('#sitesPanel .layout-panel.active')||document.getElementById('sitesPanel')}
+  function moveDraggedTo(target){
+    if(!dragged||!target||dragged===target)return false;
+    const grid=target.parentElement;if(!grid)return false;
+    const cards=[...grid.querySelectorAll('.site-card:not(.hidden)')];
+    const from=cards.indexOf(dragged),to=cards.indexOf(target);
+    if(from<0||to<0)return false;
+    if(from<to)target.after(dragged);else target.before(dragged);
+    return true;
+  }
   function startAutoScroll(){
     if(autoScrollTimer)return;
     autoScrollTimer=setInterval(()=>{
@@ -118,9 +131,84 @@ export function dragScript(i18n = null) {
     card.addEventListener('dragend',()=>{card.classList.remove('dragging');document.querySelectorAll('.drag-over').forEach(i=>i.classList.remove('drag-over'));stopAutoScroll();dragged=null;});
     card.addEventListener('dragover',(e)=>{e.preventDefault();lastDragY=e.clientY;card.classList.add('drag-over')});
     card.addEventListener('dragleave',()=>card.classList.remove('drag-over'));
-    card.addEventListener('drop',(e)=>{e.preventDefault();lastDragY=e.clientY;card.classList.remove('drag-over');if(!dragged||dragged===card)return;const grid=card.parentElement;if(!grid)return;const cards=[...grid.querySelectorAll('.site-card:not(.hidden)')];const from=cards.indexOf(dragged),to=cards.indexOf(card);console.log('[drag] drop from='+from+' to='+to);if(from<to)card.after(dragged);else card.before(dragged);dirty=true;saveBtn.disabled=false;stopAutoScroll();dragged=null;});
+    card.addEventListener('drop',(e)=>{e.preventDefault();lastDragY=e.clientY;card.classList.remove('drag-over');if(moveDraggedTo(card))markDirty();stopAutoScroll();dragged=null;});
   });
-  saveBtn?.addEventListener('click',()=>{const items=[...document.querySelectorAll('#sitesPanel .site-card:not(.hidden)')].map((card,i)=>({id:Number(card.dataset.id),sort_order:(i+1)*10}));console.log('[drag] save count='+items.length);saveBtn.disabled=true;saveBtn.textContent='保存中...';fetch('/api/config/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})}).then(r=>r.json()).then(d=>{if(d.code===200){dirty=false;saveBtn.textContent='已保存';setTimeout(()=>saveBtn.textContent='${saveDragSortText}',1200)}else{alert(d.message||'保存失败');saveBtn.disabled=false;saveBtn.textContent='${saveDragSortText}'}}).catch(()=>{alert('网络错误');saveBtn.disabled=false;saveBtn.textContent='${saveDragSortText}'});});
+  /* —— 触摸设备：长按卡片拖动排序（Pointer Events） —— */
+  const DRAG_HOLD_MS=250,DRAG_TOLERANCE=10;
+  if(pureTouch){
+    document.querySelectorAll('.site-card[draggable]').forEach(card=>card.removeAttribute('draggable'));
+    let pd=null,pressTimer=null,dragging=false,reordered=false;
+    const BLOCK_SELECTOR='.fav-btn,.copy-btn,.site-card-admin,.site-card-tags a';
+    function clearPress(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null}}
+    function blockTouchScroll(e){if(dragging&&e.cancelable)e.preventDefault()}
+    function blockContextMenu(e){if(dragging||pd)e.preventDefault()}
+    function onTouchMove(e){
+      if(!dragging){
+        if(pd&&(Math.abs(e.clientX-pd.x)>DRAG_TOLERANCE||Math.abs(e.clientY-pd.y)>DRAG_TOLERANCE)){clearPress();pd=null}
+        return;
+      }
+      if(e.cancelable)e.preventDefault();
+      lastDragY=e.clientY;
+      const hit=document.elementFromPoint(e.clientX,e.clientY);
+      const target=hit&&hit.closest?hit.closest('.site-card'):null;
+      if(moveDraggedTo(target)){reordered=true;markDirty()}
+    }
+    function endTouchDrag(){
+      clearPress();
+      document.removeEventListener('pointermove',onTouchMove,true);
+      document.removeEventListener('pointerup',endTouchDrag,true);
+      document.removeEventListener('pointercancel',endTouchDrag,true);
+      if(!dragging){pd=null;return}
+      dragging=false;
+      if(dragged)dragged.classList.remove('dragging');
+      document.querySelectorAll('.drag-over').forEach(i=>i.classList.remove('drag-over'));
+      document.body.classList.remove('drag-sorting');
+      stopAutoScroll();
+      window.removeEventListener('touchmove',blockTouchScroll,false);
+      window.removeEventListener('contextmenu',blockContextMenu,true);
+      suppressClickUntil=Date.now()+400;
+      try{if(navigator.vibrate)navigator.vibrate(8)}catch(err){}
+      dragged=null;pd=null;reordered=false;
+    }
+    function beginTouchDrag(){
+      pressTimer=null;
+      if(!pd)return;
+      dragging=true;
+      reordered=false;
+      dragged=pd.card;
+      dragged.classList.add('dragging');
+      document.body.classList.add('drag-sorting');
+      startAutoScroll();
+      try{if(navigator.vibrate)navigator.vibrate(12)}catch(err){}
+      window.addEventListener('touchmove',blockTouchScroll,{passive:false});
+      window.addEventListener('contextmenu',blockContextMenu,true);
+    }
+    document.addEventListener('pointerdown',(e)=>{
+      if(dragging||e.pointerType==='mouse'||!e.isPrimary)return;
+      const el=e.target;
+      if(!el||!el.closest)return;
+      if(el.closest(BLOCK_SELECTOR))return;
+      const card=el.closest('.site-card.is-draggable');
+      if(!card)return;
+      clearPress();
+      pd={card:card,x:e.clientX,y:e.clientY};
+      /* 长按计时期间就要跟踪移动：若先滑动，则判定为页面滚动并放弃拖拽 */
+      document.addEventListener('pointermove',onTouchMove,true);
+      document.addEventListener('pointerup',endTouchDrag,true);
+      document.addEventListener('pointercancel',endTouchDrag,true);
+      pressTimer=setTimeout(beginTouchDrag,DRAG_HOLD_MS);
+    },{passive:true});
+    if(saveBtn&&saveBtn.parentElement){
+      const hint=document.createElement('p');
+      hint.className='nav-sort-hint';
+      hint.textContent='${sortHintText}';
+      saveBtn.parentElement.appendChild(hint);
+    }
+  }
+  /* 拖拽结束后浏览器补发的那次 click 会误触书签跳转，统一在此吞掉 */
+  document.addEventListener('click',(e)=>{if(Date.now()<suppressClickUntil){e.preventDefault();e.stopPropagation()}},true);
+
+  saveBtn?.addEventListener('click',()=>{const scope=activeScope();const items=scope?[...scope.querySelectorAll('.site-card:not(.hidden)')].map((card,i)=>({id:Number(card.dataset.id),sort_order:(i+1)*10})):[];console.log('[drag] save count='+items.length);saveBtn.disabled=true;saveBtn.textContent='保存中...';fetch('/api/config/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})}).then(r=>r.json()).then(d=>{if(d.code===200){dirty=false;saveBtn.textContent='已保存';setTimeout(()=>saveBtn.textContent='${saveDragSortText}',1200)}else{alert(d.message||'保存失败');saveBtn.disabled=false;saveBtn.textContent='${saveDragSortText}'}}).catch(()=>{alert('网络错误');saveBtn.disabled=false;saveBtn.textContent='${saveDragSortText}'});});
   `;
 }
 

@@ -887,3 +887,11 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     html[data-bg="gradient"] body.nav-shell{background:radial-gradient(circle at 12% -5%,color-mix(in srgb,var(--nav-accent) 22%,transparent),transparent 26rem),radial-gradient(circle at 90% 105%,color-mix(in srgb,var(--nav-primary) 20%,transparent),transparent 30rem),var(--nav-page-bg)!important}
     html[data-bg="paper"] body.nav-shell{background-color:var(--nav-page-bg)!important;background-image:linear-gradient(color-mix(in srgb,var(--nav-ink) 5%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--nav-ink) 5%,transparent) 1px,transparent 1px)!important;background-size:26px 26px!important}
     html[data-bg="image"] body.nav-shell{background-image:var(--nav-bg-image,none)!important;background-size:cover!important;background-position:center!important;background-attachment:fixed!important;background-repeat:no-repeat!important;background-color:var(--nav-page-bg)!important}
+
+    /* —— 拖拽排序（鼠标 HTML5 拖放 + 触摸长按拖动） —— */
+    /* 可拖拽卡片禁掉长按呼出菜单与文本选择，否则触摸长按会被系统菜单/选词抢走 */
+    .site-card.is-draggable{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+    /* 拖动中让命中测试落在下方卡片上，而不是被拖起的这张 */
+    .site-card.dragging{pointer-events:none}
+    body.drag-sorting{-webkit-user-select:none;user-select:none}
+    .nav-sort-hint{flex:0 0 100%;margin:6px 0 0;color:var(--nav-muted);font-size:.72rem;line-height:1.4}
