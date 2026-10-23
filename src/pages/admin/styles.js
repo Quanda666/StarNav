@@ -349,7 +349,7 @@ body{padding:0!important}
   .table-wrapper{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
   #config .table-wrapper{overflow:visible!important}#pending .table-wrapper{overflow:hidden!important;max-width:100%;min-width:0}
   #pending,#pendingTable{max-width:100%;min-width:0!important;width:100%;box-sizing:border-box}
-  #configTable,#pendingTable,#configTable thead,#pendingTable thead,#configTable tbody,#pendingTable tbody,#configTable tr,#pendingTable tr,#configTable td,#pendingTable td{display:block;width:100%;box-sizing:border-box}#pendingTable,#pendingTable thead,#pendingTable tbody,#pendingTable tr,#pendingTable td{max-width:100%;min-width:0!important}
+  #configTable,#pendingTable,#configTable thead,#pendingTable thead,#configTable tbody,#pendingTable tbody,#configTable tr,#pendingTable tr,#configTable td,#pendingTable td{display:block;width:100%;box-sizing:border-box}#configTable,#configTable thead,#configTable tbody,#configTable tr,#configTable td,#pendingTable,#pendingTable thead,#pendingTable tbody,#pendingTable tr,#pendingTable td{max-width:100%;min-width:0!important}
   #configTable thead,#pendingTable thead{display:none}
   #configTable tr,#pendingTable tr{margin:0 0 12px;padding:12px;border:1px solid var(--admin-line);border-radius:16px;background:#fffdf8}#pendingTable tr{overflow:hidden}
   #configTable td,#pendingTable td{padding:6px 0;border:0;min-width:0!important}
