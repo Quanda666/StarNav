@@ -25,6 +25,12 @@ export async function handleAdminRequest(request, env, ctx) {
     if (await isAdminInitialized(env)) {
       return new Response(null, { status: 302, headers: { Location: '/admin' } });
     }
+    // 鉴权：初始化属于高危操作，必须携带部署者通过 `wrangler secret put SETUP_TOKEN` 配置的密钥，
+    // 否则任意匿名访问者都可在部署完成后抢先创建管理员账号（CWE-306）。
+    const setupToken = env.SETUP_TOKEN;
+    if (!setupToken || url.searchParams.get('token') !== setupToken) {
+      return textResponse('Forbidden', 403);
+    }
     const formData = await request.formData();
     const name = (formData.get('name') || '').trim();
     const password = (formData.get('password') || '').trim();
