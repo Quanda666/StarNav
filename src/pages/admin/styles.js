@@ -357,8 +357,8 @@ body{padding:0!important}
   #configTable td:nth-child(3)::before,#configTable td:nth-child(4)::before{display:block;margin-bottom:4px;color:var(--admin-muted);font-size:.72rem;font-weight:700}
   #configTable td:nth-child(3)::before{content:'分类'}
   #configTable td:nth-child(4)::before{content:'标签'}
-  #configTable .actions,#pendingTable .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-  #configTable .actions button,#pendingTable .actions button{width:100%;margin:0;padding:8px 6px}
+  #configTable .actions,#pendingTable .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  #configTable .actions button,#pendingTable .actions button{width:100%;margin:0;padding:7px 4px;font-size:.76rem;font-weight:600;border-radius:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 待审卡片：与书签列表(#configTable)一致的纵向堆叠卡片，弃用网格（网格项 width:100% 会让 auto 图标列膨胀至容器宽度并横向溢出页面）。tr/td 的 display:block 与卡片样式复用上方通用规则，此处只管字段排版。 */
   #pendingTable td:nth-child(1){display:flex;justify-content:flex-end;padding-top:0;color:var(--admin-muted);font-size:.74rem;line-height:1.3}
   #pendingTable td:nth-child(2){font-weight:700;font-size:1.04rem;color:var(--admin-text);line-height:1.3}
