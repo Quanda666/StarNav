@@ -21,6 +21,7 @@ const MAX_RESPONSE_BYTES = 512 * 1024;
 
 export const WEB_SEARCH_PROVIDERS = [
   { id: 'none', label: '关闭', needsKey: false, needsBaseUrl: false },
+  { id: 'metaso', label: '秘塔 AI 搜索（Metaso，中文效果好，按次计费）', needsKey: true, needsBaseUrl: false },
   { id: 'tavily', label: 'Tavily（推荐，返回摘要）', needsKey: true, needsBaseUrl: false },
   { id: 'serper', label: 'Serper（Google 结果）', needsKey: true, needsBaseUrl: false },
   { id: 'brave', label: 'Brave Search API', needsKey: true, needsBaseUrl: false },
@@ -261,8 +262,45 @@ async function fetchJson(url, options = {}) {
   }
 }
 
-async function searchTavily(query, { apiKey, limit }) {
-  const data = await fetchJson('https://api.tavily.com/search', {
+// 秘塔 AI 搜索：官方 SDK 走 POST https://metaso.cn/api/open/search/v2，
+// 请求体 { question, lang, stream }，Bearer Key，结果在 data.webpages[].
+// 不同接入方式返回字段名有差异，因此解析做容错，并在无法识别时回携字段名便于排查。
+
+/**
+ * 从秘塔响应里提取结果（纯函数，便于单测）。
+ *
+ * @param {object} json 接口返回的 JSON。
+ * @param {number} [limit]
+ * @returns {{results:Array<{title:string,url:string,snippet:string}>, keys:string}}
+ */
+export function extractMetasoResults(json, limit = 5) {
+  const payload = json?.data ?? json ?? {};
+  const items = payload.webpages || payload.results || payload.items || payload.references || [];
+  const results = normalizeSearchResults((Array.isArray(items) ? items : []).map((item) => ({
+    title: item?.title || item?.name,
+    url: item?.link || item?.url,
+    snippet: item?.summary || item?.snippet || item?.content || item?.description || item?.text,
+  })), limit);
+  return { results, keys: Object.keys(payload || {}).slice(0, 10).join('、') };
+}
+
+async function searchMetaso(query, { apiKey, limit }) {
+  const data = await fetchJson('https://metaso.cn/api/open/search/v2', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ question: query, lang: 'zh', stream: false }),
+  });
+  const { results, keys } = extractMetasoResults(data, limit);
+  if (!results.length) {
+    throw new Error(`秘塔返回中未识别到网页结果（顶层字段：${keys || '空'}），请确认 Key 与套餐是否可用`);
+  }
+  return results;
+}
+
+async function searchTavily(query, { apiKey, limit }) {  const data = await fetchJson('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -276,8 +314,7 @@ async function searchTavily(query, { apiKey, limit }) {
   return normalizeSearchResults(data?.results || [], limit);
 }
 
-async function searchSerper(query, { apiKey, limit }) {
-  const data = await fetchJson('https://google.serper.dev/search', {
+async function searchSerper(query, { apiKey, limit }) {  const data = await fetchJson('https://google.serper.dev/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
     body: JSON.stringify({ q: query, num: limit }),
@@ -382,7 +419,8 @@ export async function webSearch(env, query, { limit, settings } = {}) {
 
   try {
     let results = [];
-    if (provider === 'tavily') results = await searchTavily(keyword, { apiKey: resolved.apiKey, limit: safeLimit });
+    if (provider === 'metaso') results = await searchMetaso(keyword, { apiKey: resolved.apiKey, limit: safeLimit });
+    else if (provider === 'tavily') results = await searchTavily(keyword, { apiKey: resolved.apiKey, limit: safeLimit });
     else if (provider === 'serper') results = await searchSerper(keyword, { apiKey: resolved.apiKey, limit: safeLimit });
     else if (provider === 'brave') results = await searchBrave(keyword, { apiKey: resolved.apiKey, limit: safeLimit });
     else if (provider === 'searxng') results = await searchSearxng(keyword, { baseUrl: resolved.baseUrl, limit: safeLimit });

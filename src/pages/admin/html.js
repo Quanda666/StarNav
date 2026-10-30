@@ -1,3 +1,15 @@
+import { WEB_SEARCH_PROVIDERS } from '../../services/webSearchService.js';
+import { EMAIL_PROVIDERS } from '../../services/emailService.js';
+
+// 选项列表在服务端就渲染好：即使浏览器缓存了旧版 admin.js（未重新拉取），
+// 下拉框也不会是空的、点不动——避免“页面新、脚本旧”导致的不可用。
+const webSearchProviderOptions = WEB_SEARCH_PROVIDERS
+  .map((provider) => `<option value="${provider.id}">${provider.label}</option>`)
+  .join('');
+const emailProviderOptions = EMAIL_PROVIDERS
+  .map((provider) => `<option value="${provider.id}">${provider.label}</option>`)
+  .join('');
+
 export const adminHtml = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -620,7 +632,7 @@ export const adminHtml = `<!DOCTYPE html>
             <label class="settings-check"><input type="checkbox" id="webSearchAuto"> 站内无结果时自动联网补充</label>
             <div>
               <label for="webSearchProvider">搜索后端</label>
-              <select id="webSearchProvider"></select>
+              <select id="webSearchProvider">${webSearchProviderOptions}</select>
             </div>
             <div>
               <label for="webSearchMaxResults">单次结果数</label>
@@ -663,7 +675,7 @@ export const adminHtml = `<!DOCTYPE html>
             <label class="settings-check"><input type="checkbox" id="emailNotifyDigest"> 定期站点摘要</label>
             <div>
               <label for="emailProvider">发送方式</label>
-              <select id="emailProvider"></select>
+              <select id="emailProvider">${emailProviderOptions}</select>
             </div>
             <div>
               <label for="emailFromName">发件人名称</label>

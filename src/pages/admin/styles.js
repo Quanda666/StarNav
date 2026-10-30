@@ -386,7 +386,10 @@ body{padding:0!important}
   .settings-card-head{display:block}
   .settings-card-head small{display:block;margin-top:4px}
   .backup-io-grid,.webdav-form-grid{grid-template-columns:1fr}
-  .private-password-row{display:grid;grid-template-columns:1fr;gap:8px}
+  /* 密码/密钥行：输入框占满剩余宽度，「显示」按钮保持窄身，不要各自占一整行 */
+  .private-password-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start}
+  .private-password-row input{width:100%;min-width:0;margin-bottom:0}
+  .private-password-row button{width:auto;margin-bottom:0;white-space:nowrap}
   .ai-actions{display:grid;grid-template-columns:1fr;gap:8px}
   .ai-actions button{width:100%}
   .status-cell{gap:4px}

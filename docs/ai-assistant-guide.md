@@ -56,6 +56,7 @@
 
 | 后端 | 需要 Key | 说明 |
 |---|---|---|
+| 秘塔 AI 搜索（Metaso） | 是 | 中文效果最好，按次计费，免费额度可试用；Key 在 [metaso.cn/search-api/api-keys](https://metaso.cn/search-api/api-keys) 申请 |
 | Tavily | 是 | 推荐，专为 LLM 设计，直接返回摘要，免费额度够个人站点 |
 | Serper | 是 | Google 结果，速度快 |
 | Brave Search API | 是 | 有免费额度 |

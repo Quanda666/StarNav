@@ -7,6 +7,8 @@ import {
   parseDuckDuckGoLite,
   normalizeSearchResults,
   normalizeProvider,
+  extractMetasoResults,
+  WEB_SEARCH_PROVIDERS,
 } from '../src/services/webSearchService.js';
 
 test('stripHtml 去标签、解码实体、压空白', () => {
@@ -62,6 +64,35 @@ test('normalizeSearchResults 只保留 http(s) 结果并去重', () => {
 test('normalizeProvider 回退到已知后端', () => {
   assert.equal(normalizeProvider('tavily'), 'tavily');
   assert.equal(normalizeProvider('TAVILY'), 'tavily');
+  assert.equal(normalizeProvider('metaso'), 'metaso');
   assert.equal(normalizeProvider('不存在'), 'duckduckgo');
   assert.equal(normalizeProvider(''), 'duckduckgo');
+});
+
+test('秘塔搜索后端已注册且需要 Key', () => {
+  const metaso = WEB_SEARCH_PROVIDERS.find((item) => item.id === 'metaso');
+  assert.ok(metaso, '应包含 metaso 后端');
+  assert.equal(metaso.needsKey, true);
+});
+
+test('秘塔响应解析：兼容 data.webpages / results / items 三种结构', () => {
+  const pages = extractMetasoResults({
+    data: {
+      webpages: [
+        { position: 1, title: 'Workers 文档', link: 'https://developers.cloudflare.com/workers/', summary: '运行时文档' },
+        { position: 2, title: '重复项', link: 'https://developers.cloudflare.com/workers/', summary: '同链接' },
+      ],
+      credits: 99,
+    },
+  }, 5);
+  assert.equal(pages.results.length, 1, '同链接应去重');
+  assert.equal(pages.results[0].title, 'Workers 文档');
+  assert.equal(pages.results[0].snippet, '运行时文档');
+
+  const flat = extractMetasoResults({ results: [{ name: 'A', url: 'https://a.example/', content: '内容' }] }, 5);
+  assert.deepEqual(flat.results.map((item) => item.url), ['https://a.example/']);
+
+  const empty = extractMetasoResults({ data: { answer: '只有 AI 回答' } }, 5);
+  assert.equal(empty.results.length, 0);
+  assert.match(empty.keys, /answer/, '未识别时应回携顶层字段名便于排查');
 });

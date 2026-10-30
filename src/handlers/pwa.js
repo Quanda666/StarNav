@@ -1,4 +1,6 @@
 import { getSystemSettings } from '../services/systemSettingsService.js';
+import { homeCssVersion } from '../pages/home/css.js';
+import { getAdminAsset } from '../pages/adminAssets.js';
 
 const APP_NAME = '星漫旅站';
 const APP_SHORT_NAME = '星漫旅站';
@@ -154,12 +156,16 @@ export async function handlePwaRequest(request, env) {
   }
 
   if (isSw) {
+    const adminAssetVersion = `${getAdminAsset('admin.js')?.version || ''}-${getAdminAsset('admin.html')?.version || ''}`;
     const shellUrls = ['/', '/manifest.webmanifest', '/pwa-icon.svg', '/pwa-icon-192.svg', '/pwa-icon-512.svg'];
     if (siteIcon && !shellUrls.includes(siteIcon)) {
       shellUrls.push(siteIcon);
     }
     const shellUrlsStr = JSON.stringify(shellUrls);
-    const configVersion = getSimpleHash(`${appName}-${siteIcon}-${themeColor}`);
+    // 缓存版本除了站点配置，还要包含静态资源版本：
+    // 否则仅代码/样式变更时 SW 不会重建缓存，旧资源会被一直缓存优先地服务下去。
+    const assetVersion = `${homeCssVersion}-${adminAssetVersion}`;
+    const configVersion = getSimpleHash(`${appName}-${siteIcon}-${themeColor}-${assetVersion}`);
     const cacheName = `starnav-pwa-${configVersion}`;
     const runtimeCacheName = `starnav-runtime-${configVersion}`;
 
@@ -202,6 +208,20 @@ self.addEventListener('fetch',event=>{
       }
       return response;
     }).catch(()=>caches.match(request).then(cached=>cached||caches.match('/'))));
+    return;
+  }
+  // 静态资源（/static/*：首页 CSS、后台 HTML/CSS/JS）走【网络优先】：
+  // 它们自带 ETag + no-cache，联网时总能拿到最新版（未变则 304 不耗流量），
+  // 断网时才回落到缓存。若改成缓存优先，发布新版本后浏览器会一直用旧包——
+  // 会出现“页面结构是新的、脚本是旧的”这种诡异现象。
+  if(isSameOrigin&&url.pathname.startsWith('/static/')){
+    event.respondWith(fetch(request).then(response=>{
+      if(response&&response.ok){
+        const copy=response.clone();
+        caches.open(CACHE_NAME).then(cache=>cache.put(request,copy)).catch(()=>undefined);
+      }
+      return response;
+    }).catch(()=>caches.match(request)));
     return;
   }
   const isShell=SHELL_URLS.includes(url.pathname)||SHELL_URLS.includes(request.url);
