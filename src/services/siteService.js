@@ -1348,13 +1348,16 @@ export async function bulkUpdateSites(env, { ids = [], catelog, tags, mode = 're
 export async function submitSite(env, config) {
   const site = normalizeSitePayload(config);
   const reason = cleanText(config?.reason).slice(0, 500) || null;
+  // 可选：提交者邮箱，仅用于告知审核结果（不对外展示）
+  const rawEmail = cleanText(config?.email).slice(0, 160);
+  const email = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]{2,}$/.test(rawEmail) ? rawEmail : null;
   const duplicate = await findDuplicateSite(env, site.url);
   if (duplicate) throw buildDuplicateError(duplicate, 'submit');
 
   return env.NAV_DB.prepare(`
-    INSERT INTO pending_sites (name, url, logo, desc, catelog, tags, reason)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, JSON.stringify(site.tags), reason).run();
+    INSERT INTO pending_sites (name, url, logo, desc, catelog, tags, reason, email)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(site.name, site.url, site.logo, site.desc, site.catelog, JSON.stringify(site.tags), reason, email).run();
 }
 
 export async function getPendingSites(env, { page = 1, pageSize = 10, status = '' } = {}) {

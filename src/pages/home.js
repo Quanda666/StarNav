@@ -397,25 +397,32 @@ export async function renderHomePage(request, env, ctx) {
 
   <div class="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-3 floating-actions">
     <div id="floatingAiPanel" class="floating-ai-panel hidden w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-primary-100/60 bg-white/95 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-primary-100/60 px-4 py-3">
-        <div>
+      <div class="flex items-start justify-between gap-2 border-b border-primary-100/60 px-4 py-3">
+        <div class="min-w-0 flex-1">
           <h3 class="text-sm font-semibold text-gray-900">AI 小助理</h3>
-          <p class="text-xs text-gray-500">优先检索本站书签，再生成回复</p>
+          <p class="text-xs text-gray-500">站内优先 · 支持时间/统计与联网</p>
         </div>
-        <div class="flex items-center gap-1">
-          <button type="button" id="toggleAiFullscreen" class="rounded-full px-2 py-1 text-xs text-gray-500 hover:bg-primary-50" aria-label="全屏显示 AI 小助理" title="全屏显示">全屏</button>
+        <div class="flex flex-shrink-0 items-center gap-1">
+          <button type="button" id="toggleAiWebSearch" class="ai-web-toggle" aria-pressed="false" title="联网搜索：允许 AI 参考站外信息"><span aria-hidden="true">🌐</span> 联网</button>
+          <button type="button" id="toggleAiFullscreen" class="whitespace-nowrap rounded-full px-2 py-1 text-xs text-gray-500 hover:bg-primary-50" aria-label="全屏显示 AI 小助理" title="全屏显示">全屏</button>
           <button type="button" id="closeAiPanel" class="rounded-full px-2 py-1 text-gray-500 hover:bg-primary-50" aria-label="关闭 AI 小助理">×</button>
         </div>
       </div>
       <div id="aiChatBody" class="ai-chat-body space-y-3 p-4">
-        <div class="ai-message assistant">你好，我是本站 AI 小助理。你可以问我：“有没有图片压缩工具？”、“某个网站放在哪个分类？”、“帮我找设计相关书签”。</div>
+        <div class="ai-message assistant">你好，我是本站 AI 小助理。我可以帮你找书签、说清某个网站放在哪个分类，也能直接回答“今天星期几”“本站有多少书签”；需要站外信息时，打开右上角「联网」再问我就好。</div>
+      </div>
+      <div id="aiQuickAsk" class="flex flex-wrap gap-1.5 px-4 pb-1">
+        <button type="button" class="ai-quick-chip" data-ask="今天星期几">今天星期几</button>
+        <button type="button" class="ai-quick-chip" data-ask="本站一共有多少书签">本站有多少书签</button>
+        <button type="button" class="ai-quick-chip" data-ask="访问最多的书签">访问最多的书签</button>
+        <button type="button" class="ai-quick-chip" data-ask="帮我找设计相关的书签">找设计书签</button>
       </div>
       <form id="aiChatForm" class="border-t border-primary-100/60 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
         <div class="flex gap-2">
           <input id="aiChatInput" class="min-w-0 flex-1 rounded-xl border border-primary-100 px-3 py-2 text-sm outline-none focus:border-primary-300" placeholder="输入你想找的书签或问题..." autocomplete="off">
           <button id="aiSendBtn" type="submit" class="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white">发送</button>
         </div>
-        <p class="mt-2 text-[11px] text-gray-500">未配置模型时会自动使用本地书签检索结果回答。</p>
+        <p class="mt-2 text-[11px] text-gray-500">未配置模型时也会用本地检索与实时计算回答；开启「联网」后站外信息会单独标注来源。</p>
       </form>
     </div>
     <button type="button" id="backToTopBtn" class="nav-backtop hidden" title="${th('backToTop')}" aria-label="${th('backToTop')}">↑</button>
@@ -694,6 +701,8 @@ document.addEventListener('DOMContentLoaded',function(){
   const floatingAiPanel=document.getElementById('floatingAiPanel');
   const closeAiPanelBtn=document.getElementById('closeAiPanel');
   const toggleAiFullscreenBtn=document.getElementById('toggleAiFullscreen');
+  const toggleAiWebSearchBtn=document.getElementById('toggleAiWebSearch');
+  const aiQuickAskBox=document.getElementById('aiQuickAsk');
   const aiChatBody=document.getElementById('aiChatBody');
   const aiChatForm=document.getElementById('aiChatForm');
   const aiChatInput=document.getElementById('aiChatInput');
@@ -722,11 +731,30 @@ document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('sitesGrid')?.addEventListener('mousedown',clearActiveResult,{capture:true});
   function normalizeAiText(text){return String(text||'').replace(/\\*\\*([^*]+)\\*\\*/g,'$1').replace(/__([^_]+)__/g,'$1').replace(/^\\s*[-*]\\s+/gm,'· ').replace(/\\n{3,}/g,'\\n\\n').trim()}
   let lastAiSites=[];
+  let aiHistory=[];
+  const AI_MODE_LABELS={ai:'AI 回答',local:'本站检索',local_strict:'本站精确',local_realtime:'实时计算',local_stats:'本站统计',fallback:'降级回答'};
+  function aiWebEnabled(){return localStorage.getItem('nav:aiWeb')==='1'}
+  function syncAiWebButton(){if(!toggleAiWebSearchBtn)return;const on=aiWebEnabled();toggleAiWebSearchBtn.setAttribute('aria-pressed',on?'true':'false');toggleAiWebSearchBtn.title=on?'联网已开启：允许 AI 参考站外信息（点击关闭）':'联网已关闭：只使用本站书签（点击开启）'}
   function normalizeAiSiteUrl(v){const t=String(v||'').trim();return /^https?:\\/\\//i.test(t)?t:(/^[\\w.-]+\\.[\\w.-]+/.test(t)?'https://'+t:'')}
   function createAiSiteCard(site){const card=document.createElement('div');card.className='ai-site-card rounded-xl border border-primary-100/70 bg-white/80 p-3 text-xs shadow-sm';const name=site.name||'未命名';const cat=site.catelog||'未分类';const desc=site.desc||'暂无描述';const rawUrl=site.url||'';const normalizedUrl=normalizeAiSiteUrl(rawUrl);const visitUrl=site.id?('/go/'+encodeURIComponent(site.id)):(normalizedUrl||'#');card.innerHTML='<div class="flex items-start justify-between gap-2"><div class="min-w-0 flex-1"><div class="truncate text-sm font-semibold text-gray-900"></div><div class="mt-1 inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-[11px] text-primary-700"></div></div><span class="flex-shrink-0 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] text-accent-700">本站书签</span></div><p class="mt-2 line-clamp-2 text-gray-600"></p><div class="mt-2 truncate text-[11px] text-primary-600"></div><div class="mt-3 flex gap-2"><a class="ai-card-visit flex-1 rounded-lg bg-primary-600 px-3 py-1.5 text-center font-medium text-white" target="_blank" rel="noopener noreferrer">访问</a><button type="button" class="ai-card-copy rounded-lg bg-accent-100 px-3 py-1.5 font-medium text-accent-700">复制</button></div>';card.querySelector('.text-sm').textContent=name;card.querySelector('.bg-primary-50').textContent=cat;card.querySelector('p').textContent=desc;card.querySelector('.text-primary-600').textContent=normalizedUrl||rawUrl||'未提供链接';const visit=card.querySelector('.ai-card-visit');visit.href=visitUrl;if(!normalizedUrl&&!site.id){visit.classList.add('pointer-events-none','opacity-50')}const copy=card.querySelector('.ai-card-copy');copy.dataset.url=normalizedUrl||rawUrl;return card}
-  function appendAiMessage(role,text,sites){if(!aiChatBody)return;const msg=document.createElement('div');msg.className='ai-message '+role;msg.textContent=normalizeAiText(text);aiChatBody.appendChild(msg);if(role==='assistant'&&Array.isArray(sites)&&sites.length){lastAiSites=sites.slice(0,5).map(function(site){return{id:site.id}}).filter(function(site){return site.id});const wrap=document.createElement('div');wrap.className='space-y-2';sites.slice(0,6).forEach(function(site){wrap.appendChild(createAiSiteCard(site))});aiChatBody.appendChild(wrap)}aiChatBody.scrollTop=aiChatBody.scrollHeight}
+  function createAiWebCard(item,index){const card=document.createElement('div');card.className='ai-web-card';const host=(function(){try{return new URL(item.url).hostname.replace(/^www\./,'')}catch(e){return ''}})();card.innerHTML='<div class="ai-web-head"><span class="ai-web-badge">联网 '+(index+1)+'</span><span class="ai-web-host"></span></div><a class="ai-web-title" target="_blank" rel="noopener noreferrer"></a><p class="ai-web-snippet"></p>';card.querySelector('.ai-web-host').textContent=host;const link=card.querySelector('.ai-web-title');link.href=item.url;link.textContent=item.title||item.url;card.querySelector('.ai-web-snippet').textContent=item.snippet||'';return card}
+  function appendAiMessage(role,text,sites,meta){if(!aiChatBody)return;const msg=document.createElement('div');msg.className='ai-message '+role;msg.textContent=normalizeAiText(text);aiChatBody.appendChild(msg);const info=meta||{};
+    if(role==='assistant'){
+      const badges=[];
+      if(info.mode&&AI_MODE_LABELS[info.mode])badges.push(AI_MODE_LABELS[info.mode]);
+      if(info.usedWebSearch)badges.push('含联网结果');
+      if(info.webError)badges.push('联网失败');
+      if(badges.length){const b=document.createElement('div');b.className='ai-msg-badges';badges.forEach(function(label){const span=document.createElement('span');span.className='ai-mode-badge';span.textContent=label;b.appendChild(span)});aiChatBody.appendChild(b)}
+    }
+    if(role==='assistant'&&Array.isArray(sites)&&sites.length){lastAiSites=sites.slice(0,5).map(function(site){return{id:site.id}}).filter(function(site){return site.id});const wrap=document.createElement('div');wrap.className='space-y-2';sites.slice(0,6).forEach(function(site){wrap.appendChild(createAiSiteCard(site))});aiChatBody.appendChild(wrap)}
+    const web=(role==='assistant'&&meta&&Array.isArray(meta.webResults))?meta.webResults:[];
+    if(web.length){const head=document.createElement('div');head.className='ai-web-results-title';head.textContent='联网结果（非本站书签）';aiChatBody.appendChild(head);const wrap=document.createElement('div');wrap.className='ai-web-results';web.slice(0,4).forEach(function(item,i){wrap.appendChild(createAiWebCard(item,i))});aiChatBody.appendChild(wrap)}
+    aiChatBody.scrollTop=aiChatBody.scrollHeight}
   aiChatBody?.addEventListener('click',function(e){const btn=e.target.closest('.ai-card-copy');if(!btn)return;e.preventDefault();const url=btn.dataset.url;if(!url)return;const old=btn.textContent;navigator.clipboard.writeText(url).then(()=>{btn.textContent='已复制';setTimeout(()=>btn.textContent=old,1200)}).catch(()=>{btn.textContent='复制失败';setTimeout(()=>btn.textContent=old,1200)})});
-  aiChatForm?.addEventListener('submit',function(e){e.preventDefault();const text=aiChatInput?.value.trim();if(!text)return;appendAiMessage('user',text);aiChatInput.value='';aiSendBtn.disabled=true;aiSendBtn.textContent='思考中';fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,previousSites:lastAiSites})}).then(r=>r.json()).then(d=>{const data=d.data||{};appendAiMessage('assistant',data.answer||d.message||'暂时没有得到回复。',data.sites||[])}).catch(()=>appendAiMessage('assistant','AI 小助理暂时无法连接，请稍后重试。')).finally(()=>{aiSendBtn.disabled=false;aiSendBtn.textContent='发送';aiChatInput?.focus()})});
+  aiChatForm?.addEventListener('submit',function(e){e.preventDefault();const text=aiChatInput?.value.trim();if(!text)return;const history=aiHistory.slice(-8);appendAiMessage('user',text);aiHistory.push({role:'user',content:text});if(aiQuickAskBox)aiQuickAskBox.classList.add('hidden');aiChatInput.value='';aiSendBtn.disabled=true;aiSendBtn.textContent='思考中';fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,previousSites:lastAiSites,history:history,webSearch:aiWebEnabled()})}).then(r=>r.json()).then(d=>{const data=d.data||{};const answer=data.answer||d.message||'暂时没有得到回复。';appendAiMessage('assistant',answer,data.sites||[],{mode:data.mode,usedWebSearch:data.usedWebSearch,webResults:data.webResults,webError:data.webError});aiHistory.push({role:'assistant',content:normalizeAiText(answer).slice(0,600)})}).catch(()=>{appendAiMessage('assistant','AI 小助理暂时无法连接，请稍后重试。')}).finally(()=>{aiSendBtn.disabled=false;aiSendBtn.textContent='发送';aiChatInput?.focus()})});
+  toggleAiWebSearchBtn?.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const next=aiWebEnabled()?'0':'1';localStorage.setItem('nav:aiWeb',next);syncAiWebButton()});
+  aiQuickAskBox?.addEventListener('click',function(e){const chip=e.target.closest('.ai-quick-chip');if(!chip)return;e.preventDefault();if(!aiChatInput||!aiChatForm)return;aiChatInput.value=chip.dataset.ask||chip.textContent||'';aiChatForm.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))});
+  syncAiWebButton();
   function updateBackToTopVisibility(){if(!backToTopBtn)return;backToTopBtn.classList.toggle('hidden',window.scrollY<360)}
   let lastTopbarScrollY=window.scrollY;
   function updateTopbarOnScroll(){const bar=document.querySelector('.nav-topbar');if(!bar)return;if(window.innerWidth>=1024){bar.classList.remove('nav-topbar-hidden');lastTopbarScrollY=window.scrollY;return}const y=window.scrollY,dy=y-lastTopbarScrollY;if(y<72||dy<-2){bar.classList.remove('nav-topbar-hidden')}else if(dy>2&&y>72){bar.classList.add('nav-topbar-hidden')}lastTopbarScrollY=y}
@@ -859,7 +887,7 @@ document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('closeModal')?.addEventListener('click',closeModal);
   document.getElementById('cancelAddSite')?.addEventListener('click',closeModal);
   document.getElementById('fetchFaviconBtn')?.addEventListener('click',function(){const u=document.getElementById('addSiteUrl').value.trim();if(!u)return alert('请先输入网址');const btn=this;const originalHTML=btn.innerHTML;btn.disabled=true;btn.innerHTML='⏳';fetch('/api/favicon?url='+encodeURIComponent(u)).then(r=>r.json()).then(d=>{if(d.favicon){document.getElementById('addSiteLogo').value=d.favicon;btn.innerHTML='✓';setTimeout(()=>{btn.innerHTML=originalHTML},1200)}else alert('未找到合适图标')}).catch(()=>alert('图标获取失败，请稍后重试')).finally(()=>{btn.disabled=false;if(btn.innerHTML==='⏳')btn.innerHTML=originalHTML})});
-  document.getElementById('addSiteForm')?.addEventListener('submit',function(e){e.preventDefault();const payload={name:addSiteName.value,url:addSiteUrl.value,logo:addSiteLogo.value,desc:addSiteDesc.value,catelog:addSiteCatelog.value,tags:addSiteTags.value,reason:(document.getElementById('addSiteReason')||{}).value||''};fetch('/api/config/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()).then(d=>{if(d.code===201){alert('提交成功，等待管理员审核');this.reset();closeModal()}else if(d.code===409&&d.duplicate){alert('本站已收录该网址：\\n#'+d.duplicate.id+' '+(d.duplicate.name||'')+'\\n分类：'+(d.duplicate.catelog||'')+'\\n如需修改，请联系管理员或在已有书签上操作。')}else alert(d.message||'提交失败')}).catch(()=>alert('网络错误'))});
+  document.getElementById('addSiteForm')?.addEventListener('submit',function(e){e.preventDefault();const payload={name:addSiteName.value,url:addSiteUrl.value,logo:addSiteLogo.value,desc:addSiteDesc.value,catelog:addSiteCatelog.value,tags:addSiteTags.value,reason:(document.getElementById('addSiteReason')||{}).value||'',email:(document.getElementById('addSiteEmail')||{}).value||''};fetch('/api/config/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()).then(d=>{if(d.code===201){alert('提交成功，等待管理员审核'+(payload.email?'，审核结果会邮件通知你':''));this.reset();closeModal()}else if(d.code===409&&d.duplicate){alert('本站已收录该网址：\\n#'+d.duplicate.id+' '+(d.duplicate.name||'')+'\\n分类：'+(d.duplicate.catelog||'')+'\\n如需修改，请联系管理员或在已有书签上操作。')}else alert(d.message||'提交失败')}).catch(()=>alert('网络错误'))});
 
   document.getElementById('autoFetchMetaBtn')?.addEventListener('click',function(){var u=(document.getElementById('addSiteUrl')||{}).value?.trim();if(!u){alert('请先输入网址');return}var btn=this,status=document.getElementById('autoFetchStatus');btn.disabled=true;btn.textContent='抓取中';if(status){status.classList.remove('hidden');status.textContent='正在抓取网站信息...'}fetch('/api/site/preview?url='+encodeURIComponent(u)).then(function(r){return r.json()}).then(function(d){if(d.code===200&&d.data){var data=d.data;if(data.title&&!document.getElementById('addSiteName').value)document.getElementById('addSiteName').value=data.title;if(data.description&&!document.getElementById('addSiteDesc').value)document.getElementById('addSiteDesc').value=data.description;if(data.favicon&&!document.getElementById('addSiteLogo').value)document.getElementById('addSiteLogo').value=data.favicon;if(data.duplicate&&status){status.textContent='\u26a0\ufe0f 本站已收录类似网址：#'+data.duplicate.id+' '+(data.duplicate.name||'')+' ('+( data.duplicate.catelog||'')+')'}else if(status){status.textContent='\u2705 抓取完成'+(data.title?' \u00b7 '+data.title:'')}}else if(status){status.textContent='未能抓取到信息：'+(d.message||'请手动填写')}}).catch(function(){if(status)status.textContent='抓取失败，请手动填写'}).finally(function(){btn.disabled=false;btn.textContent='抓取'})});
   document.getElementById('submitSuggestCategoryBtn')?.addEventListener('click',function(){var name=(document.getElementById('addSiteName')||{}).value?.trim()||'';var u=(document.getElementById('addSiteUrl')||{}).value?.trim()||'';if(!name&&!u){alert('请先输入名称或网址');return}var btn=this,old=btn.textContent;btn.disabled=true;btn.textContent='\u23f3';fetch('/api/submit/suggest-category',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,url:u,desc:(document.getElementById('addSiteDesc')||{}).value||''})}).then(function(r){return r.json()}).then(function(d){if(d.code===200&&d.data&&d.data.category){document.getElementById('addSiteCatelog').value=d.data.category}else{alert('未能推荐分类，请手动选择')}}).catch(function(){alert('网络错误')}).finally(function(){btn.disabled=false;btn.textContent=old})});

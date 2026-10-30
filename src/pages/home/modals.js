@@ -55,6 +55,7 @@ export function renderSubmitModal(datalistOptions, i18n = null) {
         </div>
         <datalist id="catalogList">${datalistOptions}</datalist>
         <input id="addSiteReason" placeholder="推荐理由 可选，帮助管理员了解为什么推荐" class="${fieldClass}">
+        <input id="addSiteEmail" type="email" placeholder="邮箱 可选，仅用于接收审核结果通知" class="${fieldClass}" autocomplete="off">
         <div class="flex justify-end gap-3 pt-1">
           <button type="button" id="cancelAddSite" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-gray-600 transition hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">取消</button>
           <button type="submit" class="rounded-lg bg-accent-500 px-4 py-2 font-medium text-white transition hover:bg-accent-600">提交</button>

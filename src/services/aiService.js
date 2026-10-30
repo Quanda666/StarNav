@@ -1,9 +1,12 @@
 import { cleanText } from '../lib/utils.js';
 import { decryptSecret, encryptSecret } from '../lib/crypto.js';
+import { getBeijingParts, BEIJING_TIMEZONE_LABEL } from '../lib/datetime.js';
 import { getSetting, setSetting } from './settingsService.js';
 import { canAccessSite, getSite, searchSites, getSiteAnalytics } from './siteService.js';
 import { listCategories } from './categoryService.js';
-import { listTags } from './tagService.js';
+import { listTags, loadTagProfile } from './tagService.js';
+import { getSiteStats, formatStatsForPrompt, describeSiteStats } from './statsService.js';
+import { webSearch, getWebSearchSettings, fetchPageDigest } from './webSearchService.js';
 
 const AI_SETTING_PREFIX = 'ai.';
 const DEFAULT_AI_SETTINGS = {
@@ -288,6 +291,269 @@ function stripMarkdownArtifacts(text) {
     .trim();
 }
 
+// ─── 实时问答（时间 / 日期 / 星期 / 站点统计）─────────────────────
+// 这类问题有唯一正确答案，交给大模型只会引入幻觉和延迟，
+// 因此在服务端直接计算或直接查库，保证 100% 准确、零 token 成本。
+
+const REALTIME_ASK_WEEKDAY = /(星期|礼拜|周)\s*(几|几号|是什么|是啥)|今天\s*(是)?\s*(星期|周)/;
+const REALTIME_ASK_CLOCK = /(几点|几时|多少点|什么时间了?|现在时间|当前时间|时间是多少)/;
+const REALTIME_ASK_DATE = /(今天|明天|昨天|现在|当前)\s*(是)?\s*(几号|几月几号|几月几日|什么日期|日期|多少号)|(几号了)|(今天日期)/;
+const REALTIME_ASK_YEAR = /(今年|现在是|当前)\s*(是)?\s*(哪一年|什么年份|几年)|今年是/;
+const REALTIME_STAT_OBJECT = /(书签|网站|链接|网址|收录|分类|标签|目录|空间|访问|浏览|点击)/;
+const REALTIME_RECOMMEND_VERB = /(推荐|帮我|给我|找|搜|列出|列一下|来几|要几|介绍)/;
+
+/**
+ * 判断消息是否是「确定性实时问题」（时间 / 日期 / 星期 / 统计）。
+ * 纯函数，便于单测。
+ *
+ * @param {string} message 用户消息。
+ * @returns {{kind:''|'weekday'|'clock'|'date'|'year'|'stats', focus:string}}
+ */
+export function detectRealtimeIntent(message) {
+  const text = cleanText(message);
+  if (!text) return { kind: '', focus: '' };
+
+  if (REALTIME_ASK_CLOCK.test(text)) return { kind: 'clock', focus: '' };
+  if (REALTIME_ASK_WEEKDAY.test(text)) return { kind: 'weekday', focus: '' };
+  if (REALTIME_ASK_DATE.test(text)) return { kind: 'date', focus: '' };
+  if (REALTIME_ASK_YEAR.test(text)) return { kind: 'year', focus: '' };
+
+  const hasStrongCount = /(多少|总数|数量|统计|共计|一共|总和)/.test(text);
+  const hasWeakCount = /几/.test(text);
+  const hasObject = REALTIME_STAT_OBJECT.test(text);
+  const hasRecommendVerb = REALTIME_RECOMMEND_VERB.test(text);
+  if (hasObject && (hasStrongCount || (hasWeakCount && !hasRecommendVerb))) {
+    let focus = 'sites';
+    if (/(标签)/.test(text)) focus = 'tags';
+    else if (/(分类|类别|目录)/.test(text)) focus = 'categories';
+    else if (/(访问|点击|浏览|人气)/.test(text)) focus = 'hits';
+    else if (/(新增|收录|今天|本周|最近|这几天)/.test(text)) focus = 'new';
+    else if (/(待审|审核|提交)/.test(text)) focus = 'pending';
+    return { kind: 'stats', focus };
+  }
+
+  return { kind: '', focus: '' };
+}
+
+/**
+ * 构造实时问题的最终回答（纯函数）。
+ *
+ * @param {{kind:string,focus:string}} intent detectRealtimeIntent 的结果。
+ * @param {object} stats getSiteStats 的结果（仅 stats 类型需要）。
+ * @param {{now?: number, adminAuthed?: boolean}} [options]
+ * @returns {string}
+ */
+export function buildRealtimeAnswer(intent, stats = {}, { now, adminAuthed = false } = {}) {
+  const p = getBeijingParts(now);
+  switch (intent.kind) {
+    case 'weekday':
+      return `今天是 ${p.yearMonthDay} ${p.weekdayName}（北京时间）。`;
+    case 'clock':
+      return `现在是北京时间 ${p.time}（${p.date} ${p.weekdayName}）。本站在全球边缘节点运行，其他时区的时间请按 UTC 偏移自行换算。`;
+    case 'date':
+      return `今天是 ${p.yearMonthDay}，${p.weekdayName}（北京时间）。`;
+    case 'year':
+      return `今年是 ${p.year} 年，现在是 ${p.yearMonthDay} ${p.weekdayName}。`;
+    case 'stats': {
+      if (!stats || !Number.isFinite(Number(stats.totalSites))) {
+        return '暂时读不到本站统计数据，请稍后再试。';
+      }
+      const base = describeSiteStats(stats, { adminAuthed, now });
+      if (intent.focus === 'tags') {
+        return `本站目前共有 ${stats.totalTags} 个标签，分布在 ${stats.totalSites} 条书签上。`
+          + (stats.topTag?.name ? `\n使用最多的标签是「${stats.topTag.name}」（${stats.topTag.count} 条书签）。` : '')
+          + '\n想按标签找书签，可以直接说“找 #标签名”或在搜索框输入 tag:标签名。';
+      }
+      if (intent.focus === 'categories') {
+        return `本站目前共有 ${stats.totalCategories} 个分类，收录 ${stats.totalSites} 条书签。`
+          + (stats.topCategory?.name ? `\n其中「${stats.topCategory.name}」书签最多，共 ${stats.topCategory.count} 条。` : '');
+      }
+      if (intent.focus === 'hits') {
+        return `本站书签累计被访问 ${stats.totalHits} 次，其中 ${stats.visitedSites} 条书签至少被访问过一次。`
+          + '\n想看排行榜可以问“访问最多的书签”。';
+      }
+      if (intent.focus === 'new') {
+        const latest = stats.latestSites || [];
+        return `收录节奏：今天新增 ${stats.todayNew} 条，近 7 天 ${stats.weekNew} 条，近 30 天 ${stats.monthNew} 条。`
+          + (latest.length ? `\n最近收录：${latest.map((site) => `${site.name}（${site.catelog}）`).join('、')}。` : '');
+      }
+      if (intent.focus === 'pending') {
+        if (!adminAuthed || stats.pendingSites === null || stats.pendingSites === undefined) {
+          return `待审核数量只有管理员可见。当前本站共收录 ${stats.totalSites} 条书签。`;
+        }
+        return `当前有 ${stats.pendingSites} 条书签提交等待审核。`;
+      }
+      return base;
+    }
+    default:
+      return '';
+  }
+}
+
+// ─── 站内词汇表（标签 / 分类）驱动的检索 ─────────────────────
+
+async function loadSiteVocabulary(env) {
+  const [categories, tags] = await Promise.all([
+    listCategories(env).catch(() => []),
+    listTags(env).catch(() => []),
+  ]);
+  return {
+    categories: (categories || []).map((item) => cleanText(item.name)).filter(Boolean),
+    tags: (tags || [])
+      .map((item) => ({ name: cleanText(item.name), count: Number(item.site_count) || 0 }))
+      .filter((item) => item.name),
+  };
+}
+
+/**
+ * 根据用户消息 + 站内标签/分类词汇表，生成检索计划（纯函数）。
+ *
+ * @param {string} message
+ * @param {{categories?: string[], tags?: Array<{name:string,count:number}>}} [vocabulary]
+ * @returns {{phrase:string,keywords:string[],tags:string[],categories:string[]}}
+ */
+export function buildSearchPlan(message, vocabulary = {}) {
+  const raw = cleanText(message);
+  const lower = raw.toLowerCase();
+  const unique = (values) => [...new Set(values.map((value) => cleanText(value)).filter(Boolean))];
+
+  const tags = unique((vocabulary.tags || [])
+    .map((item) => cleanText(item?.name))
+    .filter((name) => name.length >= 1 && lower.includes(name.toLowerCase())))
+    .sort((a, b) => a.length - b.length)
+    .slice(0, 4);
+
+  const categories = unique((vocabulary.categories || [])
+    .filter((name) => name && lower.includes(cleanText(name).toLowerCase())))
+    .sort((a, b) => a.length - b.length)
+    .slice(0, 3);
+
+  const keywords = inferSearchKeywords(raw)
+    .filter((keyword) => !tags.some((tag) => tag.toLowerCase() === keyword.toLowerCase()))
+    .filter((keyword) => !categories.some((category) => category.toLowerCase() === keyword.toLowerCase()))
+    .slice(0, 8);
+
+  return { phrase: normalizeSearchPhrase(raw), keywords, tags, categories };
+}
+
+/**
+ * 按检索计划检索书签：短语 > 标签/分类精确 > 关键词扩展，按命中权重累加排序。
+ *
+ * @param {object} env
+ * @param {{plan:object,limit?:number,adminAuthed?:boolean,privateUnlocked?:boolean}} options
+ * @returns {Promise<Array>}
+ */
+async function retrieveSitesForAi(env, { plan, limit = 16, adminAuthed = false, privateUnlocked = false } = {}) {
+  const queries = [];
+  const pushQuery = (keyword, weight, reason) => {
+    const value = cleanText(keyword);
+    if (!value) return;
+    if (queries.some((item) => item.keyword === value)) return;
+    queries.push({ keyword: value, weight, reason });
+  };
+
+  pushQuery(plan.phrase, 3, '原句匹配');
+  plan.tags.forEach((tag) => pushQuery(`tag:"${tag}"`, 2.6, `标签「${tag}」`));
+  plan.categories.forEach((category) => pushQuery(`cat:"${category}"`, 2.4, `分类「${category}」`));
+  plan.keywords.forEach((keyword, index) => pushQuery(keyword, 1 + Math.max(0, (8 - index)) * 0.12, `关键词「${keyword}」`));
+
+  const merged = new Map();
+  for (const query of queries.slice(0, 12)) {
+    let results = [];
+    try {
+      results = await searchSites(env, {
+        keyword: query.keyword,
+        limit: Math.max(10, limit),
+        includePrivate: privateUnlocked,
+        adminAuthed,
+        privateUnlocked,
+      });
+    } catch (error) {
+      console.warn(`[ai] 检索失败 keyword="${query.keyword.slice(0, 40)}": ${error.message}`);
+      continue;
+    }
+
+    const hitsCount = (results || []).length;
+    // 命中数量越少的查询越「独有」，同等条件下应获得更高的区分度权重
+    const specificity = hitsCount > 0 ? 1 + Math.min(0.6, 6 / (hitsCount + 3)) : 1;
+    for (const site of results || []) {
+      const base = Number(site._score) || 0;
+      const gained = base * query.weight * specificity;
+      const existing = merged.get(site.id);
+      if (existing) {
+        existing._aiSearchScore += gained;
+        existing._matchedBy.push(query.reason);
+        existing._score = Math.max(Number(existing._score) || 0, base);
+        existing._hitCount += 1;
+      } else {
+        merged.set(site.id, {
+          ...site,
+          _aiSearchScore: gained,
+          _matchedBy: [query.reason],
+          _hitCount: 1,
+        });
+      }
+    }
+  }
+
+  return [...merged.values()]
+    .map((site) => {
+      const multiHitBonus = (Number(site._hitCount) || 1) > 1 ? (Number(site._hitCount) - 1) * 180 : 0;
+      const hits = Math.min(Number(site.hits) || 0, 5000);
+      const popularity = Math.log10(hits + 1) * 30;
+      return { ...site, _aiSearchScore: (Number(site._aiSearchScore) || 0) + multiHitBonus + popularity };
+    })
+    .sort((a, b) => {
+      const diff = (Number(b._aiSearchScore) || 0) - (Number(a._aiSearchScore) || 0);
+      if (diff !== 0) return diff;
+      return (Number(b.hits) || 0) - (Number(a.hits) || 0);
+    })
+    .slice(0, limit);
+}
+
+// ─── 联网搜索决策 ───────────────────────────────────────
+
+const WEB_INTENT_PATTERN = /(联网|网上|网络|线上|百度|谷歌|google|bing|网页搜索|搜一下网|查一下网|最新的?消息|新闻|官网是什么|实时|外网)/i;
+
+/**
+ * 决定本次问答是否需要联网检索（纯函数）。
+ *
+ * @param {string} message
+ * @param {{siteCount:number, settings:object, preference?:boolean|null}} options
+ * @returns {{use:boolean, reason:string}}
+ */
+export function decideWebSearch(message, { siteCount = 0, settings = {}, preference = null } = {}) {
+  if (settings.enabled !== 'true') return { use: false, reason: '未启用' };
+  const text = cleanText(message);
+  if (preference === false) return { use: false, reason: '用户已关闭联网' };
+  if (WEB_INTENT_PATTERN.test(text)) return { use: true, reason: '用户明确要求联网' };
+  if (preference === true) return { use: true, reason: '用户开启联网开关' };
+  if (settings.autoMode === 'true' && siteCount === 0) return { use: true, reason: '站内无结果，自动联网补充' };
+  return { use: false, reason: '站内结果已足够' };
+}
+
+function formatWebContext(results = []) {
+  if (!results.length) return '';
+  return results.map((item, index) => `[${index + 1}] ${item.title}\n    URL: ${item.url}\n    摘要: ${item.snippet || '（无摘要）'}`).join('\n');
+}
+
+function extractFirstUrl(message = '') {
+  const match = String(message).match(/https?:\/\/[^\s，。！？；、）)】』」]+/i);
+  return match ? match[0].replace(/[.,;:!?]+$/, '') : '';
+}
+
+function sanitizeHistory(history = [], maxTurns = 6) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .filter((item) => item && (item.role === 'user' || item.role === 'assistant'))
+    .map((item) => ({
+      role: item.role,
+      content: cleanText(item.content).slice(0, 1200),
+    }))
+    .filter((item) => item.content)
+    .slice(-maxTurns * 2);
+}
+
 function detectBookmarkIntent(message) {
   const text = cleanText(message);
   const containsKeyword = extractContainsKeyword(text);
@@ -396,7 +662,26 @@ function buildLocalAnswer(message, sites) {
   };
 }
 
-async function callOpenAiCompatible({ settings, message, context }) {
+async function callOpenAiCompatible({ settings, message, context, history = [], extraSystem = [], temperature = 0.3 }) {
+  const historyMessages = sanitizeHistory(history).map((item) => ({ role: item.role, content: item.content }));
+  const systemMessages = [
+    { role: 'system', content: settings.systemPrompt },
+    { role: 'system', content: '事实性约束：你正在做 RAG 问答。“本站书签检索结果”是唯一可信的本站数据源。回答书签是否存在、在哪个分类、链接是什么、包含某字/某词的所有书签、某分类/标签有哪些等事实型问题时，只能使用检索结果中的条目。检索结果为空时必须说本站未找到；检索结果非空时不得说未检索到。不要输出检索结果中不存在的名称、分类、标签、URL。' },
+    { role: 'system', content: '输出格式要求：请使用中文纯文本回答；可以使用编号列表，但不要使用 Markdown 加粗、标题符号或多余星号。不要把“**”输出给用户。' },
+    ...extraSystem.filter(Boolean).map((content) => ({ role: 'system', content })),
+  ];
+
+  const messages = [
+    ...systemMessages,
+    ...historyMessages,
+    { role: 'user', content: message },
+  ];
+
+  if (context) {
+    // 检索结果紧贴用户提问，避免长对话历史把事实材料“挤”出注意力范围
+    messages.splice(messages.length - 1, 0, { role: 'system', content: `本站书签检索结果：\n${context}` });
+  }
+
   const response = await fetch(settings.baseUrl, {
     method: 'POST',
     signal: AbortSignal.timeout(30000),
@@ -406,14 +691,8 @@ async function callOpenAiCompatible({ settings, message, context }) {
     },
     body: JSON.stringify({
       model: settings.model,
-      messages: [
-        { role: 'system', content: settings.systemPrompt },
-        { role: 'system', content: '事实性约束：你正在做 RAG 问答。“本站书签检索结果”是唯一可信数据源。回答书签是否存在、在哪个分类、链接是什么、包含某字/某词的所有书签、某分类/标签有哪些等事实型问题时，只能使用检索结果中的条目。检索结果为空时必须说本站未找到；检索结果非空时不得说未检索到。不要输出检索结果中不存在的名称、分类、标签、URL。' },
-        { role: 'system', content: '输出格式要求：请使用中文纯文本回答；可以使用编号列表，但不要使用 Markdown 加粗、标题符号或多余星号。不要把“**”输出给用户。' },
-        { role: 'system', content: `本站书签检索结果：\n${context}` },
-        { role: 'user', content: message },
-      ],
-      temperature: 0.3,
+      messages,
+      temperature,
     }),
   });
 
@@ -444,31 +723,298 @@ function parseSuggestedTags(text, limit = 8) {
     .slice(0, limit);
 }
 
-function suggestTagsLocally(site = {}, existingTags = [], limit = 8) {
-  const text = [site.name, site.url, site.desc, site.catelog].map((v) => cleanText(v).toLowerCase()).join(' ');
-  const suggestions = new Set();
-  const add = (tag) => { const t = cleanText(tag); if (t) suggestions.add(t); };
-  add(site.catelog);
-  const rules = [
-    [['ai', 'gpt', 'chatgpt', 'claude', 'gemini', '大模型', '人工智能'], 'AI'],
-    [['图床', '图片上传', '图片外链', 'img', 'image', 'photo'], '图床'],
-    [['网盘', '云盘', 'drive', 'pan', 'cloud'], '网盘'],
-    [['github', 'gitlab', '代码', '编程', '开发', 'api', 'json'], '开发工具'],
-    [['设计', '素材', '图标', '配色', 'figma', 'svg'], '设计'],
-    [['视频', '影视', '电影', '音乐', '音频'], '影音'],
-    [['文档', '笔记', '知识库', '博客', '教程'], '知识'],
-    [['邮箱', '临时邮箱', '短信', '接码'], '工具'],
-  ];
-  for (const [keys, tag] of rules) {
-    if (keys.some((key) => text.includes(String(key).toLowerCase()))) add(tag);
+// ─── 标签推荐引擎 ───────────────────────────────────────────
+// 目标：让推荐结果「贴站内」且「可解释」。
+// 三条信号叠加打分：
+//   1) 站内词汇表（已有标签）在名称/描述/域名/分类中的出现位置与强度；
+//   2) 标签与该分类的历史共现度 + 标签自身热度（贴着站内既有习惯，不造新词）；
+//   3) 语义词典与域名规则（兜底，用于库还很空、词汇表覆盖不到时）。
+
+const TAG_SEMANTIC_RULES = [
+  { tag: 'AI', keys: ['ai', 'gpt', 'chatgpt', 'claude', 'gemini', 'midjourney', 'stable diffusion', '大模型', '人工智能', 'aigc', 'llm', '提示词', '智能助手'] },
+  { tag: '图床', keys: ['图床', '图片上传', '图片外链', '图链', 'imgurl', 'sm.ms', 'imgbb', '上传图片', '图片托管'] },
+  { tag: '网盘', keys: ['网盘', '云盘', '云存储', 'onedrive', 'dropbox', 'mega', '夸克', '阿里云盘', '百度网盘', '115'] },
+  { tag: '代码托管', keys: ['github', 'gitlab', 'gitee', '代码托管', '代码仓库', 'repo'] },
+  { tag: '开发工具', keys: ['api', 'json', 'sdk', '开发者', '开发文档', '调试', '正则', '时间戳', '编码转换', 'npm', 'docker', 'vscode', 'ide', 'postman'] },
+  { tag: '设计素材', keys: ['设计', '素材', '图标', 'icon', '配色', '调色', 'figma', 'svg', '字体', '插画', 'ui', 'mockup', 'dribbble', 'behance'] },
+  { tag: '影音娱乐', keys: ['视频', '影视', '电影', '电视剧', '音乐', '音频', '动漫', '番剧', '直播', 'b站', 'bilibili', 'youtube', '油管', 'spotify'] },
+  { tag: '学习提升', keys: ['教程', '课程', '学习', '考试', '题库', '英语', '教学', 'mooc', 'wiki', '百科'] },
+  { tag: '阅读资讯', keys: ['博客', '资讯', '新闻', '文章', '阅读', 'rss', '电子书', '书单', 'medium'] },
+  { tag: '效率笔记', keys: ['笔记', '知识库', '待办', 'todo', '效率', 'notion', 'obsidian', '思维导图', '流程图', '语雀', '飞书'] },
+  { tag: '办公协作', keys: ['office', 'excel', 'word', 'ppt', '文档', '表格', '协作', '会议', 'pdf', '格式转换'] },
+  { tag: '资源下载', keys: ['下载', '磁力', '种子', 'bt', '资源站', '电子书下载', '素材下载'] },
+  { tag: '在线工具', keys: ['在线工具', '工具箱', '小工具', '生成器', 'utilities', 'toolbox'] },
+  { tag: '安全隐私', keys: ['安全', '隐私', '密码', '加密', '防火墙', '泄露', '漏洞'] },
+  { tag: '服务器运维', keys: ['服务器', 'vps', '主机', '域名', 'dns', 'cdn', '部署', '运维', 'nginx', 'linux', '监控', '宝塔'] },
+  { tag: '建站托管', keys: ['建站', '博客系统', 'wordpress', 'hexo', 'hugo', 'vercel', 'netlify', 'cloudflare', 'pages', 'workers', '虚拟主机'] },
+  { tag: '图片处理', keys: ['压缩', '抠图', '去背景', '图片编辑', '加水印', '图片压缩', 'photoshop', '图片转换'] },
+  { tag: '邮箱短信', keys: ['邮箱', '邮件', '临时邮箱', '短信', '接码', 'sms', 'mail'] },
+  { tag: '社交社区', keys: ['论坛', '社区', '贴吧', '知乎', '微博', 'discord', 'telegram', 'reddit', 'v2ex'] },
+  { tag: '地图出行', keys: ['地图', '导航', '出行', '航班', '火车', '打车', '地铁', '路线'] },
+  { tag: '金融理财', keys: ['汇率', '股票', '基金', '记账', '理财', '税务', '利率'] },
+  { tag: '游戏', keys: ['游戏', 'steam', '手游', '攻略', '汉化', 'epic'] },
+  { tag: '生活服务', keys: ['菜谱', '天气', '健康', '购物', '比价', '快递', '日历'] },
+  { tag: '字体排版', keys: ['字体', '排版', '字库', '免费字体', 'typography'] },
+  { tag: '数据可视化', keys: ['图表', '可视化', 'chart', 'dashboard', 'bi', '甘特图'] },
+];
+
+const TAG_DOMAIN_RULES = [
+  { match: ['github.com', 'gitlab.com', 'gitee.com', 'bitbucket.org'], tag: '代码托管' },
+  { match: ['bilibili.com', 'youtube.com', 'iqiyi.com', 'v.qq.com', 'douyin.com'], tag: '影音娱乐' },
+  { match: ['figma.com', 'dribbble.com', 'behance.net', 'canva.com'], tag: '设计素材' },
+  { match: ['notion.so', 'obsidian.md', 'yuque.com', 'feishu.cn', 'wolai.com'], tag: '效率笔记' },
+  { match: ['vercel.com', 'netlify.com', 'cloudflare.com', 'railway.app', 'render.com'], tag: '建站托管' },
+  { match: ['openai.com', 'anthropic.com', 'claude.ai', 'chatgpt.com', 'gemini.google.com', 'midjourney.com'], tag: 'AI' },
+  { match: ['drive.google.com', 'pan.baidu.com', 'aliyundrive.com', 'alipan.com', '115.com'], tag: '网盘' },
+  { match: ['mail.google.com', 'outlook.com', 'mail.qq.com', '163.com'], tag: '邮箱短信' },
+  { match: ['npmjs.com', 'pypi.org', 'crates.io', 'docker.com'], tag: '开发工具' },
+];
+
+const TAG_MIN_LENGTH = 2;
+const TAG_MAX_LENGTH = 12;
+
+function normalizeTagKey(value) {
+  return cleanText(value).toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * 站内标签词汇表是否「够用」（决定是否更需要语义词典兜底）。
+ *
+ * @param {object} profile loadTagProfile 的返回值。
+ * @returns {boolean}
+ */
+export function isTagVocabularySparse(profile = {}) {
+  const size = profile?.tags instanceof Map ? profile.tags.size : 0;
+  return size < 8;
+}
+
+/**
+ * 本地标签推荐（纯函数，可单测）。
+ *
+ * @param {object} site 书签对象 {name,url,desc,catelog,tags}。
+ * @param {object} profile loadTagProfile 的返回值（可为空对象）。
+ * @param {{limit?:number}} [options]
+ * @returns {Array<{name:string,score:number,source:string,reason:string}>}
+ */
+export function suggestTagsLocally(site = {}, profile = {}, { limit = 5 } = {}) {
+  const name = cleanText(site.name);
+  const desc = cleanText(site.desc);
+  const url = cleanText(site.url);
+  const category = cleanText(site.catelog);
+  const host = (() => {
+    try {
+      return new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname.replace(/^www\./, '').toLowerCase();
+    } catch {
+      return url.toLowerCase();
+    }
+  })();
+  const currentTags = Array.isArray(site.tags)
+    ? site.tags.map((tag) => cleanText(tag)).filter(Boolean)
+    : cleanText(site.tags).split(/[,，、\s]+/).map((tag) => cleanText(tag)).filter(Boolean);
+
+  const lowerName = name.toLowerCase();
+  const lowerDesc = desc.toLowerCase();
+  const haystack = [lowerName, lowerDesc, host, category.toLowerCase()].join(' \u0001 ');
+  const candidates = new Map();
+
+  const push = (tagName, entry) => {
+    const clean = cleanText(tagName);
+    if (!clean) return;
+    if (clean.length < TAG_MIN_LENGTH || clean.length > TAG_MAX_LENGTH) return;
+    const key = normalizeTagKey(clean);
+    if (!key) return;
+    const existing = candidates.get(key);
+    if (!existing || entry.score > existing.score) {
+      candidates.set(key, { name: existing?.preservedName || clean, ...entry, preservedName: existing?.preservedName || clean });
+    }
+  };
+
+  const categoryTags = profile?.categories instanceof Map ? profile.categories.get(category) : null;
+  const categoryTagTotal = categoryTags
+    ? [...categoryTags.values()].reduce((sum, value) => sum + value, 0)
+    : 0;
+
+  // ① 站内已有标签：按命中位置打分 + 分类共现 + 热度
+  if (profile?.tags instanceof Map) {
+    for (const [key, info] of profile.tags) {
+      const tagName = cleanText(info?.name);
+      if (!tagName || tagName.length < TAG_MIN_LENGTH || tagName.length > TAG_MAX_LENGTH) continue;
+      const lowerTag = tagName.toLowerCase();
+
+      let positional = 0;
+      let reason = '';
+      if (lowerName.includes(lowerTag)) {
+        positional = 95;
+        reason = `站内已有标签，且出现在书签名称中`;
+      } else if (lowerDesc.includes(lowerTag)) {
+        positional = 72;
+        reason = `站内已有标签，描述中提到了它`;
+      } else if (host.includes(lowerTag)) {
+        positional = 66;
+        reason = `站内已有标签，域名与之吻合`;
+      } else if (category.toLowerCase() === lowerTag) {
+        positional = 40;
+        reason = `站内已有标签，与分类同名`;
+      }
+      if (!positional) continue;
+
+      const total = Number(info.total) || 0;
+      const cooc = categoryTags ? Number(categoryTags.get(tagName)) || 0 : 0;
+      const coocBoost = categoryTagTotal && cooc ? Math.min(18, (cooc / categoryTagTotal) * 26) : 0;
+      const popularity = Math.min(14, Math.log10(total + 1) * 7);
+      push(tagName, {
+        name: tagName,
+        score: positional + coocBoost + popularity,
+        source: 'vocabulary',
+        reason: coocBoost > 4 ? `${reason}；该分类下已有 ${cooc} 条书签使用此标签` : reason,
+      });
+    }
   }
-  const existingNames = existingTags.map((t) => t.name || t.tag || '').filter(Boolean);
-  for (const name of existingNames) {
-    if (suggestions.size >= limit) break;
-    const lower = cleanText(name).toLowerCase();
-    if (lower && text.includes(lower)) add(name);
+
+  // ② 分类共识：同一分类下高频使用的标签（即使字面未命中，也符合站内习惯）
+  if (categoryTags && categoryTagTotal) {
+    const dominant = [...categoryTags.entries()]
+      .map(([tagName, count]) => ({ tagName, count, ratio: count / categoryTagTotal }))
+      .filter((item) => item.ratio >= 0.2 && item.count >= 2)
+      .sort((a, b) => b.ratio - a.ratio)
+      .slice(0, 3);
+    for (const item of dominant) {
+      push(item.tagName, {
+        name: item.tagName,
+        score: 34 + item.ratio * 20,
+        source: 'category',
+        reason: `分类「${category}」下约 ${Math.round(item.ratio * 100)}% 的书签都用了这个标签`,
+      });
+    }
   }
-  return [...suggestions].slice(0, limit);
+
+  // ③ 语义词典：库还很空时权重更高
+  const sparse = isTagVocabularySparse(profile);
+  for (const rule of TAG_SEMANTIC_RULES) {
+    const hitKey = rule.keys.find((key) => haystack.includes(String(key).toLowerCase()));
+    if (!hitKey) continue;
+    const existing = candidates.get(normalizeTagKey(rule.tag));
+    const base = sparse ? 70 : 46;
+    if (!existing) {
+      push(rule.tag, {
+        name: rule.tag,
+        score: base,
+        source: 'semantic',
+        reason: `名称/描述/域名命中关键词「${hitKey}」`,
+      });
+    } else if (existing.score < base) {
+      push(rule.tag, { name: rule.tag, score: base, source: 'semantic', reason: existing.reason });
+    }
+  }
+
+  // ③ 域名规则
+  for (const rule of TAG_DOMAIN_RULES) {
+    if (!rule.match.some((domain) => host.includes(domain) || url.toLowerCase().includes(domain))) continue;
+    const existing = candidates.get(normalizeTagKey(rule.tag));
+    const base = sparse ? 64 : 44;
+    if (!existing || existing.score < base) {
+      push(rule.tag, {
+        name: rule.tag,
+        score: base,
+        source: 'domain',
+        reason: `域名 ${host || url} 常见于「${rule.tag}」类站点`,
+      });
+    }
+  }
+
+  // ④ 已有标签保留（避免二次推荐把人工标签弄丢）
+  for (const tag of currentTags) {
+    const key = normalizeTagKey(tag);
+    if (!key) continue;
+    const existing = candidates.get(key);
+    const base = existing ? Math.max(existing.score + 8, 90) : 88;
+    push(tag, {
+      name: existing?.name || tag,
+      score: base,
+      source: 'existing',
+      reason: '该书签当前已有的标签',
+    });
+  }
+
+  const categoryKey = normalizeTagKey(category);
+  const nameKey = normalizeTagKey(name);
+
+  return [...candidates.values()]
+    .filter((item) => {
+      const key = normalizeTagKey(item.name);
+      if (!key) return false;
+      if (key === nameKey) return false; // 标签与书签名重复没有信息量
+      if (key === categoryKey) return false; // 标签与分类名重复（分类已经表达了这层信息）
+      return true;
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.name.length - b.name.length;
+    })
+    .slice(0, Math.max(1, limit));
+}
+
+/**
+ * 归一化大模型给出的标签：大小写/别名对齐站内词汇表，并过滤无效项（纯函数）。
+ *
+ * @param {Array<string|{name?:string}>} items
+ * @param {object} profile
+ * @param {{limit?:number, baseScore?:number}} [options]
+ * @returns {Array<{name:string,score:number,source:string,reason:string}>}
+ */
+export function normalizeAiTagSuggestions(items = [], profile = {}, { limit = 6, baseScore = 92 } = {}) {
+  const vocabulary = profile?.tags instanceof Map ? profile.tags : new Map();
+  const results = [];
+  const seen = new Set();
+
+  for (const item of Array.isArray(items) ? items : []) {
+    const raw = cleanText(typeof item === 'string' ? item : item?.name).replace(/^#+/, '');
+    if (!raw) continue;
+    if (raw.length < TAG_MIN_LENGTH || raw.length > TAG_MAX_LENGTH) continue;
+    const key = normalizeTagKey(raw);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+
+    const known = vocabulary.get(key);
+    results.push({
+      name: known?.name || raw,
+      score: baseScore - results.length * 2,
+      source: known ? 'ai+vocabulary' : 'ai',
+      reason: known ? 'AI 推荐，与站内已有标签一致' : 'AI 推荐的新标签',
+    });
+    if (results.length >= limit) break;
+  }
+  return results;
+}
+
+/**
+ * 合并本地与 AI 候选并按分数取前 N（纯函数）。
+ *
+ * @param {Array} localCandidates
+ * @param {Array} aiCandidates
+ * @param {{limit?:number}} [options]
+ * @returns {{tags:string[], details:Array}}
+ */
+export function mergeTagCandidates(localCandidates = [], aiCandidates = [], { limit = 5 } = {}) {
+  const merged = new Map();
+  for (const item of [...localCandidates, ...aiCandidates]) {
+    const name = cleanText(item?.name);
+    if (!name) continue;
+    const key = normalizeTagKey(name);
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, { ...item, name });
+      continue;
+    }
+    // 同一标签取更高分，但保留更「站内」的来源说明
+    if ((Number(item.score) || 0) > (Number(existing.score) || 0)) {
+      merged.set(key, { ...item, name: existing.name, reason: item.reason || existing.reason });
+    }
+  }
+  const details = [...merged.values()]
+    .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0) || a.name.length - b.name.length)
+    .slice(0, Math.max(1, limit));
+  return { tags: details.map((item) => item.name), details };
 }
 
 function normalizeCategorySuggestion(value, categories = []) {
@@ -602,59 +1148,88 @@ export async function suggestTagsForSite(env, siteInput, { limit = 8 } = {}) {
     }
     : await getSite(env, siteInput);
   if (!site || (!site.name && !site.url)) throw new Error('site not found');
-  const tagRows = await listTags(env);
-  const existingTags = tagRows.map((row) => row.name).filter(Boolean).slice(0, 80);
   const maxTags = Math.min(12, Math.max(3, Number(limit) || 8));
+  // 站内标签画像：拿使用量与「标签×分类」共现，推荐结果才会跟站点既有习惯一致
+  const profile = await loadTagProfile(env).catch(() => ({ tags: new Map(), categories: new Map() }));
+  const localCandidates = suggestTagsLocally(site, profile, { limit: maxTags + 3 });
   const settings = await getAiSettings(env, { includeSecret: true });
-  const fallbackTags = suggestTagsLocally(site, tagRows, maxTags);
 
   if (settings.enabled !== 'true' || !settings.apiKey) {
+    const merged = mergeTagCandidates(localCandidates, [], { limit: maxTags });
     return {
       site,
-      tags: fallbackTags,
+      tags: merged.tags,
+      details: merged.details,
       mode: 'local',
       configured: false,
-      message: 'AI 未启用或未配置 API Key，已返回本地规则推荐标签。',
+      vocabularySize: profile.tags?.size || 0,
+      message: 'AI 未启用或未配置 API Key，已按站内标签体系 + 规则推荐。',
     };
   }
 
+  // 按使用量排序的词汇表（带分类共现提示），让模型优先复用站内既有标签
+  const categoryHint = cleanText(site.catelog);
+  const categoryCommon = categoryHint && profile.categories?.get(categoryHint)
+    ? [...profile.categories.get(categoryHint).entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([name, count]) => `${name}(${count})`)
+      .join('、')
+    : '';
+  const vocabularyLines = [...(profile.tags?.values() || [])]
+    .sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0))
+    .slice(0, 120)
+    .map((item) => `${item.name}(${item.total})`)
+    .join('、');
+
   const prompt = [
-    '请为下面这个书签推荐适合的中文标签。',
+    '请为下面这个书签推荐标签。',
     '要求：',
     `1. 最多返回 ${maxTags} 个标签。`,
-    '2. 标签要短，通常 2-8 个字。',
-    '3. 优先复用“已有标签候选”中的标签，只有明显必要时才创建新标签。',
-    '4. 只返回 JSON 数组，不要解释，不要 Markdown。',
+    '2. 标签要短，2-8 个字，中文优先。',
+    '3. 强烈优先复用“站内已有标签”中语义匹配的标签（尽量直接照抄名称与大小写），只有确实没有合适的才创建新标签。',
+    '4. 不要输出与分类名完全相同的标签，不要输出书签名称本身作为标签。',
+    '5. 每个标签附一个 confidence（0-100）与一行 reason（为何适合）。',
+    '6. 只返回 JSON 数组，形如 [{"name":"AI","confidence":92,"reason":"站点为 AI 对话工具"}]，不要解释、不要 Markdown、不要代码块。',
     '',
     `书签名称：${site.name || ''}`,
     `URL：${site.url || ''}`,
     `分类：${site.catelog || ''}`,
     `描述：${site.desc || ''}`,
     `已有标签：${Array.isArray(site.tags) ? site.tags.join('、') : ''}`,
-    `已有标签候选：${existingTags.join('、') || '暂无'}`,
-  ].join('\n');
+    `站内已有标签（括号内为使用次数）：${vocabularyLines || '暂无'}`,
+    categoryCommon ? `同类书签常用标签：${categoryCommon}` : '',
+  ].filter(Boolean).join('\n');
 
   try {
     const answer = await callOpenAiCompatible({
-      settings: { ...settings, systemPrompt: '你是书签标签整理助手。你只能输出 JSON 数组，例如 ["AI","开发工具"]。不要输出解释、标题、Markdown 或代码块。' },
+      settings: { ...settings, systemPrompt: '你是书签标签整理助手。你只输出 JSON 数组，元素形如 {"name":"AI","confidence":92,"reason":"..."}。不要输出解释、标题、Markdown 或代码块。' },
       message: prompt,
       context: '后台标签推荐任务，不需要回答用户问题。',
+      temperature: 0.1,
     });
-    const tags = parseSuggestedTags(answer, maxTags);
+    const parsed = parseSuggestedTags(answer, maxTags + 3);
+    const aiCandidates = normalizeAiTagSuggestions(parsed, profile, { limit: maxTags + 2 });
+    const merged = mergeTagCandidates(localCandidates, aiCandidates, { limit: maxTags });
     return {
       site,
-      tags: tags.length ? tags : fallbackTags,
-      mode: tags.length ? 'ai' : 'local',
+      tags: merged.tags,
+      details: merged.details,
+      mode: merged.tags.length ? (aiCandidates.length ? 'ai+local' : 'local') : 'local',
       configured: true,
-      raw: answer.slice(0, 500),
+      vocabularySize: profile.tags?.size || 0,
+      raw: answer.slice(0, 300),
     };
   } catch (error) {
+    const merged = mergeTagCandidates(localCandidates, [], { limit: maxTags });
     return {
       site,
-      tags: fallbackTags,
+      tags: merged.tags,
+      details: merged.details,
       mode: 'fallback',
       configured: true,
-      message: `AI 推荐失败，已返回本地规则推荐。错误：${error.message}`,
+      vocabularySize: profile.tags?.size || 0,
+      message: `AI 推荐失败，已按站内标签体系 + 规则推荐。错误：${error.message}`,
     };
   }
 }
@@ -779,6 +1354,7 @@ export async function suggestTagsForSites(env, siteIds = [], { limit = 8, batchL
         ok: true,
         site: item.site,
         tags: item.tags || [],
+        details: item.details || [],
         mode: item.mode,
         configured: item.configured,
         message: item.message || '',
@@ -1013,9 +1589,66 @@ export async function analyzeCategoryErrors(env, { limit = 20 } = {}) {
   return { type: 'category-errors', totalOrphaned: orphaned.length, orphaned: orphaned.slice(0, safeLimit), suggestions, aiEnabled };
 }
 
-export async function chatWithAiAssistant(env, request, { message, previousSites = [], adminAuthed = false, privateUnlocked = false } = {}) {
+function siteToSource(site, index) {
+  return {
+    index: index + 1,
+    type: 'site',
+    title: site?.name || '未命名书签',
+    url: site?.url || '',
+    snippet: site?.desc || '',
+    catelog: site?.catelog || '',
+    id: site?.id || null,
+  };
+}
+
+export async function chatWithAiAssistant(env, request, {
+  message,
+  previousSites = [],
+  history = [],
+  adminAuthed = false,
+  privateUnlocked = false,
+  webSearchPreference = null,
+} = {}) {
   const cleanMessage = cleanText(message);
   if (!cleanMessage) throw new Error('Message is required');
+
+  const now = Date.now();
+  const realtimeIntent = detectRealtimeIntent(cleanMessage);
+
+  // ① 时间 / 日期 / 星期：服务端直接计算，100% 准确且零 token 成本
+  if (realtimeIntent.kind && realtimeIntent.kind !== 'stats') {
+    return {
+      code: 200,
+      data: {
+        answer: buildRealtimeAnswer(realtimeIntent, {}, { now }),
+        mode: 'local_realtime',
+        sites: [],
+        sources: [],
+        webResults: [],
+        configured: false,
+        realtime: true,
+        usedWebSearch: false,
+      },
+    };
+  }
+
+  // ② 站点统计：直接查库回答，不经过大模型
+  if (realtimeIntent.kind === 'stats') {
+    const stats = await getSiteStats(env, { adminAuthed, privateUnlocked, now });
+    return {
+      code: 200,
+      data: {
+        answer: buildRealtimeAnswer(realtimeIntent, stats, { now, adminAuthed }),
+        mode: 'local_stats',
+        sites: [],
+        sources: [],
+        webResults: [],
+        configured: false,
+        realtime: true,
+        usedWebSearch: false,
+      },
+    };
+  }
 
   const intent = detectBookmarkIntent(cleanMessage);
   const contextSites = await resolveContextSites(env, previousSites, { adminAuthed, privateUnlocked });
@@ -1037,7 +1670,10 @@ export async function chatWithAiAssistant(env, request, { message, previousSites
             answer: `以下是本站访问量最高的 ${topSites.length} 个书签：\n\n${lines.join('\n\n')}`,
             mode: 'local_strict',
             sites: topSites,
+            sources: topSites.map(siteToSource),
+            webResults: [],
             configured: false,
+            usedWebSearch: false,
           },
         };
       }
@@ -1046,12 +1682,15 @@ export async function chatWithAiAssistant(env, request, { message, previousSites
     }
   }
 
+  // ③ 站内检索：短语 + 标签/分类精确 + 关键词扩展，按命中权重排序
   if (intent.hasPronoun && contextSites.length) {
     sites = contextSites;
   } else {
-    sites = await searchExpandedSites(env, {
-      message: cleanMessage,
-      limit: (intent.asksList || intent.containsKeyword) ? 30 : 16,
+    const vocabulary = await loadSiteVocabulary(env);
+    const plan = buildSearchPlan(cleanMessage, vocabulary);
+    sites = await retrieveSitesForAi(env, {
+      plan,
+      limit: (intent.asksList || intent.containsKeyword) ? 24 : 12,
       adminAuthed,
       privateUnlocked,
     });
@@ -1061,40 +1700,122 @@ export async function chatWithAiAssistant(env, request, { message, previousSites
     sites = filterSitesByContainsKeyword(sites, intent.containsKeyword);
   }
 
+  // ④ 明确的事实型问题：本地严格作答（不消耗额度，也不会幻觉）
   if ((intent.asksCategory || intent.asksUrl || intent.asksExistence || intent.asksList || intent.containsKeyword || intent.hasPronoun) && sites.length) {
     return {
       code: 200,
       data: {
         ...buildLocalAnswer(cleanMessage, sites),
         sites,
+        sources: sites.map(siteToSource),
+        webResults: [],
         configured: false,
+        usedWebSearch: false,
       },
     };
+  }
+
+  // ⑤ 联网 / 抓取链接（站外信息单独标注，不与本站书签混淆）
+  const searchSettings = await getWebSearchSettings(env, { includeSecret: true });
+  const webDecision = decideWebSearch(cleanMessage, {
+    siteCount: sites.length,
+    settings: searchSettings,
+    preference: webSearchPreference,
+  });
+
+  let webResults = [];
+  let webError = '';
+  let webProvider = '';
+  if (webDecision.use) {
+    const searchResult = await webSearch(env, cleanMessage, { settings: searchSettings });
+    webResults = searchResult.results || [];
+    webProvider = searchResult.provider || '';
+    webError = searchResult.ok ? '' : (searchResult.error || '');
+  }
+
+  const urlInMessage = extractFirstUrl(cleanMessage);
+  let pageDigest = null;
+  if (urlInMessage && !sites.some((site) => site.url === urlInMessage)) {
+    const digest = await fetchPageDigest(urlInMessage);
+    if (digest.ok) pageDigest = digest;
   }
 
   const context = formatSiteContext(sites);
   const settings = await getAiSettings(env, { includeSecret: true });
 
   if (settings.enabled !== 'true' || !settings.apiKey) {
+    // 未配置大模型：本地规则回答 + 把联网结果作为补充列出
+    const local = buildLocalAnswer(cleanMessage, sites);
+    const extra = [];
+    if (pageDigest) {
+      extra.push(`\n\n（你提到的链接 ${pageDigest.url} 我读取了：${pageDigest.title || '（无标题）'}${pageDigest.description ? ` — ${pageDigest.description}` : ''}）`);
+    }
+    if (webResults.length) {
+      extra.push(`\n\n以下是联网检索结果（非本站书签，请自行判断）：\n\n${webResults.map((item, i) => `${i + 1}. ${item.title}\n   ${item.url}\n   ${item.snippet || ''}`).join('\n\n')}`);
+    } else if (webError) {
+      extra.push(`\n\n（联网检索未成功：${webError}）`);
+    }
     return {
       code: 200,
       data: {
-        ...buildLocalAnswer(cleanMessage, sites),
+        answer: `${local.answer}${extra.join('')}`,
+        mode: local.mode,
         sites,
+        sources: sites.map(siteToSource),
+        webResults,
+        webProvider,
+        webError,
+        pageDigest,
         configured: false,
+        usedWebSearch: webResults.length > 0,
       },
     };
   }
 
+  // ⑥ 组装给模型的上下文：当前时间 + 站点规模 + 站内检索 + 联网结果 + 页面摘要
+  const p = getBeijingParts(now);
+  const stats = await getSiteStats(env, { adminAuthed, privateUnlocked, now });
+  const extraSystem = [
+    `时间基准：当前${BEIJING_TIMEZONE_LABEL}为 ${p.yearMonthDay} ${p.weekdayName} ${p.time}（${p.date}）。`
+    + '任何涉及今天/明天/昨天/星期几/几号/年份的问题，都必须以此为准，不要使用你训练数据里的日期。',
+    `站点规模快照（用于回答“有多少”类问题）：\n${formatStatsForPrompt(stats)}`,
+    '站外信息规则：标有“联网检索结果”的内容来自互联网，不是本站书签。引用时必须说明“来自网络”，并按 [1][2] 标注序号；不得把它说成本站收录的条目。',
+  ];
+  if (pageDigest) {
+    extraSystem.push(
+      `用户提到的网页（实时抓取）：\n标题：${pageDigest.title || '（无标题）'}\nURL：${pageDigest.url}\n描述：${pageDigest.description || '（无）'}\n正文节选：${pageDigest.text.slice(0, 1200)}`,
+    );
+    extraSystem.push('如果用户在问这个网页能否收录、该放到哪个分类，请结合上面的站点规模快照里已有的分类，给出具体分类和 2-5 个标签建议，并说明理由；同时提醒最终以管理员判断为准。');
+  }
+  if (webResults.length) {
+    extraSystem.push(`联网检索结果（非本站书签）：\n${formatWebContext(webResults)}`);
+  }
+  if (webError) {
+    extraSystem.push(`注意：本次联网检索失败（${webError}）。不要编造网络上的信息，如实说明联网不可用。`);
+  }
+
   try {
-    const answer = await callOpenAiCompatible({ settings, message: cleanMessage, context });
+    const answer = await callOpenAiCompatible({
+      settings,
+      message: cleanMessage,
+      context,
+      history,
+      extraSystem,
+      temperature: 0.2,
+    });
     return {
       code: 200,
       data: {
         answer,
         mode: 'ai',
         sites,
+        sources: sites.map(siteToSource),
+        webResults,
+        webProvider,
+        webError,
+        pageDigest,
         configured: true,
+        usedWebSearch: webResults.length > 0,
       },
     };
   } catch (error) {
@@ -1105,7 +1826,12 @@ export async function chatWithAiAssistant(env, request, { message, previousSites
         answer: `${fallback.answer}\n\n（AI 模型暂时调用失败，已先返回本站检索结果。错误：${error.message}）`,
         mode: 'fallback',
         sites,
+        sources: sites.map(siteToSource),
+        webResults,
+        webProvider,
+        webError,
         configured: true,
+        usedWebSearch: webResults.length > 0,
       },
     };
   }

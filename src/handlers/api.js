@@ -1,4 +1,4 @@
-import { errorResponse, isSubmissionEnabled, jsonResponse } from '../lib/utils.js';
+import { cleanText, errorResponse, isSubmissionEnabled, jsonResponse } from '../lib/utils.js';
 import { createApiToken, isAdminAuthenticated, listApiTokens, revokeApiToken, validateApiToken } from '../lib/auth.js';
 import { getFavicon } from '../lib/favicon.js';
 import {
@@ -38,6 +38,8 @@ import {
 } from '../services/categoryService.js';
 import { applySiteTagSuggestions, listSitesNeedingTags, listTags, mergeTags } from '../services/tagService.js';
 import { analyzeNoTagSites, analyzeDuplicateSites, analyzeSearchGaps, analyzeCategoryErrors, chatWithAiAssistant, getAiSettings, listAiModels, suggestCategoryForSite, suggestTagMerges, suggestTagsForSite, suggestTagsForSites, testAiSettings, updateAiSettings } from '../services/aiService.js';
+import { testWebSearch, getWebSearchSettings, updateWebSearchSettings, WEB_SEARCH_PROVIDERS } from '../services/webSearchService.js';
+import { testEmailSettings, getEmailSettings, updateEmailSettings, getEmailSendLog, previewEmailTemplate, EMAIL_PROVIDERS, notifySubmission, notifyReviewDecision } from '../services/emailService.js';
 import { getSystemSettings, updateSystemSettings } from '../services/systemSettingsService.js';
 import {
   getPrivateBookmarkPassword,
@@ -208,6 +210,8 @@ async function dispatchApiRequest(request, env, ctx) {
       const result = await chatWithAiAssistant(env, request, {
         message: body?.message,
         previousSites: body?.previousSites || body?.contextSites || [],
+        history: Array.isArray(body?.history) ? body.history : [],
+        webSearchPreference: typeof body?.webSearch === 'boolean' ? body.webSearch : null,
         adminAuthed,
         privateUnlocked: privateAccess,
       });
@@ -273,7 +277,33 @@ async function dispatchApiRequest(request, env, ctx) {
     if (isSiteSubmitPath && method === 'POST') {
       const settings = await getSystemSettings(env);
       if (!isSubmissionEnabled(env, settings)) return errorResponse('Public submission disabled', 403);
-      const insert = await submitSite(env, await request.json());
+      const body = await request.json();
+      const insert = await submitSite(env, body);
+      // 邮件提醒异步触发（不影响提交响应，失败也不报错）
+      const pendingId = insert?.meta?.last_row_id;
+      safeLog(ctx, (async () => {
+        try {
+          const pendingTotal = await env.NAV_DB
+            .prepare("SELECT COUNT(*) AS total FROM pending_sites WHERE COALESCE(status, 'pending') = 'pending'")
+            .first()
+            .catch(() => null);
+          await notifySubmission(env, {
+            siteId: pendingId,
+            site: {
+              name: body?.name || '',
+              url: body?.url || '',
+              desc: body?.desc || '',
+              catelog: body?.catelog || '',
+              tags: body?.tags || [],
+              reason: body?.reason || '',
+            },
+            totalPending: Number(pendingTotal?.total) || undefined,
+            siteUrl: url.origin,
+          });
+        } catch (error) {
+          console.warn(`[email] 提交通知失败：${error?.message || error}`);
+        }
+      })());
       return jsonResponse({ code: 201, message: 'Config submitted successfully, waiting for admin approve', insert }, 201);
     }
 
@@ -500,6 +530,72 @@ async function dispatchApiRequest(request, env, ctx) {
       return jsonResponse({ code: 200, message: 'AI models fetched successfully', data });
     }
 
+    if (path === '/settings/web-search' && method === 'GET') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      const data = await getWebSearchSettings(env);
+      return jsonResponse({ code: 200, data: { ...data, providers: WEB_SEARCH_PROVIDERS } });
+    }
+
+    if (path === '/settings/web-search' && method === 'PUT') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      const data = await updateWebSearchSettings(env, await request.json());
+      const providers = WEB_SEARCH_PROVIDERS;
+      safeLog(ctx, logOperation(env, { action: OPERATION_LOG_ACTIONS.SETTINGS_UPDATE, target: 'settings', summary: `联网搜索：${data.enabled === 'true' ? '开启' : '关闭'}（${data.provider}）`, request }));
+      return jsonResponse({ code: 200, message: 'Web search settings updated successfully', data: { ...data, providers } });
+    }
+
+    if (path === '/settings/web-search/test' && method === 'POST') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      const data = await testWebSearch(env, await request.json().catch(() => ({})));
+      return jsonResponse({ code: 200, message: data.ok ? 'Web search test succeeded' : 'Web search test failed', data });
+    }
+
+    if (path === '/settings/email' && method === 'GET') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      const data = await getEmailSettings(env);
+      const log = await getEmailSendLog(env);
+      return jsonResponse({ code: 200, data: { ...data, providers: EMAIL_PROVIDERS, log } });
+    }
+
+    if (path === '/settings/email' && method === 'PUT') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      const data = await updateEmailSettings(env, await request.json());
+      const log = await getEmailSendLog(env);
+      safeLog(ctx, logOperation(env, { action: OPERATION_LOG_ACTIONS.SETTINGS_UPDATE, target: 'settings', summary: `邮箱通知：${data.enabled === 'true' ? '开启' : '关闭'}（${data.provider}）`, request }));
+      return jsonResponse({ code: 200, message: 'Email settings updated successfully', data: { ...data, providers: EMAIL_PROVIDERS, log } });
+    }
+
+    if (path === '/settings/email/test' && method === 'POST') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      const data = await testEmailSettings(env, await request.json().catch(() => ({})));
+      const log = await getEmailSendLog(env);
+      return jsonResponse({ code: 200, message: data.ok ? 'Test email sent' : 'Test email failed', data: { ...data, log } });
+    }
+
+    if (path === '/settings/email/preview' && method === 'POST') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      const body = await request.json().catch(() => ({}));
+      const settings = await getEmailSettings(env);
+      const rendered = await previewEmailTemplate(cleanText(body?.template) || 'submission', {
+        siteName: cleanText(body?.siteName),
+        siteUrl: cleanText(body?.siteUrl),
+      });
+      return jsonResponse({ code: 200, data: { ...rendered, siteName: settings.fromName || '' } });
+    }
+
+    if (path === '/settings/email/log' && method === 'GET') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      return jsonResponse({ code: 200, data: await getEmailSendLog(env) });
+    }
+
     if (path === '/settings/private-bookmarks' && method === 'GET') {
       const unauthorized = await requireAdmin(request, env);
       if (unauthorized) return unauthorized;
@@ -553,16 +649,45 @@ async function dispatchApiRequest(request, env, ctx) {
 
       if (method === 'PUT') {
         const force = url.searchParams.get('force') === 'true';
+        const pending = await env.NAV_DB.prepare('SELECT * FROM pending_sites WHERE id = ?').bind(id).first().catch(() => null);
         await approvePendingSite(env, id, { force });
         safeLog(ctx, logOperation(env, { action: OPERATION_LOG_ACTIONS.PENDING_APPROVE, target: 'pending_site', targetId: id, request }));
+        if (pending) {
+          safeLog(ctx, notifyReviewDecision(env, {
+            approved: true,
+            submitterEmail: pending.email,
+            site: {
+              name: pending.name,
+              url: pending.url,
+              desc: pending.desc,
+              catelog: pending.catelog,
+            },
+            siteUrl: url.origin,
+          }));
+        }
         return jsonResponse({ code: 200, message: 'Pending config approved successfully' });
       }
 
       if (method === 'DELETE') {
         const body = await request.json().catch(() => ({}));
         const rejectReason = body?.reason || url.searchParams.get('reason') || '';
+        const pending = await env.NAV_DB.prepare('SELECT * FROM pending_sites WHERE id = ?').bind(id).first().catch(() => null);
         await rejectPendingSite(env, id, { reason: rejectReason });
         safeLog(ctx, logOperation(env, { action: OPERATION_LOG_ACTIONS.PENDING_REJECT, target: 'pending_site', targetId: id, summary: rejectReason || undefined, request }));
+        if (pending) {
+          safeLog(ctx, notifyReviewDecision(env, {
+            approved: false,
+            reason: rejectReason,
+            submitterEmail: pending.email,
+            site: {
+              name: pending.name,
+              url: pending.url,
+              desc: pending.desc,
+              catelog: pending.catelog,
+            },
+            siteUrl: url.origin,
+          }));
+        }
         return jsonResponse({ code: 200, message: 'Pending config rejected successfully' });
       }
     }

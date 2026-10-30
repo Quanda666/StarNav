@@ -895,3 +895,39 @@ html.dark .floating-theme-panel,html.dark .floating-ai-panel{background:rgba(15,
     .site-card.dragging{pointer-events:none}
     body.drag-sorting{-webkit-user-select:none;user-select:none}
     .nav-sort-hint{flex:0 0 100%;margin:6px 0 0;color:var(--nav-muted);font-size:.72rem;line-height:1.4}
+
+    /* —— AI 小助理增强：即时问答徽标 / 联网开关 / 快捷提问 / 联网来源卡片 —— */
+    .ai-web-toggle{display:inline-flex;align-items:center;gap:.25rem;white-space:nowrap;border-radius:999px;border:1px solid color-mix(in srgb,var(--nav-primary) 20%,transparent);background:rgba(255,255,255,.72);padding:.2rem .5rem;font-size:.7rem;line-height:1.4;color:#64748b;transition:background .18s ease,color .18s ease,border-color .18s ease}
+    .ai-web-toggle:hover{border-color:var(--nav-primary);color:var(--nav-primary)}
+    .ai-web-toggle[aria-pressed="true"]{background:var(--nav-primary);border-color:var(--nav-primary);color:#fff}
+    .ai-quick-chip{border-radius:999px;border:1px dashed color-mix(in srgb,var(--nav-primary) 26%,transparent);background:transparent;padding:.2rem .55rem;font-size:.7rem;white-space:nowrap;color:var(--nav-primary);transition:background .18s ease,border-color .18s ease}
+    .ai-quick-chip:hover{background:var(--nav-primary-50);border-style:solid}
+    .ai-msg-badges{display:flex;flex-wrap:wrap;gap:.25rem}
+    .ai-mode-badge{border-radius:999px;padding:.1rem .45rem;font-size:.65rem;font-weight:600;background:color-mix(in srgb,var(--nav-primary) 10%,transparent);color:var(--nav-primary)}
+    .ai-web-results-title{font-size:.68rem;font-weight:600;letter-spacing:.04em;color:#94a3b8}
+    .ai-web-results{display:flex;flex-direction:column;gap:.5rem}
+    .ai-web-card{border-radius:.9rem;border:1px solid color-mix(in srgb,var(--nav-accent) 26%,transparent);background:linear-gradient(180deg,color-mix(in srgb,var(--nav-accent) 7%,transparent),transparent);padding:.6rem .7rem}
+    .ai-web-head{display:flex;align-items:center;justify-content:space-between;gap:.4rem;margin-bottom:.25rem}
+    .ai-web-badge{border-radius:999px;background:var(--nav-accent);color:#fff;padding:.05rem .4rem;font-size:.62rem;font-weight:600}
+    .ai-web-host{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.65rem;color:#94a3b8}
+    .ai-web-title{display:block;font-size:.8rem;font-weight:600;line-height:1.35;color:var(--nav-primary)}
+    .ai-web-title:hover{text-decoration:underline}
+    .ai-web-snippet{margin-top:.25rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;font-size:.72rem;line-height:1.5;color:#64748b}
+    html.dark .ai-web-toggle{background:rgba(30,41,59,.8);border-color:rgba(148,163,184,.3);color:#cbd5e1}
+    html.dark .ai-web-toggle[aria-pressed="true"]{background:var(--nav-accent);border-color:var(--nav-accent);color:#04211a}
+    html.dark .ai-quick-chip{border-color:rgba(148,163,184,.35);color:#cbd5e1}
+    html.dark .ai-quick-chip:hover{background:rgba(51,65,85,.75)}
+    html.dark .ai-mode-badge{background:rgba(148,163,184,.18);color:#e2e8f0}
+    html.dark .ai-web-card{background:rgba(30,41,59,.72);border-color:rgba(148,163,184,.28)}
+    html.dark .ai-web-title{color:#93c5fd}
+    html.dark .ai-web-snippet{color:#cbd5e1}
+    html.dark .ai-site-card .bg-accent-50{background:rgba(16,185,129,.18)!important}
+    html.dark .ai-site-card .text-accent-700{color:#6ee7b7!important}
+    html.dark .ai-site-card .bg-primary-50{background:rgba(96,165,250,.18)!important}
+    html.dark .ai-site-card .text-primary-700{color:#93c5fd!important}
+    html[data-skin] .ai-web-toggle,html[data-skin] .ai-quick-chip{background:color-mix(in srgb,var(--nav-surface-2) 88%,transparent);border-color:var(--nav-line);color:var(--nav-muted)}
+    html[data-skin] .ai-web-toggle[aria-pressed="true"]{background:var(--nav-accent);border-color:var(--nav-accent);color:#fff}
+    html[data-skin] .ai-mode-badge{background:color-mix(in srgb,var(--nav-accent) 16%,transparent);color:var(--nav-ink)}
+    html[data-skin] .ai-web-card{background:color-mix(in srgb,var(--nav-surface-2) 90%,transparent);border-color:var(--nav-line)}
+    html[data-skin] .ai-web-title{color:var(--nav-ink)}
+    html[data-skin] .ai-web-snippet,html[data-skin] .ai-web-host{color:var(--nav-muted)}

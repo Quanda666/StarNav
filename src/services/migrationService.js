@@ -193,6 +193,7 @@ async function runMigration(env) {
   await backfillSiteUrlKeys(env);
   await ensureColumn(env, 'pending_sites', 'tags', 'TEXT');
   await ensureColumn(env, 'pending_sites', 'reason', 'TEXT');
+  await ensureColumn(env, 'pending_sites', 'email', 'TEXT');
   await ensureColumn(env, 'pending_sites', 'status', "TEXT NOT NULL DEFAULT 'pending'");
   await ensureColumn(env, 'pending_sites', 'reject_reason', 'TEXT');
   await ensureColumn(env, 'pending_sites', 'reviewed_at', 'TIMESTAMP');

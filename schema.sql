@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS pending_sites (
   catelog TEXT NOT NULL,
   tags TEXT,
   reason TEXT,
+  email TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
   reject_reason TEXT,
   reviewed_at TIMESTAMP,

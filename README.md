@@ -37,6 +37,13 @@
   - 公开只读 API、Bearer Token 写入、API Discovery、OpenAPI 描述
   - Manifest V3 浏览器插件（一键收藏当前页、查重、AI 推荐）
   - WebHook 事件推送、WebDAV 备份
+  - 邮件通知：新提交提醒 / 审核结果 / 链接异常告警 / 站点摘要（Resend、SMTP、HTTP 中继）
+- **AI 小助理**
+  - 时间与日期（今天星期几）、站点统计（有多少书签/标签）等事实类问题由服务端直接计算，**不经模型、不会胡说**
+  - 站内检索由标签/分类词汇表驱动，多路召回加权排序，支持多轮上下文追问
+  - 可选联网搜索（Tavily / Serper / Brave / SearXNG / DuckDuckGo），来源单独标注
+  - 可读取用户贴出的链接并给出分类、标签建议
+  - 标签自动生成：站内词汇表 + 分类共识 + 语义词典 + 域名规则四路加权，附推荐理由
 - **多空间（预留）**
   - 数据库 `spaces` 表、空间服务与 `GET /api/spaces` 读取接口已实现
   - 空间增删改接口当前处于稳定化冻结状态（返回 409），前台空间切换与后台空间管理界面暂未开放
@@ -132,6 +139,8 @@ npm run db:backup    # 导出 D1 到 backup.sql
 | [API](docs/api-guide.md) | 公开接口、Token、OpenAPI |
 | [浏览器插件](docs/browser-extension-guide.md) | 一键收藏当前页 |
 | [WebHook](docs/webhook-guide.md) | 写操作事件推送 |
+| [AI 小助理](docs/ai-assistant-guide.md) | 事实类问答、站内检索、联网搜索、标签生成 |
+| [邮箱通知](docs/email-notification-guide.md) | Resend / SMTP / HTTP 中继配置与排错 |
 | [备份与导入导出](docs/backup-restore-guide.md) | 合并/覆盖、定时备份、旧 config.json |
 
 从旧单文件版本升级：先导出旧后台 `config.json`，部署本版并初始化数据库，再在后台导入。完整步骤见备份文档。

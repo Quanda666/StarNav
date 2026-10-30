@@ -205,3 +205,58 @@ export async function listTags(env) {
 
   return results || [];
 }
+
+/**
+ * 标签体系画像：每个标签的使用量，以及它与分类的共现关系。
+ * 用于让标签推荐「贴着站内已有习惯走」，而不是凭空造词。
+ *
+ * @param {object} env
+ * @param {{maxRows?: number}} [options]
+ * @returns {Promise<{tags: Map<string, {name:string,total:number,categories:Map<string,number>}>, categories: Map<string, Map<string, number>>}>}
+ */
+export async function loadTagProfile(env, { maxRows = 600 } = {}) {
+  const tags = new Map();
+  const categories = new Map();
+  let rows = [];
+
+  try {
+    const { results } = await env.NAV_DB.prepare(`
+      SELECT
+        t.name AS tag_name,
+        COALESCE(c.name, s.catelog, '') AS category_name,
+        COUNT(DISTINCT s.id) AS usage_count
+      FROM site_tags st
+      JOIN tags t ON t.id = st.tag_id
+      JOIN sites s ON s.id = st.site_id
+      LEFT JOIN categories c ON c.id = s.category_id
+      GROUP BY t.name, category_name
+      ORDER BY usage_count DESC
+      LIMIT ?
+    `).bind(Math.max(50, Math.min(2000, Number(maxRows) || 600))).all();
+    rows = results || [];
+  } catch (error) {
+    console.warn(`[tags] profile query fallback: ${error?.message || error}`);
+    const fallback = await listTags(env).catch(() => []);
+    rows = (fallback || []).map((row) => ({ tag_name: row.name, category_name: '', usage_count: Number(row.site_count) || 0 }));
+  }
+
+  for (const row of rows) {
+    const name = cleanText(row.tag_name);
+    if (!name) continue;
+    const category = cleanText(row.category_name);
+    const count = Number(row.usage_count) || 0;
+    const key = name.toLowerCase();
+
+    if (!tags.has(key)) tags.set(key, { name, total: 0, categories: new Map() });
+    const entry = tags.get(key);
+    entry.total += count;
+    if (category) {
+      entry.categories.set(category, (entry.categories.get(category) || 0) + count);
+      if (!categories.has(category)) categories.set(category, new Map());
+      const bucket = categories.get(category);
+      bucket.set(entry.name, (bucket.get(entry.name) || 0) + count);
+    }
+  }
+
+  return { tags, categories };
+}

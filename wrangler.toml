@@ -21,3 +21,13 @@ database_name = "book"
 [[kv_namespaces]]
 binding = "NAV_AUTH"
 # id = "your-kv-namespace-id"           # 留空 = 自动创建/复用名为 NAV_AUTH 的 KV
+
+# ── 可选变量（不填不影响运行）───────────────────────
+# [vars]
+#   # 邮件里的按钮链接前缀（如 https://nav.example.com）；不配置则邮件不显示按钮
+#   SITE_URL = "https://your-domain.com"
+#   # 每次 Cron 健康检查的书签数量上限
+#   HEALTH_CHECK_CRON_LIMIT = 30
+#
+# 敏感配置建议用 wrangler secret put：
+#   SECRET_KEY    —— 用于加密 AI Key / SMTP 密码 / WebHook secret（换掉会导致已存密钥需重填）

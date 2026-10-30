@@ -47,6 +47,7 @@ export const adminHtml = `<!DOCTYPE html>
           <button class="tab-button" data-tab="systemSettings" title="系统设置"><span class="tab-icon">⚙️</span><span class="tab-text">系统设置</span></button>
           <button class="tab-button" data-tab="aiAdmin" title="AI 分析"><span class="tab-icon">🤖</span><span class="tab-text">AI 分析</span></button>
           <button class="tab-button" data-tab="aiAssistant" title="AI 接口"><span class="tab-icon">🔌</span><span class="tab-text">AI 接口</span></button>
+          <button class="tab-button" data-tab="emailNotify" title="邮箱通知"><span class="tab-icon">📧</span><span class="tab-text">邮箱通知</span></button>
           <button class="tab-button" data-tab="backups" title="备份恢复"><span class="tab-icon">💾</span><span class="tab-text">备份恢复</span></button>
         </div>
         <div class="sidebar-group">
@@ -605,6 +606,154 @@ export const adminHtml = `<!DOCTYPE html>
             <button type="button" id="testAiSettings" class="check-btn">测试连接</button>
           </div>
           <div id="aiSettingsStatus" class="ai-status" style="display:none;"></div>
+        </div>
+
+        <div class="settings-card ai-settings-card" style="margin-top:16px;">
+          <div class="page-head" style="padding:0 0 8px;">
+            <div>
+              <h3>联网搜索</h3>
+              <p class="category-hint">让 AI 小助理能参考站外信息（新闻、官网、最新动态）。未启用时只使用本站书签，问答不受影响。</p>
+            </div>
+          </div>
+          <div class="token-form-grid">
+            <label class="settings-check"><input type="checkbox" id="webSearchEnabled"> 启用联网搜索</label>
+            <label class="settings-check"><input type="checkbox" id="webSearchAuto"> 站内无结果时自动联网补充</label>
+            <div>
+              <label for="webSearchProvider">搜索后端</label>
+              <select id="webSearchProvider"></select>
+            </div>
+            <div>
+              <label for="webSearchMaxResults">单次结果数</label>
+              <input type="number" id="webSearchMaxResults" min="1" max="8" step="1" value="5">
+            </div>
+            <div class="token-span-2" id="webSearchKeyRow">
+              <label for="webSearchApiKey">API Key</label>
+              <div class="private-password-row">
+                <input type="password" id="webSearchApiKey" autocomplete="off" placeholder="留空表示不修改现有 Key">
+                <button type="button" id="toggleWebSearchApiKey">显示</button>
+              </div>
+            </div>
+            <div class="token-span-2" id="webSearchBaseUrlRow">
+              <label for="webSearchBaseUrl">SearXNG 实例地址</label>
+              <input type="text" id="webSearchBaseUrl" placeholder="https://searxng.example.com">
+            </div>
+          </div>
+          <div class="ai-actions">
+            <button type="button" id="saveWebSearchSettings">保存联网设置</button>
+            <button type="button" id="testWebSearchSettings" class="check-btn">测试搜索</button>
+          </div>
+          <div id="webSearchStatus" class="ai-status" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div id="emailNotify" class="tab-content">
+        <div class="page-head">
+          <div>
+            <h2>邮箱通知</h2>
+            <p class="category-hint">新书签提交提醒、审核结果通知、链接异常告警与站点摘要，支持 Resend / SMTP / HTTP 中继。</p>
+          </div>
+          <button id="refreshEmailSettings" type="button">刷新配置</button>
+        </div>
+        <div class="settings-card ai-settings-card">
+          <div class="token-form-grid">
+            <label class="settings-check"><input type="checkbox" id="emailEnabled"> 启用邮件通知</label>
+            <label class="settings-check"><input type="checkbox" id="emailNotifySubmission"> 新书签提交时提醒</label>
+            <label class="settings-check"><input type="checkbox" id="emailNotifyReview"> 审核结果通知提交者</label>
+            <label class="settings-check"><input type="checkbox" id="emailNotifyHealth"> 链接异常告警</label>
+            <label class="settings-check"><input type="checkbox" id="emailNotifyDigest"> 定期站点摘要</label>
+            <div>
+              <label for="emailProvider">发送方式</label>
+              <select id="emailProvider"></select>
+            </div>
+            <div>
+              <label for="emailFromName">发件人名称</label>
+              <input type="text" id="emailFromName" placeholder="星漫旅站">
+            </div>
+            <div>
+              <label for="emailFromAddress">发件人邮箱</label>
+              <input type="text" id="emailFromAddress" placeholder="noreply@your-domain.com">
+            </div>
+            <div class="token-span-2">
+              <label for="emailRecipients">收件人（多个用逗号分隔）</label>
+              <input type="text" id="emailRecipients" placeholder="admin@your-domain.com">
+            </div>
+            <div>
+              <label for="emailReplyTo">回复地址（可选）</label>
+              <input type="text" id="emailReplyTo" placeholder="留空则回复到发件人">
+            </div>
+            <div>
+              <label for="emailDigestHour">摘要发送时间（北京时间整点）</label>
+              <input type="number" id="emailDigestHour" min="0" max="23" step="1" value="9">
+            </div>
+            <div>
+              <label for="emailDigestPeriod">摘要周期</label>
+              <select id="emailDigestPeriod">
+                <option value="week">每周</option>
+                <option value="month">每月</option>
+              </select>
+            </div>
+            <div class="token-span-2" id="emailApiKeyRow">
+              <label for="emailApiKey" id="emailApiKeyLabel">API Key</label>
+              <div class="private-password-row">
+                <input type="password" id="emailApiKey" autocomplete="off" placeholder="留空表示不修改现有 Key">
+                <button type="button" id="toggleEmailApiKey">显示</button>
+              </div>
+            </div>
+            <div class="token-span-2" id="emailHttpEndpointRow">
+              <label for="emailHttpEndpoint">HTTP 中继地址</label>
+              <input type="text" id="emailHttpEndpoint" placeholder="https://your-relay.example.com/send">
+            </div>
+            <div id="emailSmtpHostRow">
+              <label for="emailSmtpHost">SMTP 服务器</label>
+              <input type="text" id="emailSmtpHost" placeholder="smtp.qq.com">
+            </div>
+            <div id="emailSmtpPortRow">
+              <label for="emailSmtpPort">端口 / 加密</label>
+              <div class="private-password-row">
+                <input type="number" id="emailSmtpPort" min="1" max="65535" value="465">
+                <select id="emailSmtpSecure">
+                  <option value="tls">TLS（465）</option>
+                  <option value="starttls">STARTTLS（587）</option>
+                  <option value="none">明文（25）</option>
+                </select>
+              </div>
+            </div>
+            <div id="emailSmtpUserRow">
+              <label for="emailSmtpUser">SMTP 用户名</label>
+              <input type="text" id="emailSmtpUser" placeholder="通常是邮箱地址" autocomplete="off">
+            </div>
+            <div id="emailSmtpPassRow">
+              <label for="emailSmtpPass">SMTP 密码 / 授权码</label>
+              <div class="private-password-row">
+                <input type="password" id="emailSmtpPass" placeholder="留空表示不修改" autocomplete="off">
+                <button type="button" id="toggleEmailSmtpPass">显示</button>
+              </div>
+            </div>
+          </div>
+          <div class="ai-actions">
+            <button type="button" id="saveEmailSettings">保存邮件设置</button>
+            <button type="button" id="testEmailSettings" class="check-btn">发送测试邮件</button>
+            <select id="emailPreviewTemplate" style="width:auto;min-width:140px;margin:0;">
+              <option value="submission">预览：新提交提醒</option>
+              <option value="approved">预览：审核通过</option>
+              <option value="rejected">预览：审核未通过</option>
+              <option value="healthAlert">预览：链接异常</option>
+              <option value="digest">预览：站点摘要</option>
+              <option value="test">预览：测试邮件</option>
+            </select>
+            <button type="button" id="previewEmailTemplate" class="secondary-btn">预览模板</button>
+          </div>
+          <div id="emailSettingsStatus" class="ai-status" style="display:none;"></div>
+        </div>
+        <div id="emailPreviewBox" style="display:none;margin-top:16px;">
+          <div class="analytics-panel wide">
+            <div class="analytics-panel-title"><h3>模板预览</h3><small id="emailPreviewSubject"></small></div>
+            <iframe id="emailPreviewFrame" title="邮件模板预览" style="width:100%;height:520px;border:1px solid var(--admin-line);border-radius:14px;background:#fff;"></iframe>
+          </div>
+        </div>
+        <div class="analytics-panel wide" style="margin-top:16px;">
+          <div class="analytics-panel-title"><h3>最近发送记录</h3><small id="emailLogHint">最多保留 40 条</small></div>
+          <div id="emailSendLog" class="analytics-list"></div>
         </div>
       </div>
 

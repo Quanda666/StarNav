@@ -6,6 +6,8 @@ import { renderHomePage } from './pages/home.js';
 import { ensureSchema } from './services/migrationService.js';
 import { runScheduledHealthCheck } from './services/siteService.js';
 import { runScheduledBackup } from './services/backupService.js';
+import { notifyHealthAlert, maybeSendDigest } from './services/emailService.js';
+import { getSiteStats } from './services/statsService.js';
 import { errorResponse, withSecurityHeaders } from './lib/utils.js';
 import { withHomeEdgeCache } from './lib/edgeCache.js';
 
@@ -50,6 +52,52 @@ export default {
       const limit = env.HEALTH_CHECK_CRON_LIMIT || 30;
       const healthResult = await runScheduledHealthCheck(env, { limit });
       console.log(`[cron] health check completed: checked=${healthResult.checked}, ok=${healthResult.ok}, failed=${healthResult.failed}`);
+
+      // 健康异常 → 邮件告警（未配置邮件时会自行跳过）
+      try {
+        const failedItems = (healthResult.results || []).filter((item) => !item.ok);
+        if (failedItems.length) {
+          const ids = failedItems.map((item) => Number(item.id)).filter((id) => Number.isInteger(id) && id > 0);
+          const details = new Map();
+          if (ids.length) {
+            try {
+              const placeholders = ids.map(() => '?').join(',');
+              const { results } = await env.NAV_DB.prepare(`SELECT id, name, url FROM sites WHERE id IN (${placeholders})`).bind(...ids).all();
+              for (const row of results || []) details.set(Number(row.id), row);
+            } catch (error) {
+              console.log(`[cron] 健康告警取详情失败：${error?.message || error}`);
+            }
+          }
+          const mailResult = await notifyHealthAlert(env, {
+            items: failedItems.map((item) => ({
+              name: details.get(Number(item.id))?.name || `#${item.id}`,
+              url: details.get(Number(item.id))?.url || '',
+              statusCode: item.status_code,
+              error: item.error,
+            })),
+            checked: healthResult.checked,
+            failed: healthResult.failed,
+            siteUrl: env.SITE_URL || '',
+          });
+          console.log(`[cron] 健康告警邮件：${mailResult?.ok ? '已发送' : `未发送（${mailResult?.reason || mailResult?.error || '未知'}）`}`);
+        }
+      } catch (error) {
+        console.log(`[cron] 健康告警失败：${error?.message || error}`);
+      }
+
+      // 定期摘要（到达配置的北京时间整点且当天未发过才发）
+      try {
+        const stats = await getSiteStats(env, { adminAuthed: true });
+        const digestResult = await maybeSendDigest(env, {
+          stats,
+          latestSites: stats.latestSites,
+          siteUrl: env.SITE_URL || '',
+        });
+        if (digestResult?.sent) console.log('[cron] 站点摘要邮件已发送');
+      } catch (error) {
+        console.log(`[cron] 摘要邮件失败：${error?.message || error}`);
+      }
+
       try {
         const backupResult = await runScheduledBackup(env);
         if (backupResult?.skipped) {

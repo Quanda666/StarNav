@@ -41,3 +41,6 @@ temp/
 
 # Claude Code local settings
 .claude/
+
+# AiCode 本地工作目录（会话记忆、截图、工具输出等，不入库）
+.aicode/
