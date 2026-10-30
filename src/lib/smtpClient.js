@@ -157,6 +157,100 @@ function expect(reply, codes, stage) {
 }
 
 /**
+ * 规范化邮箱凭据（纯函数，便于单测）。
+ *
+ * 处理两类非常常见的人为输入问题：
+ *   1. 授权码被复制成「xxxx xxxx xxxx xxxx」形态（QQ/163 就是 4 组 4 位展示），
+ *      中间的空格会让认证必然失败，因此消除所有空白；
+ *   2. 复制时带上了引号或全角空格。
+ *
+ * 注意：只对“看起来是授权码”的值做去空格（去空格后 8-32 位纯字母数字），
+ * 避免误伤真正含空格的密码。
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+export function normalizeMailCredential(value) {
+  let text = String(value ?? '');
+  // 去零宽字符、全角空格、前后引号
+  text = text.replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\u3000/g, ' ');
+  text = text.replace(/^[\s"']+|[\s"']+$/g, '');
+  const squeezed = text.replace(/\s+/g, '');
+  if (squeezed !== text && /^[A-Za-z0-9]{8,32}$/.test(squeezed)) return squeezed;
+  return text;
+}
+
+/**
+ * 将 SMTP 认证失败（535/534/530 等）翻译成可操作的排查建议（纯函数）。
+ *
+ * SMTP 只回一个笼统的状态码，各家邮箱又都把原因归到同一句里，
+ * 用户看到「Login fail」完全无法定位，这里按主流服务商给出排查顺序。
+ *
+ * @param {{code?:number, stage?:string, message?:string}} error
+ * @param {{host?:string, user?:string, pass?:string}} [context]
+ * @returns {string} 追加在错误后面的建议，无建议时返回空串
+ */
+export function describeSmtpAuthFailure(error = {}, context = {}) {
+  const code = Number(error.code) || 0;
+  const stage = String(error.stage || '');
+  const host = String(context.host || '').toLowerCase();
+  const pass = String(context.pass ?? '');
+  const hints = [];
+
+  if (code === 535 || code === 534 || code === 530 || stage.startsWith('auth')) {
+    const provider = host.includes('qq.com')
+      ? 'QQ 邮箱'
+      : host.includes('163.com') || host.includes('126.com')
+        ? '网易邮箱'
+        : host.includes('gmail.com') || host.includes('google.com')
+          ? 'Gmail'
+          : host.includes('outlook') || host.includes('office365')
+            ? 'Outlook'
+            : '该邮箱';
+
+    if (provider === 'QQ 邮箱' || provider === '网易邮箱') {
+      hints.push(`${provider}必须使用「授权码」而不是登录密码：在网页版设置里开启 SMTP/POP3 服务后生成`);
+      hints.push('确认已开启 SMTP 服务（QQ：设置→账号→POP3/IMAP/SMTP服务）');
+    } else if (provider === 'Gmail') {
+      hints.push('Gmail 必须使用「应用专用密码」（需先开两步验证），不能用账号密码');
+    } else if (provider === 'Outlook') {
+      hints.push('Outlook 用 587 + STARTTLS，密码为账号密码或应用密码');
+    } else {
+      hints.push('确认用户名是完整邮箱地址、密码/授权码正确');
+    }
+
+    if (/\s/.test(pass)) hints.push('密码/授权码中含空白字符，已尝试自动去除；建议重新粘贴确认');
+    hints.push('短时间内反复失败会被临时限制登录，请稍等几分钟再试');
+    if (host && !String(context.user || '').includes('@')) hints.push('用户名建议填完整邮箱地址（如 name@qq.com）');
+  }
+
+  return hints.length ? `；排查建议：${hints.join('；')}` : '';
+}
+
+/**
+ * 从 EHLO 响应里解析支持的认证机制（纯函数，便于单测）。
+ * 兼容 `AUTH PLAIN LOGIN` 与旧式 `AUTH=PLAIN LOGIN` 两种写法。
+ *
+ * @param {string[]} lines EHLO 响应的各行
+ * @returns {string[]} 大写的机制名，如 ['LOGIN','PLAIN']
+ */
+export function parseAuthMechanisms(lines = []) {
+  const mechanisms = new Set();
+  for (const raw of lines) {
+    const line = String(raw || '').trim();
+    const match = /^250[ -]?AUTH[ =](.+)$/i.exec(line);
+    if (!match) continue;
+    for (const name of match[1].trim().split(/\s+/)) {
+      const normalized = name.toUpperCase();
+      // 兼容 `AUTH=LOGIN` 这种把机制写成参数的形式
+      const cleaned = normalized === 'AUTH' ? '' : normalized;
+      if (cleaned && /^[A-Z0-9-]+$/.test(cleaned)) mechanisms.add(cleaned);
+    }
+  }
+  return [...mechanisms];
+}
+
+/**
  * 在当前 IO 上执行一次完整的发信会话。
  *
  * @param {object} io createSmptIo 风格的 IO 实现。
@@ -180,6 +274,11 @@ export async function sendMailSession(io, options) {
   if (!from?.address) throw new SmtpError('缺少发件人地址', { stage: 'config' });
   if (!toList.length) throw new SmtpError('缺少收件人地址', { stage: 'config' });
 
+  // 凭据规范化：授权码常被复制成含空格的形态，原样发送必然 535
+  const credential = auth
+    ? { user: normalizeMailCredential(auth.user), pass: normalizeMailCredential(auth.pass) }
+    : null;
+
   let socketIo = io;
   const withTimeout = async (promise, stage) => {
     let timer = null;
@@ -201,6 +300,7 @@ export async function sendMailSession(io, options) {
 
     let ehlo = await withTimeout(socketIo.readReply(), 'ehlo');
     let capabilities = ehlo.lines.join('\n').toUpperCase();
+    let mechanisms = parseAuthMechanisms(ehlo.lines);
     expect(ehlo, [250], 'ehlo');
 
     if (startTls) {
@@ -212,19 +312,29 @@ export async function sendMailSession(io, options) {
       ehlo = await withTimeout(socketIo.readReply(), 'ehlo-after-tls');
       expect(ehlo, [250], 'ehlo-after-tls');
       capabilities = ehlo.lines.join('\n').toUpperCase();
+      mechanisms = parseAuthMechanisms(ehlo.lines);
     }
 
-    if (auth?.user && auth?.pass) {
-      if (capabilities.includes('AUTH PLAIN') || capabilities.includes('AUTH=PLAIN')) {
-        await socketIo.write(`AUTH PLAIN ${encodeBase64(`\u0000${auth.user}\u0000${auth.pass}`)}${CRLF}`);
-        expect(await withTimeout(socketIo.readReply(), 'auth'), [235, 503], 'auth');
-      } else {
+    if (credential?.user && credential?.pass) {
+      // 两种都支持时优先 LOGIN：主流邮箱（QQ/163/Gmail）均支持，兼容性最好
+      const supportsLogin = mechanisms.includes('LOGIN') || mechanisms.length === 0;
+      const supportsPlain = mechanisms.includes('PLAIN') || capabilities.includes('AUTH PLAIN') || capabilities.includes('AUTH=PLAIN');
+      if (!supportsPlain && !supportsLogin) {
+        throw new SmtpError(
+          `服务器不提供 AUTH PLAIN/LOGIN（它支持：${mechanisms.join('、') || '无'}），本客户端无法用该服务器认证`,
+          { stage: 'auth-mechanism' },
+        );
+      }
+      if (supportsLogin) {
         await socketIo.write(`AUTH LOGIN${CRLF}`);
         expect(await withTimeout(socketIo.readReply(), 'auth-login'), [334], 'auth-login');
-        await socketIo.write(`${encodeBase64(auth.user)}${CRLF}`);
+        await socketIo.write(`${encodeBase64(credential.user)}${CRLF}`);
         expect(await withTimeout(socketIo.readReply(), 'auth-user'), [334], 'auth-user');
-        await socketIo.write(`${encodeBase64(auth.pass)}${CRLF}`);
+        await socketIo.write(`${encodeBase64(credential.pass)}${CRLF}`);
         expect(await withTimeout(socketIo.readReply(), 'auth-pass'), [235, 503], 'auth-pass');
+      } else {
+        await socketIo.write(`AUTH PLAIN ${encodeBase64(`\u0000${credential.user}\u0000${credential.pass}`)}${CRLF}`);
+        expect(await withTimeout(socketIo.readReply(), 'auth'), [235, 503], 'auth');
       }
     }
 
@@ -340,8 +450,19 @@ export async function createSocketIo({ host, port, secureTransport = 'on' }) {
 export async function sendSmtpMail(options) {
   const secure = options.secure === 'starttls' ? 'starttls' : options.secure === 'none' ? 'off' : 'on';
   const io = await createSocketIo({ host: options.host, port: options.port, secureTransport: secure });
-  return sendMailSession(io, {
-    ...options,
-    startTls: options.secure === 'starttls',
-  });
+  try {
+    return await sendMailSession(io, {
+      ...options,
+      startTls: options.secure === 'starttls',
+    });
+  } catch (error) {
+    // 认证失败时补上可操作建议：SMTP 只回一个笼统状态码，用户无法自行定位
+    if (error instanceof SmtpError && /^auth/.test(error.stage || '')) {
+      throw new SmtpError(`${error.message}${describeSmtpAuthFailure(error, { host: options.host, user: options.auth?.user, pass: options.auth?.pass })}`, {
+        code: error.code,
+        stage: error.stage,
+      });
+    }
+    throw error;
+  }
 }

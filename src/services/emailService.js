@@ -14,7 +14,7 @@ import { cleanText } from '../lib/utils.js';
 import { decryptSecret, encryptSecret } from '../lib/crypto.js';
 import { getSetting, setSetting } from './settingsService.js';
 import { renderEmail } from './emailTemplates.js';
-import { sendSmtpMail, SmtpError } from '../lib/smtpClient.js';
+import { sendSmtpMail, SmtpError, normalizeMailCredential } from '../lib/smtpClient.js';
 import { getBeijingParts } from '../lib/datetime.js';
 
 const EMAIL_PREFIX = 'email.';
@@ -134,7 +134,7 @@ export async function updateEmailSettings(env, payload = {}) {
   await setSetting(env, `${EMAIL_PREFIX}smtpHost`, cleanText(payload.smtpHost).slice(0, 200));
   await setSetting(env, `${EMAIL_PREFIX}smtpPort`, String(Math.max(1, Math.min(65535, Number(payload.smtpPort) || 465))));
   await setSetting(env, `${EMAIL_PREFIX}smtpSecure`, ['tls', 'starttls', 'none'].includes(String(payload.smtpSecure)) ? String(payload.smtpSecure) : 'tls');
-  await setSetting(env, `${EMAIL_PREFIX}smtpUser`, cleanText(payload.smtpUser).slice(0, 200));
+  await setSetting(env, `${EMAIL_PREFIX}smtpUser`, normalizeMailCredential(cleanText(payload.smtpUser)).slice(0, 200));
   await setSetting(env, `${EMAIL_PREFIX}httpEndpoint`, cleanText(payload.httpEndpoint).slice(0, 300));
   await setSetting(env, `${EMAIL_PREFIX}notifySubmission`, boolString(payload.notifySubmission));
   await setSetting(env, `${EMAIL_PREFIX}notifyReview`, boolString(payload.notifyReview));
@@ -147,7 +147,8 @@ export async function updateEmailSettings(env, payload = {}) {
   if (apiKey && apiKey !== '********') await setSetting(env, `${EMAIL_PREFIX}apiKey`, await encryptSecret(env, apiKey));
   else if (payload.clearApiKey === true) await setSetting(env, `${EMAIL_PREFIX}apiKey`, '');
 
-  const smtpPass = cleanText(payload.smtpPass);
+  // 授权码常被复制成「xxxx xxxx xxxx xxxx」，存库前就规范化，避免“明明填对了却 535”
+  const smtpPass = normalizeMailCredential(cleanText(payload.smtpPass));
   if (smtpPass && smtpPass !== '********') await setSetting(env, `${EMAIL_PREFIX}smtpPass`, await encryptSecret(env, smtpPass));
   else if (payload.clearSmtpPass === true) await setSetting(env, `${EMAIL_PREFIX}smtpPass`, '');
 
@@ -381,13 +382,13 @@ export async function testEmailSettings(env, payload = {}) {
     ...(payload.smtpHost !== undefined ? { smtpHost: cleanText(payload.smtpHost) } : {}),
     ...(payload.smtpPort ? { smtpPort: String(payload.smtpPort) } : {}),
     ...(payload.smtpSecure ? { smtpSecure: String(payload.smtpSecure) } : {}),
-    ...(payload.smtpUser !== undefined ? { smtpUser: cleanText(payload.smtpUser) } : {}),
+    ...(payload.smtpUser !== undefined ? { smtpUser: normalizeMailCredential(cleanText(payload.smtpUser)) } : {}),
     ...(payload.httpEndpoint !== undefined ? { httpEndpoint: cleanText(payload.httpEndpoint) } : {}),
     enabled: 'true',
   };
   const apiKey = cleanText(payload.apiKey);
   if (apiKey && apiKey !== '********') merged.apiKey = apiKey;
-  const smtpPass = cleanText(payload.smtpPass);
+  const smtpPass = normalizeMailCredential(cleanText(payload.smtpPass));
   if (smtpPass && smtpPass !== '********') merged.smtpPass = smtpPass;
 
   const to = parseRecipients(payload.to).length ? parseRecipients(payload.to) : merged.recipientList;

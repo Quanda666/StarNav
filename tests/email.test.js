@@ -7,6 +7,9 @@ import {
   buildMimeMessage,
   dotStuff,
   encodeHeaderValue,
+  normalizeMailCredential,
+  parseAuthMechanisms,
+  describeSmtpAuthFailure,
 } from '../src/lib/smtpClient.js';
 import { renderEmail, EMAIL_TEMPLATES } from '../src/services/emailTemplates.js';
 import { parseRecipients, checkEmailReadiness } from '../src/services/emailService.js';
@@ -301,4 +304,57 @@ test('收件人解析与就绪校验', () => {
   assert.equal(checkEmailReadiness({
     enabled: 'true', provider: 'smtp', fromAddress: 'a@x.com', recipients: 'b@y.com', smtpHost: 'smtp.qq.com', smtpUser: 'u', smtpPass: '',
   }).reason, 'SMTP 已填用户名但缺少密码/授权码');
+});
+
+// ── SMTP 认证凭据规范化与失败诊断 ────────────────────────────────
+
+test('凭据规范化：去掉授权码中的空格、引号、全角空格与零宽字符', () => {
+  // QQ/163 授权码是 4 组 4 位展示，复制时极易带空格——原样发送必然 535
+  assert.equal(normalizeMailCredential('abcd efgh ijkl mnop'), 'abcdefghijklmnop');
+  assert.equal(normalizeMailCredential('  abcd efgh ijkl mnop  '), 'abcdefghijklmnop');
+  assert.equal(normalizeMailCredential('"abcdefghijklmnop"'), 'abcdefghijklmnop');
+  assert.equal(normalizeMailCredential('abcd\u3000efgh'), 'abcdefgh');
+  assert.equal(normalizeMailCredential('abc\u200bdefghijklmn'), 'abcdefghijklmn');
+});
+
+test('凭据规范化：不误伤真正含空格的密码', () => {
+  assert.equal(normalizeMailCredential('my pass phrase'), 'my pass phrase');
+  assert.equal(normalizeMailCredential('abc def'), 'abc def'); // 去空格后不足 8 位
+  assert.equal(normalizeMailCredential('a'.repeat(40)), 'a'.repeat(40)); // 去空格后超 32 位
+});
+
+test('解析 EHLO 认证机制：兼容 AUTH / AUTH= 两种写法', () => {
+  assert.deepEqual(parseAuthMechanisms(['250-smtp.qq.com', '250-AUTH LOGIN PLAIN', '250 OK']), ['LOGIN', 'PLAIN']);
+  assert.deepEqual(parseAuthMechanisms(['250-AUTH=LOGIN PLAIN', '250 OK']), ['LOGIN', 'PLAIN']);
+  assert.deepEqual(parseAuthMechanisms(['250-smpt.163.com', '250 OK']), []);
+  assert.deepEqual(parseAuthMechanisms(['250-AUTH CRAM-MD5']), ['CRAM-MD5']);
+});
+
+test('535 诊断：QQ 提示授权码 + SMTP 服务 + 空格 + 频率限制', () => {
+  const hint = describeSmtpAuthFailure(
+    { code: 535, stage: 'auth-pass', message: 'Login fail' },
+    { host: 'smtp.qq.com', user: 'user@qq.com', pass: 'abcd efgh ijkl mnop' },
+  );
+  assert.match(hint, /授权码/);
+  assert.match(hint, /SMTP 服务/);
+  assert.match(hint, /空格/);
+  assert.match(hint, /限制登录/);
+});
+
+test('535 诊断：Gmail 提示应用专用密码', () => {
+  const hint = describeSmtpAuthFailure({ code: 535, stage: 'auth-pass' }, { host: 'smtp.gmail.com', user: 'a@gmail.com', pass: 'x' });
+  assert.match(hint, /应用专用密码/);
+});
+
+test('535 诊断：用户名不是完整邮箱时提醒', () => {
+  const hint = describeSmtpAuthFailure(
+    { code: 535, stage: 'auth-login' },
+    { host: 'smtp.example.com', user: 'someone', pass: 'x' },
+  );
+  assert.match(hint, /完整邮箱/);
+});
+
+test('非认证类错误不附加认证建议', () => {
+  assert.equal(describeSmtpAuthFailure({ code: 550, stage: 'rcpt-to' }, { host: 'smtp.qq.com' }), '');
+  assert.equal(describeSmtpAuthFailure({ code: 0, stage: 'greeting' }, { host: 'smtp.qq.com' }), '');
 });
