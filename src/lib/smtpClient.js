@@ -273,55 +273,49 @@ export async function createSocketIo({ host, port, secureTransport = 'on' }) {
   const socket = connect(`${host}:${port}`, { secureTransport });
   if (socket.opened) await socket.opened;
 
-  const makeReader = (readable) => {
-    const reader = readable.getReader();
+  const buildIo = (target) => {
+    const reader = target.readable.getReader();
+    const writer = target.writable.getWriter();
+    const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let buffer = '';
-    return {
-      async readReply() {
-        const deadline = Date.now() + 20000;
-        while (Date.now() < deadline) {
-          const newlineIndex = buffer.indexOf('\n');
-          if (newlineIndex !== -1) {
-            // 读取一条完整响应：若为多行（250-xxx），继续读到以空格分隔的最后一行
-            const candidate = buffer.slice(0, newlineIndex + 1);
-            if (/^\d{3}[ -]/.test(candidate) && !/^\d{3}$/.test(candidate.trim())) {
-              const isFinal = /^\d{3} /.test(candidate);
-              buffer = buffer.slice(newlineIndex + 1);
-              if (isFinal) return parseReplyText(candidate);
-              let collected = candidate;
-              let done = false;
-              while (!done) {
-                const nextIndex = buffer.indexOf('\n');
-                if (nextIndex === -1) {
-                  const chunk = await reader.read();
-                  if (chunk.done) break;
-                  buffer += decoder.decode(chunk.value, { stream: true });
-                  continue;
-                }
-                const line = buffer.slice(0, nextIndex + 1);
-                buffer = buffer.slice(nextIndex + 1);
-                collected += line;
-                if (/^\d{3} /.test(line)) done = true;
-              }
-              return parseReplyText(collected);
-            }
-            buffer = buffer.slice(newlineIndex + 1);
-            continue;
-          }
-          const { done, value } = await reader.read();
-          if (done) return parseReplyText(buffer);
-          buffer += decoder.decode(value, { stream: true });
-        }
-        throw new SmtpError('SMTP 响应超时', { stage: 'read' });
-      },
-    };
-  };
 
-  const buildIo = (target) => {
-    const writer = target.writable.getWriter();
-    const { readReply } = makeReader(target.readable);
-    const encoder = new TextEncoder();
+    // 读到一行（无 CRLF），EOF 或套接字被关闭时返回 null
+    const readLine = async () => {
+      for (;;) {
+        const index = buffer.indexOf('\n');
+        if (index !== -1) {
+          const line = buffer.slice(0, index);
+          buffer = buffer.slice(index + 1);
+          return line.replace(/\r$/, '');
+        }
+        let chunk;
+        try {
+          chunk = await reader.read();
+        } catch {
+          return null; // 套接字已关闭
+        }
+        if (chunk.done) return null;
+        buffer += decoder.decode(chunk.value, { stream: true });
+      }
+    };
+
+    // 读一条完整 SMTP 响应：多行响应（250-xxx）持续读到 "ddd " 结尾行
+    const readReply = async () => {
+      const first = await readLine();
+      if (first === null) throw new SmtpError('SMTP 连接已断开', { stage: 'read' });
+      const lines = [first];
+      if (/^\d{3}-/.test(first)) {
+        for (;;) {
+          const next = await readLine();
+          if (next === null) break;
+          lines.push(next);
+          if (/^\d{3} /.test(next)) break;
+        }
+      }
+      return parseReplyText(lines.join('\n'));
+    };
+
     return {
       write: (text) => writer.write(encoder.encode(text)),
       readReply,
